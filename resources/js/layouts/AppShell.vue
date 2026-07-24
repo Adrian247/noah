@@ -57,9 +57,46 @@ async function logout() {
                 <RouterLink
                     class="rounded-md px-3 py-2 hover:bg-slate-100"
                     active-class="bg-slate-100 font-medium"
+                    to="/app/assets"
+                >
+                    Activos
+                </RouterLink>
+                <p class="mt-4 px-3 text-xs font-medium uppercase tracking-wide text-slate-400">
+                    Catálogos
+                </p>
+                <RouterLink
+                    class="rounded-md px-3 py-2 hover:bg-slate-100"
+                    active-class="bg-slate-100 font-medium"
+                    to="/app/catalog/items"
+                >
+                    Equipos
+                </RouterLink>
+                <RouterLink
+                    class="rounded-md px-3 py-2 hover:bg-slate-100"
+                    active-class="bg-slate-100 font-medium"
+                    to="/app/catalog/supplies"
+                >
+                    Insumos
+                </RouterLink>
+                <p class="mt-4 px-3 text-xs font-medium uppercase tracking-wide text-slate-400">
+                    Diseño
+                </p>
+                <RouterLink
+                    class="rounded-md px-3 py-2 hover:bg-slate-100"
+                    active-class="bg-slate-100 font-medium"
+                    to="/app/design/routine-types"
+                >
+                    Tipos de rutina
+                </RouterLink>
+                <p class="mt-4 px-3 text-xs font-medium uppercase tracking-wide text-slate-400">
+                    Facturación
+                </p>
+                <RouterLink
+                    class="rounded-md px-3 py-2 hover:bg-slate-100"
+                    active-class="bg-slate-100 font-medium"
                     to="/app/billing"
                 >
-                    Facturación
+                    Facturas
                 </RouterLink>
             </nav>
         </aside>

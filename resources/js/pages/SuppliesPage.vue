@@ -1,0 +1,141 @@
+<script setup lang="ts">
+import { onMounted, ref } from 'vue';
+import { api } from '@/api/client';
+
+type SupplyItem = {
+    id: number;
+    sku: string;
+    name: string;
+    unit?: string | null;
+    standard_cost?: string | number | null;
+};
+
+const items = ref<SupplyItem[]>([]);
+const loading = ref(true);
+const error = ref<string | null>(null);
+const saving = ref(false);
+
+const form = ref({
+    sku: '',
+    name: '',
+    unit: 'pza',
+    standard_cost: '',
+});
+
+async function load() {
+    loading.value = true;
+    error.value = null;
+    try {
+        const res = await api<{ data: SupplyItem[] }>('/inventory/supplies');
+        items.value = res.data;
+    } catch (e) {
+        error.value = (e as Error).message;
+    } finally {
+        loading.value = false;
+    }
+}
+
+async function submit() {
+    saving.value = true;
+    error.value = null;
+    try {
+        await api('/inventory/supplies', {
+            method: 'POST',
+            body: JSON.stringify({
+                sku: form.value.sku,
+                name: form.value.name,
+                unit: form.value.unit || null,
+                standard_cost: form.value.standard_cost
+                    ? Number(form.value.standard_cost)
+                    : null,
+            }),
+        });
+        form.value = { sku: '', name: '', unit: 'pza', standard_cost: '' };
+        await load();
+    } catch (e) {
+        error.value = (e as Error).message;
+    } finally {
+        saving.value = false;
+    }
+}
+
+onMounted(load);
+</script>
+
+<template>
+    <div class="space-y-6">
+        <h2 class="text-xl font-semibold">Insumos</h2>
+        <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
+
+        <form
+            class="max-w-lg space-y-3 rounded-lg border border-slate-200 bg-white p-4"
+            @submit.prevent="submit"
+        >
+            <p class="text-sm font-medium text-slate-700">Nuevo insumo</p>
+            <label class="block text-sm">
+                SKU
+                <input
+                    v-model="form.sku"
+                    required
+                    class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5"
+                />
+            </label>
+            <label class="block text-sm">
+                Nombre
+                <input
+                    v-model="form.name"
+                    required
+                    class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5"
+                />
+            </label>
+            <label class="block text-sm">
+                Unidad
+                <input
+                    v-model="form.unit"
+                    class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5"
+                />
+            </label>
+            <label class="block text-sm">
+                Costo estándar
+                <input
+                    v-model="form.standard_cost"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5"
+                />
+            </label>
+            <button
+                type="submit"
+                class="rounded-md bg-slate-900 px-3 py-2 text-sm text-white disabled:opacity-50"
+                :disabled="saving"
+            >
+                Guardar
+            </button>
+        </form>
+
+        <p v-if="loading" class="text-slate-500">Cargando…</p>
+        <table v-else class="w-full text-left text-sm">
+            <thead>
+                <tr class="border-b text-slate-500">
+                    <th class="py-2">SKU</th>
+                    <th>Nombre</th>
+                    <th>Unidad</th>
+                    <th>Costo</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr
+                    v-for="item in items"
+                    :key="item.id"
+                    class="border-b border-slate-100"
+                >
+                    <td class="py-2 font-mono text-xs">{{ item.sku }}</td>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.unit ?? '—' }}</td>
+                    <td>{{ item.standard_cost ?? '—' }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</template>

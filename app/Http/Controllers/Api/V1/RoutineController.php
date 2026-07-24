@@ -47,10 +47,10 @@ class RoutineController extends Controller
             'data' => $routine->load([
                 'asset',
                 'site',
-                'routineType',
+                'routineType.formVersion',
                 'assignee',
                 'executions',
-                'latestExecution',
+                'latestExecution.consumptions.supplyItem',
                 'generatedReports',
                 'invoice.lines',
             ]),

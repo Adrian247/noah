@@ -5,7 +5,7 @@
 ## Alcance de este repositorio
 
 - Documentación de producto, arquitectura y diseño.
-- **Scaffold de aplicación:** Laravel + Vue + Docker (ver [README.md](../README.md) en la raíz del repo).
+- **Scaffold de aplicación:** Laravel 13 + Vue 3 + Docker (ver [README.md](../README.md) y [docs/IMPLEMENTATION.md](../docs/IMPLEMENTATION.md)).
 
 ## Relación con otros sistemas
 

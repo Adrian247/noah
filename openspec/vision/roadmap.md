@@ -2,19 +2,19 @@
 
 Roadmap orientativo; las fechas se fijan al iniciar implementación.
 
-## Fase 0 — Fundación documental (actual)
+## Fase 0 — Fundación documental
 
 - [x] Estructura `openspec/` y nombre Noah
 - [x] Visión, alcance, concepto, roadmap, negocio, NFR
 - [x] Dominio por contexto, arquitectura, motores, API
 - [x] Diseño UX, frontend, móvil, infra, prompts, diagramas
 - [x] ADRs 001–010
-- [ ] Revisión de stakeholders del glosario y journeys
-- [ ] Congelar ADRs antes del primer código (sign-off equipo)
+- [x] Flujo de cambios (`openspec/changes/` → `archive/`)
+- [ ] Revisión formal de stakeholders del glosario y journeys (opcional continuo)
 
 ## Fase 1 — Núcleo web (MVP operativo)
 
-**Estado:** scaffold inicial en repo (`Laravel 13` + `Vue 3` + `docker-compose`); dominio de negocio pendiente.
+**Estado:** en progreso — API y flujo rutina→validación→PDF/factura en repo; UI de catálogos, activos, captura de formulario dinámica y consumos implementados. Pendiente: auditoría, diseñadores form/reporte, CRUD completo en UI.
 
 **Objetivo:** operar mantenimientos y reportes desde web sin móvil.
 

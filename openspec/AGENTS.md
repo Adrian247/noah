@@ -28,11 +28,11 @@ Prioridad: **modelo de dominio correcto** y **bajo acoplamiento** antes que velo
 3. Respetar bounded contexts; evitar acoplar módulos.
 4. Usar el lenguaje del [glosario](glossary/ubiquitous-language.md).
 
-## Stack previsto (referencia, no implementado aún)
+## Stack (referencia)
 
 | Capa | Tecnología |
 |------|------------|
-| API | Laravel 12+, PHP 8.4+ |
+| API | Laravel 13, PHP 8.4+ |
 | BD | PostgreSQL (JSONB para plantillas) |
 | Colas / cache | Redis, Horizon |
 | Web admin | Vue 3, Vite, Pinia, Tailwind |

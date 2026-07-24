@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Enums\InvoiceStatus;
 use App\Enums\MembershipRole;
 use App\Enums\RoutineStatus;
 use App\Events\RoutineValidated;
 use App\Http\Controllers\Controller;
 use App\Models\Routine;
+use App\Models\SupplyItem;
 use App\Services\AI\AiGateway;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +20,10 @@ class RoutineExecutionController extends Controller
             'responses' => ['nullable', 'array'],
             'technician_comments' => ['nullable', 'string'],
             'duration_minutes' => ['nullable', 'integer', 'min:0'],
+            'consumptions' => ['nullable', 'array'],
+            'consumptions.*.supply_item_id' => ['required', 'integer', 'exists:supply_items,id'],
+            'consumptions.*.quantity' => ['required', 'numeric', 'min:0.0001'],
+            'consumptions.*.unit_cost' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $corrected = null;
@@ -37,9 +41,18 @@ class RoutineExecutionController extends Controller
             'submitted_at' => now(),
         ]);
 
+        foreach ($data['consumptions'] ?? [] as $line) {
+            $supply = SupplyItem::query()->findOrFail($line['supply_item_id']);
+            $execution->consumptions()->create([
+                'supply_item_id' => $supply->id,
+                'quantity' => $line['quantity'],
+                'unit_cost' => $line['unit_cost'] ?? $supply->standard_cost ?? 0,
+            ]);
+        }
+
         $routine->update(['status' => RoutineStatus::PendingValidation]);
 
-        return response()->json(['data' => $execution->fresh()], 201);
+        return response()->json(['data' => $execution->fresh(['consumptions.supplyItem'])], 201);
     }
 
     public function validateExecution(Request $request, Routine $routine): JsonResponse
