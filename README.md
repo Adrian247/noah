@@ -34,20 +34,24 @@ SPA: rutas bajo `/app/*`. API: `GET /api/v1/health`.
 
 ## Desarrollo con Docker
 
+Guía detallada: **[docs/DOCKER.md](docs/DOCKER.md)**
+
 ```bash
-cp .env.docker.example .env
 docker compose up -d --build
 docker compose exec app composer install
-docker compose exec app php artisan key:generate
-docker compose exec app php artisan migrate
+docker compose exec app php artisan key:generate --force
+docker compose exec app php artisan migrate --seed --force
 npm install && npm run build
 ```
 
-- App: http://localhost:8080  
-- Mailpit: http://localhost:8025  
-- MinIO console: http://localhost:9001  
+| Servicio | URL |
+|----------|-----|
+| **Noah** | **http://localhost:8888** |
+| API health | http://localhost:8888/api/v1/health |
+| Mailpit | http://localhost:8025 |
+| MinIO | http://localhost:9001 |
 
-Ajusta `.env` con `DB_HOST=postgres`, `REDIS_HOST=redis`, etc. (ver `.env.docker.example`).
+Demo: `admin@noah.local` / `password`
 
 ## Licencia
 
