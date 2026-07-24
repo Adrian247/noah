@@ -33,6 +33,52 @@ async function load() {
     }
 }
 
+const editingId = ref<number | null>(null);
+const editForm = ref({ code: '', name: '', manufacturer: '' });
+
+function startEdit(item: CatalogItem) {
+    editingId.value = item.id;
+    editForm.value = {
+        code: item.code,
+        name: item.name,
+        manufacturer: item.manufacturer ?? '',
+    };
+}
+
+async function saveEdit(id: number) {
+    saving.value = true;
+    error.value = null;
+    try {
+        await api(`/catalog/items/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                code: editForm.value.code,
+                name: editForm.value.name,
+                manufacturer: editForm.value.manufacturer || null,
+            }),
+        });
+        editingId.value = null;
+        await load();
+    } catch (e) {
+        error.value = (e as Error).message;
+    } finally {
+        saving.value = false;
+    }
+}
+
+async function remove(id: number) {
+    if (!window.confirm('¿Eliminar este ítem del catálogo?')) {
+        return;
+    }
+    error.value = null;
+    try {
+        await api(`/catalog/items/${id}`, { method: 'DELETE' });
+        await load();
+    } catch (e) {
+        error.value = (e as Error).message;
+    }
+}
+
 async function submit() {
     saving.value = true;
     error.value = null;
@@ -106,6 +152,7 @@ onMounted(load);
                     <th class="py-2">Código</th>
                     <th>Nombre</th>
                     <th>Fabricante</th>
+                    <th class="w-32"></th>
                 </tr>
             </thead>
             <tbody>
@@ -114,9 +161,32 @@ onMounted(load);
                     :key="item.id"
                     class="border-b border-slate-100"
                 >
-                    <td class="py-2 font-mono text-xs">{{ item.code }}</td>
-                    <td>{{ item.name }}</td>
-                    <td>{{ item.manufacturer ?? '—' }}</td>
+                    <template v-if="editingId === item.id">
+                        <td class="py-2">
+                            <input v-model="editForm.code" class="w-full rounded border px-1 py-0.5 text-xs" />
+                        </td>
+                        <td>
+                            <input v-model="editForm.name" class="w-full rounded border px-1 py-0.5" />
+                        </td>
+                        <td>
+                            <input v-model="editForm.manufacturer" class="w-full rounded border px-1 py-0.5" />
+                        </td>
+                        <td class="space-x-1">
+                            <button type="button" class="text-xs underline" @click="saveEdit(item.id)">
+                                OK
+                            </button>
+                            <button type="button" class="text-xs" @click="editingId = null">×</button>
+                        </td>
+                    </template>
+                    <template v-else>
+                        <td class="py-2 font-mono text-xs">{{ item.code }}</td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.manufacturer ?? '—' }}</td>
+                        <td class="space-x-2 text-xs">
+                            <button type="button" class="underline" @click="startEdit(item)">Editar</button>
+                            <button type="button" class="text-red-700" @click="remove(item.id)">Borrar</button>
+                        </td>
+                    </template>
                 </tr>
             </tbody>
         </table>

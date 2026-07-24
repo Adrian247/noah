@@ -69,6 +69,30 @@ const router = createRouter({
                     meta: { title: 'Tipos de rutina' },
                 },
                 {
+                    path: 'design/forms',
+                    name: 'forms-list',
+                    component: () => import('@/pages/FormsListPage.vue'),
+                    meta: { title: 'Formularios' },
+                },
+                {
+                    path: 'design/forms/:id',
+                    name: 'form-designer',
+                    component: () => import('@/pages/FormDesignerPage.vue'),
+                    meta: { title: 'Diseñador de formulario' },
+                },
+                {
+                    path: 'design/reports',
+                    name: 'reports-list',
+                    component: () => import('@/pages/ReportsListPage.vue'),
+                    meta: { title: 'Reportes' },
+                },
+                {
+                    path: 'design/reports/:id',
+                    name: 'report-designer',
+                    component: () => import('@/pages/ReportDesignerPage.vue'),
+                    meta: { title: 'Diseñador de reporte' },
+                },
+                {
                     path: 'audit',
                     name: 'audit',
                     component: () => import('@/pages/AuditPage.vue'),

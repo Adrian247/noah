@@ -27,4 +27,29 @@ class CatalogItemController extends Controller
 
         return response()->json(['data' => $item], 201);
     }
+
+    public function update(Request $request, CatalogItem $catalogItem): JsonResponse
+    {
+        $data = $request->validate([
+            'code' => ['sometimes', 'string', 'max:64'],
+            'name' => ['sometimes', 'string', 'max:255'],
+            'manufacturer' => ['nullable', 'string', 'max:255'],
+            'specifications' => ['nullable', 'array'],
+        ]);
+
+        $catalogItem->update($data);
+
+        return response()->json(['data' => $catalogItem->fresh()]);
+    }
+
+    public function destroy(CatalogItem $catalogItem): JsonResponse
+    {
+        if ($catalogItem->assets()->exists()) {
+            return response()->json(['message' => 'Cannot delete: assets reference this catalog item.'], 422);
+        }
+
+        $catalogItem->delete();
+
+        return response()->json(['message' => 'Deleted']);
+    }
 }

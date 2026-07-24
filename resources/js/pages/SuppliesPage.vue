@@ -35,6 +35,39 @@ async function load() {
     }
 }
 
+const editingId = ref<number | null>(null);
+const editForm = ref({ sku: '', name: '', unit: '', standard_cost: '' });
+
+function startEdit(item: SupplyItem) {
+    editingId.value = item.id;
+    editForm.value = {
+        sku: item.sku,
+        name: item.name,
+        unit: item.unit ?? '',
+        standard_cost: item.standard_cost != null ? String(item.standard_cost) : '',
+    };
+}
+
+async function saveEdit(id: number) {
+    await api(`/inventory/supplies/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+            sku: editForm.value.sku,
+            name: editForm.value.name,
+            unit: editForm.value.unit || null,
+            standard_cost: editForm.value.standard_cost ? Number(editForm.value.standard_cost) : null,
+        }),
+    });
+    editingId.value = null;
+    await load();
+}
+
+async function remove(id: number) {
+    if (!window.confirm('¿Eliminar insumo?')) return;
+    await api(`/inventory/supplies/${id}`, { method: 'DELETE' });
+    await load();
+}
+
 async function submit() {
     saving.value = true;
     error.value = null;
@@ -122,18 +155,31 @@ onMounted(load);
                     <th>Nombre</th>
                     <th>Unidad</th>
                     <th>Costo</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
-                <tr
-                    v-for="item in items"
-                    :key="item.id"
-                    class="border-b border-slate-100"
-                >
-                    <td class="py-2 font-mono text-xs">{{ item.sku }}</td>
-                    <td>{{ item.name }}</td>
-                    <td>{{ item.unit ?? '—' }}</td>
-                    <td>{{ item.standard_cost ?? '—' }}</td>
+                <tr v-for="item in items" :key="item.id" class="border-b border-slate-100">
+                    <template v-if="editingId === item.id">
+                        <td><input v-model="editForm.sku" class="w-full rounded border px-1 text-xs" /></td>
+                        <td><input v-model="editForm.name" class="w-full rounded border px-1" /></td>
+                        <td><input v-model="editForm.unit" class="w-full rounded border px-1" /></td>
+                        <td><input v-model="editForm.standard_cost" class="w-full rounded border px-1" /></td>
+                        <td class="text-xs space-x-1">
+                            <button type="button" class="underline" @click="saveEdit(item.id)">OK</button>
+                            <button type="button" @click="editingId = null">×</button>
+                        </td>
+                    </template>
+                    <template v-else>
+                        <td class="py-2 font-mono text-xs">{{ item.sku }}</td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.unit ?? '—' }}</td>
+                        <td>{{ item.standard_cost ?? '—' }}</td>
+                        <td class="text-xs space-x-2">
+                            <button type="button" class="underline" @click="startEdit(item)">Editar</button>
+                            <button type="button" class="text-red-700" @click="remove(item.id)">Borrar</button>
+                        </td>
+                    </template>
                 </tr>
             </tbody>
         </table>

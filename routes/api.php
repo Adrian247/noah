@@ -4,11 +4,13 @@ use App\Http\Controllers\Api\V1\AssetController;
 use App\Http\Controllers\Api\V1\AuditController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CatalogItemController;
+use App\Http\Controllers\Api\V1\FormDefinitionController;
 use App\Http\Controllers\Api\V1\GeneratedReportController;
 use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\RoutineController;
 use App\Http\Controllers\Api\V1\RoutineExecutionController;
 use App\Http\Controllers\Api\V1\RoutineTypeController;
+use App\Http\Controllers\Api\V1\ReportTemplateController;
 use App\Http\Controllers\Api\V1\SiteController;
 use App\Http\Controllers\Api\V1\SupplyItemController;
 use Illuminate\Support\Facades\Route;
@@ -31,12 +33,30 @@ Route::prefix('v1')->group(function (): void {
 
             Route::get('/catalog/items', [CatalogItemController::class, 'index']);
             Route::post('/catalog/items', [CatalogItemController::class, 'store']);
+            Route::put('/catalog/items/{catalogItem}', [CatalogItemController::class, 'update']);
+            Route::delete('/catalog/items/{catalogItem}', [CatalogItemController::class, 'destroy']);
 
             Route::get('/inventory/supplies', [SupplyItemController::class, 'index']);
             Route::post('/inventory/supplies', [SupplyItemController::class, 'store']);
+            Route::put('/inventory/supplies/{supplyItem}', [SupplyItemController::class, 'update']);
+            Route::delete('/inventory/supplies/{supplyItem}', [SupplyItemController::class, 'destroy']);
 
             Route::get('/assets', [AssetController::class, 'index']);
             Route::post('/assets', [AssetController::class, 'store']);
+            Route::put('/assets/{asset}', [AssetController::class, 'update']);
+            Route::delete('/assets/{asset}', [AssetController::class, 'destroy']);
+
+            Route::get('/design/forms', [FormDefinitionController::class, 'index']);
+            Route::post('/design/forms', [FormDefinitionController::class, 'store']);
+            Route::get('/design/forms/{form}', [FormDefinitionController::class, 'show']);
+            Route::put('/design/forms/{form}/schema', [FormDefinitionController::class, 'updateSchema']);
+            Route::post('/design/forms/{form}/publish', [FormDefinitionController::class, 'publish']);
+
+            Route::get('/design/reports', [ReportTemplateController::class, 'index']);
+            Route::post('/design/reports', [ReportTemplateController::class, 'store']);
+            Route::get('/design/reports/{reportTemplate}', [ReportTemplateController::class, 'show']);
+            Route::put('/design/reports/{reportTemplate}/components', [ReportTemplateController::class, 'updateComponents']);
+            Route::post('/design/reports/{reportTemplate}/publish', [ReportTemplateController::class, 'publish']);
 
             Route::get('/routine-types', [RoutineTypeController::class, 'index']);
 

@@ -77,6 +77,39 @@ async function submit() {
     }
 }
 
+const editingId = ref<number | null>(null);
+const editForm = ref({ tag: '', location_label: '' });
+
+function startEdit(asset: Asset) {
+    editingId.value = asset.id;
+    editForm.value = {
+        tag: asset.tag,
+        location_label: asset.location_label ?? '',
+    };
+}
+
+async function saveEdit(id: number) {
+    await api(`/assets/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+            tag: editForm.value.tag,
+            location_label: editForm.value.location_label || null,
+        }),
+    });
+    editingId.value = null;
+    await load();
+}
+
+async function remove(id: number) {
+    if (!window.confirm('¿Eliminar activo?')) return;
+    try {
+        await api(`/assets/${id}`, { method: 'DELETE' });
+        await load();
+    } catch (e) {
+        error.value = (e as Error).message;
+    }
+}
+
 onMounted(load);
 </script>
 
@@ -157,18 +190,31 @@ onMounted(load);
                     <th>Sitio</th>
                     <th>Catálogo</th>
                     <th>Ubicación</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
-                <tr
-                    v-for="asset in assets"
-                    :key="asset.id"
-                    class="border-b border-slate-100"
-                >
-                    <td class="py-2 font-medium">{{ asset.tag }}</td>
-                    <td>{{ asset.site?.name ?? '—' }}</td>
-                    <td>{{ asset.catalog_item?.code ?? '—' }}</td>
-                    <td>{{ asset.location_label ?? '—' }}</td>
+                <tr v-for="asset in assets" :key="asset.id" class="border-b border-slate-100">
+                    <template v-if="editingId === asset.id">
+                        <td><input v-model="editForm.tag" class="rounded border px-1" /></td>
+                        <td>{{ asset.site?.name ?? '—' }}</td>
+                        <td>{{ asset.catalog_item?.code ?? '—' }}</td>
+                        <td><input v-model="editForm.location_label" class="rounded border px-1" /></td>
+                        <td class="text-xs space-x-1">
+                            <button type="button" class="underline" @click="saveEdit(asset.id)">OK</button>
+                            <button type="button" @click="editingId = null">×</button>
+                        </td>
+                    </template>
+                    <template v-else>
+                        <td class="py-2 font-medium">{{ asset.tag }}</td>
+                        <td>{{ asset.site?.name ?? '—' }}</td>
+                        <td>{{ asset.catalog_item?.code ?? '—' }}</td>
+                        <td>{{ asset.location_label ?? '—' }}</td>
+                        <td class="text-xs space-x-2">
+                            <button type="button" class="underline" @click="startEdit(asset)">Editar</button>
+                            <button type="button" class="text-red-700" @click="remove(asset.id)">Borrar</button>
+                        </td>
+                    </template>
                 </tr>
             </tbody>
         </table>

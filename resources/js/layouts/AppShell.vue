@@ -88,6 +88,20 @@ async function logout() {
                 >
                     Tipos de rutina
                 </RouterLink>
+                <RouterLink
+                    class="rounded-md px-3 py-2 hover:bg-slate-100"
+                    active-class="bg-slate-100 font-medium"
+                    to="/app/design/forms"
+                >
+                    Formularios
+                </RouterLink>
+                <RouterLink
+                    class="rounded-md px-3 py-2 hover:bg-slate-100"
+                    active-class="bg-slate-100 font-medium"
+                    to="/app/design/reports"
+                >
+                    Reportes
+                </RouterLink>
                 <p class="mt-4 px-3 text-xs font-medium uppercase tracking-wide text-slate-400">
                     Administración
                 </p>
