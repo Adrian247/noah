@@ -6,6 +6,7 @@ use App\Enums\InvoiceStatus;
 use App\Enums\MembershipRole;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -28,7 +29,7 @@ class InvoiceController extends Controller
         return response()->json(['data' => $invoice->load(['lines', 'routine'])]);
     }
 
-    public function issue(Request $request, Invoice $invoice): JsonResponse
+    public function issue(Request $request, Invoice $invoice, AuditLogger $audit): JsonResponse
     {
         $this->authorizeBilling($request);
 
@@ -43,6 +44,10 @@ class InvoiceController extends Controller
         ]);
 
         $invoice->routine?->update(['status' => \App\Enums\RoutineStatus::Invoiced]);
+
+        $audit->fromRequest($request, 'invoice.issued', Invoice::class, $invoice->id, [
+            'number' => $invoice->number,
+        ]);
 
         return response()->json(['data' => $invoice->fresh('lines')]);
     }

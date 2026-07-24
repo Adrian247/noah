@@ -66,6 +66,11 @@ class Routine extends Model
         return $this->belongsTo(User::class, 'assigned_to');
     }
 
+    public function workflowInstance(): HasOne
+    {
+        return $this->hasOne(WorkflowInstance::class);
+    }
+
     public function executions(): HasMany
     {
         return $this->hasMany(RoutineExecution::class);

@@ -14,7 +14,7 @@ Roadmap orientativo; las fechas se fijan al iniciar implementación.
 
 ## Fase 1 — Núcleo web (MVP operativo)
 
-**Estado:** en progreso — API y flujo rutina→validación→PDF/factura en repo; UI de catálogos, activos, captura de formulario dinámica y consumos implementados. Pendiente: auditoría, diseñadores form/reporte, CRUD completo en UI.
+**Estado:** en progreso — flujo rutina con workflow runtime, auditoría y notificaciones email básicas. Pendiente: diseñadores form/reporte/workflow, CRUD completo en UI.
 
 **Objetivo:** operar mantenimientos y reportes desde web sin móvil.
 
@@ -31,6 +31,8 @@ Roadmap orientativo; las fechas se fijan al iniciar implementación.
 **No incluye aún:** móvil, workflow visual completo, facturación fiscal en producción.
 
 ## Fase 2 — Flujo de negocio completo (web)
+
+**Estado:** parcial — workflow runtime lineal, IA en ejecución, billing borrador, email a supervisores. Pendiente: diseñadores y workflow visual.
 
 | Entrega | Descripción |
 |---------|-------------|

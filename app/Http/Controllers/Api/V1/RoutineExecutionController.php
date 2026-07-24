@@ -3,19 +3,24 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\MembershipRole;
-use App\Enums\RoutineStatus;
-use App\Events\RoutineValidated;
 use App\Http\Controllers\Controller;
 use App\Models\Routine;
 use App\Models\SupplyItem;
 use App\Services\AI\AiGateway;
+use App\Services\Audit\AuditLogger;
+use App\Services\Workflow\WorkflowRuntime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class RoutineExecutionController extends Controller
 {
-    public function store(Request $request, Routine $routine, AiGateway $ai): JsonResponse
-    {
+    public function store(
+        Request $request,
+        Routine $routine,
+        AiGateway $ai,
+        WorkflowRuntime $workflow,
+        AuditLogger $audit,
+    ): JsonResponse {
         $data = $request->validate([
             'responses' => ['nullable', 'array'],
             'technician_comments' => ['nullable', 'string'],
@@ -50,13 +55,21 @@ class RoutineExecutionController extends Controller
             ]);
         }
 
-        $routine->update(['status' => RoutineStatus::PendingValidation]);
+        $workflow->onExecutionSubmitted($routine, $request->user());
+
+        $audit->fromRequest($request, 'routine.execution_submitted', Routine::class, $routine->id, [
+            'execution_id' => $execution->id,
+        ]);
 
         return response()->json(['data' => $execution->fresh(['consumptions.supplyItem'])], 201);
     }
 
-    public function validateExecution(Request $request, Routine $routine): JsonResponse
-    {
+    public function validateExecution(
+        Request $request,
+        Routine $routine,
+        WorkflowRuntime $workflow,
+        AuditLogger $audit,
+    ): JsonResponse {
         $this->authorizeSupervisor($request);
 
         $execution = $routine->latestExecution;
@@ -64,33 +77,37 @@ class RoutineExecutionController extends Controller
             return response()->json(['message' => 'No execution to validate.'], 422);
         }
 
-        $execution->update([
-            'validated_at' => now(),
-            'validated_by' => $request->user()->id,
-        ]);
+        $workflow->onApproved($routine, $request->user());
 
-        $routine->update(['status' => RoutineStatus::Validated]);
-
-        RoutineValidated::dispatch($routine->fresh(), $execution->fresh());
+        $audit->fromRequest($request, 'routine.validated', Routine::class, $routine->id);
 
         return response()->json([
             'data' => $routine->fresh([
                 'latestExecution',
                 'generatedReports',
                 'invoice.lines',
+                'workflowInstance.transitions',
             ]),
         ]);
     }
 
-    public function reject(Request $request, Routine $routine): JsonResponse
-    {
+    public function reject(
+        Request $request,
+        Routine $routine,
+        WorkflowRuntime $workflow,
+        AuditLogger $audit,
+    ): JsonResponse {
         $this->authorizeSupervisor($request);
 
-        $request->validate(['reason' => ['required', 'string', 'max:1000']]);
+        $validated = $request->validate(['reason' => ['required', 'string', 'max:1000']]);
 
-        $routine->update(['status' => RoutineStatus::Rejected]);
+        $workflow->onRejected($routine, $request->user(), $validated['reason']);
 
-        return response()->json(['data' => $routine->fresh()]);
+        $audit->fromRequest($request, 'routine.rejected', Routine::class, $routine->id, [
+            'reason' => $validated['reason'],
+        ]);
+
+        return response()->json(['data' => $routine->fresh(['workflowInstance.transitions'])]);
     }
 
     private function authorizeSupervisor(Request $request): void

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Routine;
+use App\Services\Workflow\WorkflowRuntime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -23,7 +24,7 @@ class RoutineController extends Controller
         return response()->json($routines);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, WorkflowRuntime $workflow): JsonResponse
     {
         $data = $request->validate([
             'site_id' => ['required', 'exists:sites,id'],
@@ -38,7 +39,9 @@ class RoutineController extends Controller
             'status' => \App\Enums\RoutineStatus::Assigned,
         ]);
 
-        return response()->json(['data' => $routine->load(['asset', 'site', 'routineType'])], 201);
+        $workflow->ensureInstance($routine->load('routineType.workflowDefinition'));
+
+        return response()->json(['data' => $routine->load(['asset', 'site', 'routineType', 'workflowInstance'])], 201);
     }
 
     public function show(Routine $routine): JsonResponse
@@ -53,6 +56,7 @@ class RoutineController extends Controller
                 'latestExecution.consumptions.supplyItem',
                 'generatedReports',
                 'invoice.lines',
+                'workflowInstance.transitions',
             ]),
         ]);
     }

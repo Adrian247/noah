@@ -7,3 +7,6 @@ Propuestas cerradas (histórico). El flujo activo está en [../changes/README.md
 | [001-catalog-assets-ui](001-catalog-assets-ui/) | Fase 1 UI | Pantallas catálogo, insumos y activos |
 | [002-dynamic-form-execution](002-dynamic-form-execution/) | Fase 1 forms | Captura dinámica + consumos en ejecución |
 | [003-docs-fase1-sync](003-docs-fase1-sync/) | Docs | Roadmap, IMPLEMENTATION, tipos de rutina UI |
+| [004-audit-v1](004-audit-v1/) | Fase 1 audit | Registro y UI auditoría |
+| [005-workflow-runtime-v1](005-workflow-runtime-v1/) | Fase 2 workflow | Runtime lineal e historial |
+| [006-notifications-email-v1](006-notifications-email-v1/) | Fase 2 notify | Email pendiente validación |

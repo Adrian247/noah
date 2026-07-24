@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -11,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    public function login(Request $request): JsonResponse
+    public function login(Request $request, AuditLogger $audit): JsonResponse
     {
         $credentials = $request->validate([
             'email' => ['required', 'email'],
@@ -28,6 +29,16 @@ class AuthController extends Controller
         }
 
         $token = $user->createToken($credentials['device_name'] ?? 'noah-web')->plainTextToken;
+
+        $audit->record(
+            null,
+            $user->id,
+            'auth.login',
+            User::class,
+            $user->id,
+            [],
+            $request->ip(),
+        );
 
         return response()->json([
             'token' => $token,
@@ -48,8 +59,19 @@ class AuthController extends Controller
         ]);
     }
 
-    public function logout(Request $request): JsonResponse
+    public function logout(Request $request, AuditLogger $audit): JsonResponse
     {
+        $user = $request->user();
+        $audit->record(
+            null,
+            $user->id,
+            'auth.logout',
+            User::class,
+            $user->id,
+            [],
+            $request->ip(),
+        );
+
         $request->user()->currentAccessToken()?->delete();
 
         return response()->json(['message' => 'Logged out']);

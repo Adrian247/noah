@@ -18,6 +18,7 @@ use App\Models\RoutineType;
 use App\Models\Site;
 use App\Models\SupplyItem;
 use App\Models\User;
+use App\Services\Workflow\WorkflowRuntime;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -157,6 +158,9 @@ class NoahDemoSeeder extends Seeder
             ]
         );
 
+        $workflowDef = app(WorkflowRuntime::class)->seedDefinitionForCompany($company->id);
+        $routineType->update(['workflow_definition_id' => $workflowDef->id]);
+
         if (! Routine::query()->where('company_id', $company->id)->exists()) {
             Routine::query()->create([
                 'company_id' => $company->id,
@@ -168,5 +172,11 @@ class NoahDemoSeeder extends Seeder
                 'scheduled_at' => now()->addDay(),
             ]);
         }
+
+        $workflow = app(WorkflowRuntime::class);
+        Routine::query()
+            ->where('company_id', $company->id)
+            ->whereDoesntHave('workflowInstance')
+            ->each(fn (Routine $routine) => $workflow->ensureInstance($routine->load('routineType.workflowDefinition')));
     }
 }

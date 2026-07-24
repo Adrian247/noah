@@ -27,6 +27,7 @@ services:
       QUEUE_CONNECTION: redis
       MAIL_HOST: mailpit
       MAIL_PORT: "1025"
+      MAIL_MAILER: smtp
 
   web:
     image: nginx:1.27-alpine

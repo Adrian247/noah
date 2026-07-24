@@ -17,6 +17,7 @@ class RoutineType extends Model
         'slug',
         'form_version_id',
         'report_template_version_id',
+        'workflow_definition_id',
         'is_active',
     ];
 
@@ -35,6 +36,11 @@ class RoutineType extends Model
     public function reportTemplateVersion(): BelongsTo
     {
         return $this->belongsTo(ReportTemplateVersion::class);
+    }
+
+    public function workflowDefinition(): BelongsTo
+    {
+        return $this->belongsTo(WorkflowDefinition::class);
     }
 
     public function routines(): HasMany

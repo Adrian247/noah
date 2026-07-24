@@ -8,23 +8,26 @@
 | Catálogo, insumos, activos, sitios | API implementada |
 | Forms / report versions (JSON) | Modelo + seed; sin diseñador UI |
 | AI Gateway + PromptTemplate + AiInvocation | Implementado (local + OpenAI opcional) |
-| Evento `RoutineValidated` → PDF + borrador factura | Implementado |
+| Workflow runtime v1 (definición lineal, instancia, transiciones) | Implementado |
+| Evento `RoutineValidated` → PDF + borrador factura | Implementado (vía workflow) |
 | Reportes PDF (DomPDF, HTML por componentes) | Implementado v1 |
 | Ejecución con `responses` y `consumptions` | Implementado |
 | Facturación borrador / emitir (sin PAC) | Implementado v1 |
-| Workflow designer | Pendiente |
-| Auditoría de entidades críticas | Pendiente |
+| Auditoría append-only + API | Implementado v1 |
+| Email pendiente validación (supervisores) | Implementado v1 (Mailpit) |
+| Workflow designer visual | Pendiente |
+| Diseñadores form/reporte | Pendiente |
 
 ## Frontend
 
 | Pantalla | Estado |
 |----------|--------|
 | Login, dashboard, shell + company switch | Implementado |
-| Lista y detalle rutina (formulario dinámico, consumos, validar, PDF) | Implementado |
+| Lista y detalle rutina (formulario, consumos, workflow, validar/rechazar, PDF) | Implementado |
 | Catálogo equipos, insumos, activos | Implementado |
 | Tipos de rutina (lectura) | Implementado |
 | Facturación (listar, emitir borrador) | Implementado |
-| Diseñadores form/reporte | Pendiente |
+| Auditoría (listado) | Implementado |
 
 ## Variables de entorno IA
 

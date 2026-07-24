@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AssetController;
+use App\Http\Controllers\Api\V1\AuditController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CatalogItemController;
 use App\Http\Controllers\Api\V1\GeneratedReportController;
@@ -52,6 +53,8 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/billing/invoices', [InvoiceController::class, 'index']);
             Route::get('/billing/invoices/{invoice}', [InvoiceController::class, 'show']);
             Route::post('/billing/invoices/{invoice}/issue', [InvoiceController::class, 'issue']);
+
+            Route::get('/audit/entries', [AuditController::class, 'index']);
         });
     });
 });

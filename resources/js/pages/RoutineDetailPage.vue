@@ -31,6 +31,13 @@ type Execution = {
     consumptions?: ConsumptionLine[];
 };
 
+type WorkflowTransition = {
+    from_step?: string | null;
+    to_step: string;
+    trigger: string;
+    occurred_at: string;
+};
+
 type Routine = {
     id: number;
     status: string;
@@ -39,6 +46,11 @@ type Routine = {
     latest_execution?: Execution;
     generated_reports?: { id: number; status: string }[];
     invoice?: { id: number; status: string; total: string };
+    workflow_instance?: {
+        current_step_key: string;
+        status: string;
+        transitions?: WorkflowTransition[];
+    } | null;
 };
 
 const route = useRoute();
@@ -108,6 +120,19 @@ async function validateRoutine() {
     await load();
 }
 
+async function rejectRoutine() {
+    const reason = window.prompt('Motivo del rechazo:');
+    if (!reason?.trim()) {
+        return;
+    }
+    await api(`/routines/${route.params.id}/reject`, {
+        method: 'POST',
+        body: JSON.stringify({ reason: reason.trim() }),
+    });
+    message.value = 'Rutina devuelta al técnico para corrección.';
+    await load();
+}
+
 async function submitExecution() {
     submitting.value = true;
     message.value = null;
@@ -160,7 +185,22 @@ onMounted(async () => {
         <p class="text-sm text-slate-600">
             {{ routine.routine_type?.name }} · {{ routine.asset?.tag }} ·
             <span class="font-medium">{{ routine.status }}</span>
+            <span v-if="routine.workflow_instance" class="text-slate-500">
+                · paso {{ routine.workflow_instance.current_step_key }}
+            </span>
         </p>
+
+        <ul
+            v-if="routine.workflow_instance?.transitions?.length"
+            class="rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-600"
+        >
+            <li
+                v-for="(t, i) in routine.workflow_instance.transitions"
+                :key="i"
+            >
+                {{ t.occurred_at }} — {{ t.from_step ?? 'inicio' }} → {{ t.to_step }} ({{ t.trigger }})
+            </li>
+        </ul>
 
         <div v-if="canExecute" class="space-y-4">
             <DynamicFormRenderer v-model="formResponses" :schema="formSchema" />
@@ -257,6 +297,14 @@ onMounted(async () => {
                 @click="validateRoutine"
             >
                 Validar
+            </button>
+            <button
+                v-if="routine.status === 'pending_validation'"
+                type="button"
+                class="rounded-md border border-red-300 px-3 py-2 text-sm text-red-800"
+                @click="rejectRoutine"
+            >
+                Rechazar
             </button>
             <button
                 v-for="r in routine.generated_reports?.filter((x) => x.status === 'ready')"

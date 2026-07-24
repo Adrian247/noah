@@ -68,6 +68,12 @@ const router = createRouter({
                     component: () => import('@/pages/RoutineTypesPage.vue'),
                     meta: { title: 'Tipos de rutina' },
                 },
+                {
+                    path: 'audit',
+                    name: 'audit',
+                    component: () => import('@/pages/AuditPage.vue'),
+                    meta: { title: 'Auditoría' },
+                },
             ],
         },
     ],
