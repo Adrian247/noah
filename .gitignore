@@ -1,0 +1,42 @@
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env and secrets
+.env
+.env.*
+!.env.example
+
+# PHP / Laravel (futuro)
+/vendor/
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+auth.json
+
+# Node / Vue (futuro)
+node_modules/
+dist/
+.npm
+*.log
+
+# Build / cache
+/bootstrap/cache/*
+!/bootstrap/cache/.gitkeep
+/storage/*.key
+/storage/pail
+
+# Flutter (futuro)
+.dart_tool/
+build/
+.flutter-plugins-dependencies
+
+# Docker overrides locales
+docker-compose.override.yml

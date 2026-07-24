@@ -1,0 +1,13 @@
+---
+description: Noah — producto greenfield; fuente de verdad en openspec/
+alwaysApply: true
+---
+
+# Noah
+
+- El producto se llama **Noah** (no Mantix ni otros nombres provisionales).
+- Proyecto **nuevo y autónomo**: sin cruce de datos/código con otros sistemas; ver `openspec/vision/scope.md`.
+- Fase actual: **documentación y diseño** en `openspec/`; no asumir código existente.
+- Antes de implementar: leer `openspec/AGENTS.md`, glosario, ADRs y dominio relevante.
+- Arquitectura: monolito modular Laravel + Vue; motores de formularios, reportes y workflow; IA solo vía AI Gateway.
+- Usar lenguaje del glosario: `openspec/glossary/ubiquitous-language.md`.
