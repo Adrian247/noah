@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { RouterLink } from 'vue-router';
 import { api } from '@/api/client';
 
 type Routine = {
@@ -41,8 +42,16 @@ onMounted(async () => {
                 </tr>
             </thead>
             <tbody>
-                <tr v-for="r in routines" :key="r.id" class="border-b border-slate-100">
-                    <td class="py-2">{{ r.id }}</td>
+                <tr
+                    v-for="r in routines"
+                    :key="r.id"
+                    class="border-b border-slate-100 hover:bg-slate-50"
+                >
+                    <td class="py-2">
+                        <RouterLink class="text-slate-900 underline" :to="`/app/routines/${r.id}`">
+                            {{ r.id }}
+                        </RouterLink>
+                    </td>
                     <td>{{ r.routine_type?.name ?? '—' }}</td>
                     <td>{{ r.asset?.tag ?? '—' }}</td>
                     <td>{{ r.status }}</td>

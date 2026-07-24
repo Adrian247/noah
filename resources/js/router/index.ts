@@ -32,6 +32,18 @@ const router = createRouter({
                     component: () => import('@/pages/RoutinesPage.vue'),
                     meta: { title: 'Rutinas' },
                 },
+                {
+                    path: 'routines/:id',
+                    name: 'routine-detail',
+                    component: () => import('@/pages/RoutineDetailPage.vue'),
+                    meta: { title: 'Detalle rutina' },
+                },
+                {
+                    path: 'billing',
+                    name: 'billing',
+                    component: () => import('@/pages/InvoicesPage.vue'),
+                    meta: { title: 'Facturación' },
+                },
             ],
         },
     ],

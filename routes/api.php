@@ -3,6 +3,8 @@
 use App\Http\Controllers\Api\V1\AssetController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CatalogItemController;
+use App\Http\Controllers\Api\V1\GeneratedReportController;
+use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\RoutineController;
 use App\Http\Controllers\Api\V1\RoutineExecutionController;
 use App\Http\Controllers\Api\V1\RoutineTypeController;
@@ -43,6 +45,13 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/routines/{routine}/executions', [RoutineExecutionController::class, 'store']);
             Route::post('/routines/{routine}/validate', [RoutineExecutionController::class, 'validateExecution']);
             Route::post('/routines/{routine}/reject', [RoutineExecutionController::class, 'reject']);
+
+            Route::get('/routines/{routineId}/reports', [GeneratedReportController::class, 'index']);
+            Route::get('/reports/{report}/download', [GeneratedReportController::class, 'download']);
+
+            Route::get('/billing/invoices', [InvoiceController::class, 'index']);
+            Route::get('/billing/invoices/{invoice}', [InvoiceController::class, 'show']);
+            Route::post('/billing/invoices/{invoice}/issue', [InvoiceController::class, 'issue']);
         });
     });
 });

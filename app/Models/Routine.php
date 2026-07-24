@@ -46,6 +46,21 @@ class Routine extends Model
         return $this->belongsTo(RoutineType::class);
     }
 
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
+
+    public function generatedReports(): HasMany
+    {
+        return $this->hasMany(GeneratedReport::class);
+    }
+
+    public function invoice(): HasOne
+    {
+        return $this->hasOne(Invoice::class);
+    }
+
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');

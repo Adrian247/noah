@@ -44,7 +44,16 @@ class RoutineController extends Controller
     public function show(Routine $routine): JsonResponse
     {
         return response()->json([
-            'data' => $routine->load(['asset', 'site', 'routineType', 'assignee', 'executions', 'latestExecution']),
+            'data' => $routine->load([
+                'asset',
+                'site',
+                'routineType',
+                'assignee',
+                'executions',
+                'latestExecution',
+                'generatedReports',
+                'invoice.lines',
+            ]),
         ]);
     }
 }

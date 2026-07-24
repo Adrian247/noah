@@ -54,6 +54,13 @@ async function logout() {
                 >
                     Rutinas
                 </RouterLink>
+                <RouterLink
+                    class="rounded-md px-3 py-2 hover:bg-slate-100"
+                    active-class="bg-slate-100 font-medium"
+                    to="/app/billing"
+                >
+                    Facturación
+                </RouterLink>
             </nav>
         </aside>
         <div class="flex min-w-0 flex-1 flex-col">

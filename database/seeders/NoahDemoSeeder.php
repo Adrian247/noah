@@ -48,6 +48,18 @@ class NoahDemoSeeder extends Seeder
             'password' => Hash::make('password'),
         ]);
 
+        $supervisor = User::query()->create([
+            'name' => 'Supervisor Demo',
+            'email' => 'supervisor@noah.local',
+            'password' => Hash::make('password'),
+        ]);
+
+        $billing = User::query()->create([
+            'name' => 'Facturación Demo',
+            'email' => 'facturacion@noah.local',
+            'password' => Hash::make('password'),
+        ]);
+
         CompanyMembership::query()->create([
             'company_id' => $company->id,
             'user_id' => $admin->id,
@@ -58,6 +70,28 @@ class NoahDemoSeeder extends Seeder
             'company_id' => $company->id,
             'user_id' => $technician->id,
             'role' => MembershipRole::Technician,
+        ]);
+
+        CompanyMembership::query()->create([
+            'company_id' => $company->id,
+            'user_id' => $supervisor->id,
+            'role' => MembershipRole::Supervisor,
+        ]);
+
+        CompanyMembership::query()->create([
+            'company_id' => $company->id,
+            'user_id' => $billing->id,
+            'role' => MembershipRole::Billing,
+        ]);
+
+        \App\Models\PromptTemplate::query()->create([
+            'company_id' => null,
+            'slug' => 'grammar_correction_v1',
+            'version' => 1,
+            'provider' => 'local',
+            'system_prompt' => 'Eres un corrector de textos técnicos. No agregues información nueva.',
+            'user_template' => "{{technician_text}}",
+            'is_active' => true,
         ]);
 
         $catalog = CatalogItem::query()->create([
