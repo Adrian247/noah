@@ -13,6 +13,8 @@
 
 El puerto **8888** lo publica el contenedor **nginx** (`web`). (Si 8888 está ocupado, cambia `8888:80` en `docker-compose.yml`.)
 
+El contenedor **`queue`** ejecuta `php artisan queue:work` (Redis). Los PDF de rutinas validadas se generan en cola; sin `queue` en marcha el reporte quedará en estado `queued`.
+
 ## Arranque (primera vez)
 
 Desde la raíz del repo:

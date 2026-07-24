@@ -93,6 +93,18 @@ const router = createRouter({
                     meta: { title: 'Diseñador de reporte' },
                 },
                 {
+                    path: 'design/workflows',
+                    name: 'workflows-list',
+                    component: () => import('@/pages/WorkflowsListPage.vue'),
+                    meta: { title: 'Workflows' },
+                },
+                {
+                    path: 'design/workflows/:id',
+                    name: 'workflow-designer',
+                    component: () => import('@/pages/WorkflowDesignerPage.vue'),
+                    meta: { title: 'Diseñador workflow' },
+                },
+                {
                     path: 'audit',
                     name: 'audit',
                     component: () => import('@/pages/AuditPage.vue'),

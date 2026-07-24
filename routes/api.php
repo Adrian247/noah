@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\RoutineTypeController;
 use App\Http\Controllers\Api\V1\ReportTemplateController;
 use App\Http\Controllers\Api\V1\SiteController;
 use App\Http\Controllers\Api\V1\SupplyItemController;
+use App\Http\Controllers\Api\V1\WorkflowDefinitionController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -57,6 +58,12 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/design/reports/{reportTemplate}', [ReportTemplateController::class, 'show']);
             Route::put('/design/reports/{reportTemplate}/components', [ReportTemplateController::class, 'updateComponents']);
             Route::post('/design/reports/{reportTemplate}/publish', [ReportTemplateController::class, 'publish']);
+
+            Route::get('/design/workflows', [WorkflowDefinitionController::class, 'index']);
+            Route::get('/design/workflows/{workflowDefinition}', [WorkflowDefinitionController::class, 'show']);
+            Route::put('/design/workflows/{workflowDefinition}/definition', [WorkflowDefinitionController::class, 'updateDefinition']);
+
+            Route::put('/routine-types/{routineType}/workflow', [WorkflowDefinitionController::class, 'updateRoutineTypeWorkflow']);
 
             Route::get('/routine-types', [RoutineTypeController::class, 'index']);
 

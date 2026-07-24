@@ -16,7 +16,7 @@ class GenerateRoutineReport
         app()->instance(CurrentCompany::class, new CurrentCompany($routine->company));
 
         try {
-            $this->reports->generateForRoutine($routine, $event->execution);
+            $this->reports->queueForRoutine($routine, $event->execution);
         } catch (\Throwable $e) {
             report($e);
         }

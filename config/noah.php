@@ -12,5 +12,6 @@ return [
     'reports' => [
         'disk' => env('NOAH_REPORTS_DISK', 'local'),
         'path_prefix' => 'reports',
+        'async' => filter_var(env('NOAH_REPORTS_ASYNC', true), FILTER_VALIDATE_BOOL),
     ],
 ];

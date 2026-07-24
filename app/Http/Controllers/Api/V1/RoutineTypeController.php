@@ -12,7 +12,7 @@ class RoutineTypeController extends Controller
     {
         return response()->json([
             'data' => RoutineType::query()
-                ->with(['formVersion', 'reportTemplateVersion'])
+                ->with(['formVersion', 'reportTemplateVersion', 'workflowDefinition'])
                 ->where('is_active', true)
                 ->orderBy('name')
                 ->get(),

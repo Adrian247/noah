@@ -13,3 +13,5 @@ Propuestas cerradas (histórico). El flujo activo está en [../changes/README.md
 | [007-catalog-crud](007-catalog-crud/) | Fase 1 UI | Edición y borrado catálogos |
 | [008-form-designer-mvp](008-form-designer-mvp/) | Diseño | Formularios borrador/publicar |
 | [009-report-designer-mvp](009-report-designer-mvp/) | Diseño | Plantillas PDF componentes básicos |
+| [010-workflow-designer-visual](010-workflow-designer-visual/) | Diseño | Canvas workflow + layout |
+| [011-async-report-queue](011-async-report-queue/) | Infra | PDF en cola Redis |

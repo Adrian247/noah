@@ -316,6 +316,12 @@ onMounted(async () => {
                 Descargar PDF
             </button>
         </div>
+        <p
+            v-if="routine.generated_reports?.some((x) => ['queued', 'processing'].includes(x.status))"
+            class="text-sm text-amber-800"
+        >
+            Generando PDF en segundo plano… recarga en unos segundos.
+        </p>
         <p v-if="routine.invoice" class="text-sm">
             Factura borrador #{{ routine.invoice.id }} — {{ routine.invoice.status }} — ${{
                 routine.invoice.total

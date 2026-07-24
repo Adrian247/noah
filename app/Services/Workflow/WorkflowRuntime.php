@@ -17,7 +17,7 @@ class WorkflowRuntime
 {
     public static function defaultDefinition(): array
     {
-        return [
+        return self::withDefaultLayout([
             'initial_step' => 'field_execution',
             'steps' => [
                 'field_execution' => ['type' => 'human_task', 'label' => 'Ejecución en campo'],
@@ -42,7 +42,33 @@ class WorkflowRuntime
                     'trigger' => 'rejected',
                 ],
             ],
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $definition
+     * @return array<string, mixed>
+     */
+    public static function withDefaultLayout(array $definition): array
+    {
+        $defaults = [
+            'field_execution' => ['x' => 48, 'y' => 140],
+            'supervisor_review' => ['x' => 280, 'y' => 140],
+            'complete' => ['x' => 512, 'y' => 140],
         ];
+
+        $layout = $definition['layout'] ?? [];
+        $nodes = $layout['nodes'] ?? [];
+
+        foreach ($defaults as $key => $pos) {
+            if (! isset($nodes[$key])) {
+                $nodes[$key] = $pos;
+            }
+        }
+
+        $definition['layout'] = ['nodes' => $nodes];
+
+        return $definition;
     }
 
     public function ensureInstance(Routine $routine): WorkflowInstance

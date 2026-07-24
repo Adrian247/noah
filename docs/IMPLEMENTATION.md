@@ -8,14 +8,13 @@
 | Catálogo, insumos, activos (CRUD API) | Implementado |
 | Forms / report versions + API diseño | Implementado MVP |
 | AI Gateway + PromptTemplate + AiInvocation | Implementado (local + OpenAI opcional) |
-| Workflow runtime v1 (definición lineal, instancia, transiciones) | Implementado |
-| Evento `RoutineValidated` → PDF + borrador factura | Implementado (vía workflow) |
-| Reportes PDF (DomPDF, HTML por componentes) | Implementado v1 |
+| Workflow runtime v1 + diseño visual (layout) | Implementado MVP |
+| Evento `RoutineValidated` → PDF (cola) + borrador factura | Implementado |
+| Reportes PDF (DomPDF, job `GenerateRoutineReportJob`) | Implementado v1 async |
 | Ejecución con `responses` y `consumptions` | Implementado |
 | Facturación borrador / emitir (sin PAC) | Implementado v1 |
 | Auditoría append-only + API | Implementado v1 |
 | Email pendiente validación (supervisores) | Implementado v1 (Mailpit) |
-| Workflow designer visual | Pendiente |
 
 ## Frontend
 
@@ -24,8 +23,8 @@
 | Login, dashboard, shell + company switch | Implementado |
 | Lista y detalle rutina (formulario, consumos, workflow, validar/rechazar, PDF) | Implementado |
 | Catálogo equipos, insumos, activos (alta, edición, borrado) | Implementado |
-| Diseño: formularios y reportes (MVP) | Implementado |
-| Tipos de rutina (lectura) | Implementado |
+| Diseño: formularios, reportes, workflows (MVP) | Implementado |
+| Tipos de rutina (workflow enlazable) | Implementado |
 | Facturación (listar, emitir borrador) | Implementado |
 | Auditoría (listado) | Implementado |
 

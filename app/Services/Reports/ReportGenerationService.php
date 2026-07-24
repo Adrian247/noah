@@ -2,6 +2,7 @@
 
 namespace App\Services\Reports;
 
+use App\Jobs\GenerateRoutineReportJob;
 use App\Models\GeneratedReport;
 use App\Models\Routine;
 use App\Models\RoutineExecution;
@@ -15,9 +16,10 @@ class ReportGenerationService
         private ReportHtmlBuilder $htmlBuilder,
     ) {}
 
-    public function generateForRoutine(Routine $routine, RoutineExecution $execution): GeneratedReport
+    public function queueForRoutine(Routine $routine, RoutineExecution $execution): GeneratedReport
     {
-        $routine->load(['routineType.reportTemplateVersion', 'asset.catalogItem', 'site', 'company']);
+        $routine->load(['routineType.reportTemplateVersion']);
+
         $templateVersion = $routine->routineType?->reportTemplateVersion;
 
         $report = GeneratedReport::query()->create([
@@ -25,9 +27,32 @@ class ReportGenerationService
             'routine_id' => $routine->id,
             'routine_execution_id' => $execution->id,
             'report_template_version_id' => $templateVersion?->id,
-            'status' => 'processing',
+            'status' => 'queued',
             'disk' => config('noah.reports.disk', 'local'),
         ]);
+
+        if (! config('noah.reports.async', true)) {
+            $this->processQueuedReport($report->fresh());
+        } else {
+            GenerateRoutineReportJob::dispatch($report->id);
+        }
+
+        return $report->fresh();
+    }
+
+    public function processQueuedReport(GeneratedReport $report): GeneratedReport
+    {
+        $report->update(['status' => 'processing']);
+
+        $routine = $report->routine()->with([
+            'routineType.reportTemplateVersion',
+            'asset.catalogItem',
+            'site',
+            'company',
+        ])->firstOrFail();
+
+        $execution = $report->execution()->firstOrFail();
+        $templateVersion = $routine->routineType?->reportTemplateVersion;
 
         try {
             $html = $this->htmlBuilder->build($routine, $execution, $templateVersion?->components ?? []);
@@ -46,9 +71,24 @@ class ReportGenerationService
                 'status' => 'failed',
                 'error_message' => $e->getMessage(),
             ]);
+
             throw $e;
         }
 
         return $report->fresh();
+    }
+
+    /**
+     * @deprecated Use queueForRoutine(); kept for direct invocation in tests if needed.
+     */
+    public function generateForRoutine(Routine $routine, RoutineExecution $execution): GeneratedReport
+    {
+        $report = $this->queueForRoutine($routine, $execution);
+
+        if (config('queue.default') === 'sync') {
+            return $this->processQueuedReport($report->fresh());
+        }
+
+        return $report;
     }
 }

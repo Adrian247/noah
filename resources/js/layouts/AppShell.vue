@@ -102,6 +102,13 @@ async function logout() {
                 >
                     Reportes
                 </RouterLink>
+                <RouterLink
+                    class="rounded-md px-3 py-2 hover:bg-slate-100"
+                    active-class="bg-slate-100 font-medium"
+                    to="/app/design/workflows"
+                >
+                    Workflows
+                </RouterLink>
                 <p class="mt-4 px-3 text-xs font-medium uppercase tracking-wide text-slate-400">
                     Administración
                 </p>
