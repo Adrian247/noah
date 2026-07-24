@@ -10,6 +10,7 @@ use App\Models\Company;
 use App\Models\CompanyMembership;
 use App\Models\FormDefinition;
 use App\Models\FormVersion;
+use App\Models\PromptTemplate;
 use App\Models\ReportTemplate;
 use App\Models\ReportTemplateVersion;
 use App\Models\Routine;
@@ -24,161 +25,148 @@ class NoahDemoSeeder extends Seeder
 {
     public function run(): void
     {
-        $company = Company::query()->create([
-            'name' => 'Demo Industrial',
-            'legal_name' => 'Demo Industrial S.A. de C.V.',
-            'currency' => 'MXN',
-        ]);
+        $password = Hash::make('password');
 
-        $site = Site::query()->create([
-            'company_id' => $company->id,
-            'name' => 'Planta Norte',
-            'address' => 'Av. Industria 100',
-        ]);
+        $company = Company::query()->updateOrCreate(
+            ['name' => 'Demo Industrial'],
+            [
+                'legal_name' => 'Demo Industrial S.A. de C.V.',
+                'currency' => 'MXN',
+                'is_active' => true,
+            ]
+        );
 
-        $admin = User::query()->create([
-            'name' => 'Administrador Noah',
-            'email' => 'admin@noah.local',
-            'password' => Hash::make('password'),
-        ]);
+        $site = Site::query()->updateOrCreate(
+            ['company_id' => $company->id, 'name' => 'Planta Norte'],
+            ['address' => 'Av. Industria 100']
+        );
 
-        $technician = User::query()->create([
-            'name' => 'Técnico Demo',
-            'email' => 'tecnico@noah.local',
-            'password' => Hash::make('password'),
-        ]);
+        $admin = User::query()->updateOrCreate(
+            ['email' => 'admin@noah.local'],
+            ['name' => 'Administrador Noah', 'password' => $password]
+        );
 
-        $supervisor = User::query()->create([
-            'name' => 'Supervisor Demo',
-            'email' => 'supervisor@noah.local',
-            'password' => Hash::make('password'),
-        ]);
+        $technician = User::query()->updateOrCreate(
+            ['email' => 'tecnico@noah.local'],
+            ['name' => 'Técnico Demo', 'password' => $password]
+        );
 
-        $billing = User::query()->create([
-            'name' => 'Facturación Demo',
-            'email' => 'facturacion@noah.local',
-            'password' => Hash::make('password'),
-        ]);
+        $supervisor = User::query()->updateOrCreate(
+            ['email' => 'supervisor@noah.local'],
+            ['name' => 'Supervisor Demo', 'password' => $password]
+        );
 
-        CompanyMembership::query()->create([
-            'company_id' => $company->id,
-            'user_id' => $admin->id,
-            'role' => MembershipRole::Administrator,
-        ]);
+        $billing = User::query()->updateOrCreate(
+            ['email' => 'facturacion@noah.local'],
+            ['name' => 'Facturación Demo', 'password' => $password]
+        );
 
-        CompanyMembership::query()->create([
-            'company_id' => $company->id,
-            'user_id' => $technician->id,
-            'role' => MembershipRole::Technician,
-        ]);
+        foreach ([
+            [$admin, MembershipRole::Administrator],
+            [$technician, MembershipRole::Technician],
+            [$supervisor, MembershipRole::Supervisor],
+            [$billing, MembershipRole::Billing],
+        ] as [$user, $role]) {
+            CompanyMembership::query()->updateOrCreate(
+                ['company_id' => $company->id, 'user_id' => $user->id],
+                ['role' => $role, 'is_active' => true]
+            );
+        }
 
-        CompanyMembership::query()->create([
-            'company_id' => $company->id,
-            'user_id' => $supervisor->id,
-            'role' => MembershipRole::Supervisor,
-        ]);
+        PromptTemplate::query()->updateOrCreate(
+            ['company_id' => null, 'slug' => 'grammar_correction_v1', 'version' => 1],
+            [
+                'provider' => 'local',
+                'system_prompt' => 'Eres un corrector de textos técnicos. No agregues información nueva.',
+                'user_template' => '{{technician_text}}',
+                'is_active' => true,
+            ]
+        );
 
-        CompanyMembership::query()->create([
-            'company_id' => $company->id,
-            'user_id' => $billing->id,
-            'role' => MembershipRole::Billing,
-        ]);
+        $catalog = CatalogItem::query()->updateOrCreate(
+            ['company_id' => $company->id, 'code' => 'COMP-001'],
+            ['name' => 'Compresor de aire 50HP', 'manufacturer' => 'Atlas']
+        );
 
-        \App\Models\PromptTemplate::query()->create([
-            'company_id' => null,
-            'slug' => 'grammar_correction_v1',
-            'version' => 1,
-            'provider' => 'local',
-            'system_prompt' => 'Eres un corrector de textos técnicos. No agregues información nueva.',
-            'user_template' => "{{technician_text}}",
-            'is_active' => true,
-        ]);
+        $asset = Asset::query()->updateOrCreate(
+            ['company_id' => $company->id, 'tag' => 'EQ-1001'],
+            [
+                'site_id' => $site->id,
+                'catalog_item_id' => $catalog->id,
+                'serial_number' => 'SN-998877',
+                'location_label' => 'Sala de máquinas',
+            ]
+        );
 
-        $catalog = CatalogItem::query()->create([
-            'company_id' => $company->id,
-            'code' => 'COMP-001',
-            'name' => 'Compresor de aire 50HP',
-            'manufacturer' => 'Atlas',
-        ]);
+        SupplyItem::query()->updateOrCreate(
+            ['company_id' => $company->id, 'sku' => 'FIL-001'],
+            ['name' => 'Filtro de aceite', 'unit' => 'pza', 'standard_cost' => 450.00]
+        );
 
-        $asset = Asset::query()->create([
-            'company_id' => $company->id,
-            'site_id' => $site->id,
-            'catalog_item_id' => $catalog->id,
-            'tag' => 'EQ-1001',
-            'serial_number' => 'SN-998877',
-            'location_label' => 'Sala de máquinas',
-        ]);
+        $formDef = FormDefinition::query()->updateOrCreate(
+            ['company_id' => $company->id, 'slug' => 'mantenimiento-preventivo'],
+            ['name' => 'Mantenimiento preventivo']
+        );
 
-        SupplyItem::query()->create([
-            'company_id' => $company->id,
-            'sku' => 'FIL-001',
-            'name' => 'Filtro de aceite',
-            'unit' => 'pza',
-            'standard_cost' => 450.00,
-        ]);
-
-        $formDef = FormDefinition::query()->create([
-            'company_id' => $company->id,
-            'name' => 'Mantenimiento preventivo',
-            'slug' => 'mantenimiento-preventivo',
-        ]);
-
-        $formVersion = FormVersion::query()->create([
-            'form_definition_id' => $formDef->id,
-            'version' => 1,
-            'status' => 'published',
-            'published_at' => now(),
-            'created_by' => $admin->id,
-            'schema' => [
-                'sections' => [
-                    [
-                        'title' => 'Datos generales',
-                        'fields' => [
-                            ['key' => 'horometro', 'type' => 'number', 'label' => 'Horómetro'],
-                            ['key' => 'observaciones', 'type' => 'textarea', 'label' => 'Observaciones'],
+        $formVersion = FormVersion::query()->updateOrCreate(
+            ['form_definition_id' => $formDef->id, 'version' => 1],
+            [
+                'status' => 'published',
+                'published_at' => now(),
+                'created_by' => $admin->id,
+                'schema' => [
+                    'sections' => [
+                        [
+                            'title' => 'Datos generales',
+                            'fields' => [
+                                ['key' => 'horometro', 'type' => 'number', 'label' => 'Horómetro'],
+                                ['key' => 'observaciones', 'type' => 'textarea', 'label' => 'Observaciones'],
+                            ],
                         ],
                     ],
                 ],
-            ],
-        ]);
+            ]
+        );
 
-        $reportTpl = ReportTemplate::query()->create([
-            'company_id' => $company->id,
-            'name' => 'Reporte estándar',
-            'slug' => 'reporte-estandar',
-        ]);
+        $reportTpl = ReportTemplate::query()->updateOrCreate(
+            ['company_id' => $company->id, 'slug' => 'reporte-estandar'],
+            ['name' => 'Reporte estándar']
+        );
 
-        $reportVersion = ReportTemplateVersion::query()->create([
-            'report_template_id' => $reportTpl->id,
-            'version' => 1,
-            'status' => 'published',
-            'published_at' => now(),
-            'created_by' => $admin->id,
-            'components' => [
-                ['type' => 'title', 'text' => 'Reporte de mantenimiento'],
-                ['type' => 'paragraph', 'field' => 'corrected_comments'],
-            ],
-            'page_settings' => ['size' => 'A4'],
-        ]);
+        $reportVersion = ReportTemplateVersion::query()->updateOrCreate(
+            ['report_template_id' => $reportTpl->id, 'version' => 1],
+            [
+                'status' => 'published',
+                'published_at' => now(),
+                'created_by' => $admin->id,
+                'components' => [
+                    ['type' => 'title', 'text' => 'Reporte de mantenimiento'],
+                    ['type' => 'paragraph', 'field' => 'corrected_comments'],
+                ],
+                'page_settings' => ['size' => 'A4'],
+            ]
+        );
 
-        $routineType = RoutineType::query()->create([
-            'company_id' => $company->id,
-            'name' => 'Preventivo compresor',
-            'slug' => 'preventivo-compresor',
-            'form_version_id' => $formVersion->id,
-            'report_template_version_id' => $reportVersion->id,
-            'is_active' => true,
-        ]);
+        $routineType = RoutineType::query()->updateOrCreate(
+            ['company_id' => $company->id, 'slug' => 'preventivo-compresor'],
+            [
+                'name' => 'Preventivo compresor',
+                'form_version_id' => $formVersion->id,
+                'report_template_version_id' => $reportVersion->id,
+                'is_active' => true,
+            ]
+        );
 
-        Routine::query()->create([
-            'company_id' => $company->id,
-            'site_id' => $site->id,
-            'asset_id' => $asset->id,
-            'routine_type_id' => $routineType->id,
-            'assigned_to' => $technician->id,
-            'status' => RoutineStatus::Assigned,
-            'scheduled_at' => now()->addDay(),
-        ]);
+        if (! Routine::query()->where('company_id', $company->id)->exists()) {
+            Routine::query()->create([
+                'company_id' => $company->id,
+                'site_id' => $site->id,
+                'asset_id' => $asset->id,
+                'routine_type_id' => $routineType->id,
+                'assigned_to' => $technician->id,
+                'status' => RoutineStatus::Assigned,
+                'scheduled_at' => now()->addDay(),
+            ]);
+        }
     }
 }

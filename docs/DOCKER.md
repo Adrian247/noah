@@ -24,6 +24,21 @@ docker compose exec app php artisan key:generate --force
 docker compose exec app php artisan migrate --seed --force
 ```
 
+El servicio PHP se llama **`app`** (no `php`):
+
+```bash
+docker compose exec app php artisan ...
+```
+
+### Base de datos ya migrada
+
+- **Solo volver a cargar demo** (idempotente):  
+  `docker compose exec app php artisan db:seed --force`
+- **Reiniciar todo** (borra datos):  
+  `docker compose exec app php artisan migrate:fresh --seed --force`
+
+Si ves `users_email_unique`, los usuarios demo ya existían: usa `db:seed` con el seeder actualizado o `migrate:fresh --seed`.
+
 En tu máquina (assets de Vue):
 
 ```bash
