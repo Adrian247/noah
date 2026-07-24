@@ -14,6 +14,8 @@ Roadmap orientativo; las fechas se fijan al iniciar implementación.
 
 ## Fase 1 — Núcleo web (MVP operativo)
 
+**Estado:** scaffold inicial en repo (`Laravel 13` + `Vue 3` + `docker-compose`); dominio de negocio pendiente.
+
 **Objetivo:** operar mantenimientos y reportes desde web sin móvil.
 
 | Entrega | Descripción |

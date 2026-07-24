@@ -24,9 +24,9 @@ Glosario acordado entre negocio, diseño y desarrollo. Usar estos términos en U
 | Término | Definición |
 |---------|------------|
 | **Tipo de rutina** | Plantilla configurable: formulario + reporte + workflow (+ reglas). |
-| **Rutina** | Instancia de trabajo de campo o taller asociada a un activo y un tipo de rutina. |
-| **Mantenimiento** | Concepto amplio de intervención; en MVP puede equivaler a rutina u orden según modelo. |
-| **Orden de trabajo** | Registro formal de una intervención; puede originarse desde planificación o rutina. |
+| **Rutina** | Instancia de trabajo de campo o taller asociada a un activo y un tipo de rutina. **Agregado principal en MVP** (`Routine`). |
+| **Orden de trabajo** | Término de negocio opcional en UI; en dominio MVP es **sinónimo de Rutina**. Reservado para fase posterior si se separa planificación (backlog) de ejecución (campo). |
+| **Mantenimiento** | Concepto amplio de intervención; en documentación suele referirse al bounded context, no a una tabla. |
 | **Evidencia** | Fotografía, firma, archivo o dato que prueba la ejecución. |
 | **Ejecución** | Conjunto de respuestas de formulario + evidencias + tiempos de una rutina. |
 
@@ -80,5 +80,6 @@ Glosario acordado entre negocio, diseño y desarrollo. Usar estos términos en U
 
 ## Términos a evitar en código interno
 
-- No mezclar **Rutina** y **Orden de trabajo** sin definir relación en dominio (documentar en `domain/maintenance.md` al implementar).
+- Usar un solo agregado **`Routine`** en MVP; no crear `WorkOrder` en paralelo salvo ADR nueva.
+- En UI en español puede decirse “orden de trabajo” como etiqueta, mapeando siempre a `Routine`.
 - No usar “Mantix”; el producto es **Noah**.

@@ -1,0 +1,44 @@
+<?php
+
+namespace App\Models;
+
+use App\Models\Concerns\BelongsToCompany;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class RoutineType extends Model
+{
+    use BelongsToCompany;
+
+    protected $fillable = [
+        'company_id',
+        'name',
+        'slug',
+        'form_version_id',
+        'report_template_version_id',
+        'is_active',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+        ];
+    }
+
+    public function formVersion(): BelongsTo
+    {
+        return $this->belongsTo(FormVersion::class);
+    }
+
+    public function reportTemplateVersion(): BelongsTo
+    {
+        return $this->belongsTo(ReportTemplateVersion::class);
+    }
+
+    public function routines(): HasMany
+    {
+        return $this->hasMany(Routine::class);
+    }
+}

@@ -4,8 +4,8 @@
 
 ## Alcance de este repositorio
 
-- Documentación de producto, arquitectura y diseño (fase actual).
-- Implementación de código: por definir en fases posteriores según [vision/roadmap.md](vision/roadmap.md).
+- Documentación de producto, arquitectura y diseño.
+- **Scaffold de aplicación:** Laravel + Vue + Docker (ver [README.md](../README.md) en la raíz del repo).
 
 ## Relación con otros sistemas
 

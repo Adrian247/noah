@@ -42,7 +42,9 @@ Ajustes finales al implementar Workflow Engine.
 
 ## Relación Rutina vs Orden de trabajo
 
-En MVP, **Rutina** es el agregado principal de operación de campo. **Orden de trabajo** puede ser alias de negocio o entidad de planificación posterior; no duplicar sin necesidad.
+**Decisión MVP:** un solo agregado `Routine`. “Orden de trabajo” es alias de negocio en interfaz, no una segunda entidad.
+
+**Futuro (opcional):** `WorkOrder` como planificación/backlog que genera una o más `Routine` de ejecución; documentar en ADR antes de implementar.
 
 ## Invariantes
 

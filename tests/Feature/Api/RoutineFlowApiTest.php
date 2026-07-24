@@ -1,0 +1,36 @@
+<?php
+
+namespace Tests\Feature\Api;
+
+use App\Enums\RoutineStatus;
+use App\Models\Company;
+use App\Models\Routine;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class RoutineFlowApiTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_submit_execution_moves_to_pending_validation(): void
+    {
+        $this->seed();
+        $user = User::query()->where('email', 'tecnico@noah.local')->first();
+        $company = Company::query()->first();
+        $routine = Routine::query()->first();
+        $token = $user->createToken('test')->plainTextToken;
+
+        $this->withToken($token)
+            ->withHeader('X-Company-Id', (string) $company->id)
+            ->postJson("/api/v1/routines/{$routine->id}/executions", [
+                'technician_comments' => 'se cambio filtro y limpieza general',
+                'duration_minutes' => 90,
+            ])
+            ->assertCreated();
+
+        $routine->refresh();
+        $this->assertSame(RoutineStatus::PendingValidation, $routine->status);
+        $this->assertNotNull($routine->latestExecution?->corrected_comments);
+    }
+}
