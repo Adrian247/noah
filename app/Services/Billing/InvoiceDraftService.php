@@ -2,6 +2,7 @@
 
 namespace App\Services\Billing;
 
+use App\Enums\InvoiceLineType;
 use App\Enums\InvoiceStatus;
 use App\Models\Invoice;
 use App\Models\InvoiceLine;
@@ -11,64 +12,81 @@ use App\Support\CurrentCompany;
 
 class InvoiceDraftService
 {
+    public function __construct(
+        private readonly InvoiceTotalsCalculator $totals,
+    ) {}
+
     public function createFromRoutine(Routine $routine, RoutineExecution $execution): Invoice
     {
         $company = app(CurrentCompany::class)->company ?? $routine->company;
         $currency = $company?->currency ?? 'MXN';
 
+        $laborRate = (float) ($company?->billing_labor_rate_per_hour
+            ?? config('noah.billing.labor_rate_per_hour', 0));
+        $taxRate = (float) ($company?->billing_tax_rate
+            ?? config('noah.billing.tax_rate', 0.16));
+
         $laborHours = max(($execution->duration_minutes ?? 0) / 60, 0);
-        $laborRate = 350.00;
-        $laborTotal = round($laborHours * $laborRate, 2);
-
-        $consumptionTotal = (float) $execution->consumptions()
-            ->get()
-            ->sum(fn ($line) => (float) $line->quantity * (float) $line->unit_cost);
-
-        $subtotal = $laborTotal + $consumptionTotal;
-        $tax = round($subtotal * 0.16, 2);
-        $total = $subtotal + $tax;
 
         $invoice = Invoice::query()->create([
             'company_id' => $routine->company_id,
             'routine_id' => $routine->id,
             'status' => InvoiceStatus::Draft,
             'currency' => $currency,
-            'subtotal' => $subtotal,
-            'tax_total' => $tax,
-            'total' => $total,
+            'tax_rate_snapshot' => $taxRate,
+            'subtotal' => 0,
+            'tax_total' => 0,
+            'total' => 0,
         ]);
 
-        if ($laborTotal > 0) {
+        $sort = 0;
+
+        if ($laborHours > 0 && $laborRate > 0) {
+            $lineTotal = $this->totals->lineTotal(1, round($laborHours * $laborRate, 2));
             InvoiceLine::query()->create([
                 'invoice_id' => $invoice->id,
-                'description' => 'Mano de obra ('.number_format($laborHours, 2).' h)',
+                'line_type' => InvoiceLineType::Labor,
+                'sort_order' => $sort++,
+                'description' => 'Mano de obra sugerida',
                 'quantity' => 1,
-                'unit_price' => $laborTotal,
-                'line_total' => $laborTotal,
+                'unit_price' => $lineTotal,
+                'line_total' => $lineTotal,
+                'metadata' => [
+                    'workers' => 1,
+                    'hours' => round($laborHours, 4),
+                    'rate_per_hour' => $laborRate,
+                ],
             ]);
         }
 
+        $execution->loadMissing(['consumptions.supplyItem']);
         foreach ($execution->consumptions as $consumption) {
-            $lineTotal = round((float) $consumption->quantity * (float) $consumption->unit_cost, 2);
+            $qty = (float) $consumption->quantity;
+            $unit = (float) $consumption->unit_cost;
             InvoiceLine::query()->create([
                 'invoice_id' => $invoice->id,
+                'line_type' => InvoiceLineType::Supply,
+                'sort_order' => $sort++,
+                'source_routine_consumption_id' => $consumption->id,
                 'description' => $consumption->supplyItem?->name ?? 'Insumo',
-                'quantity' => $consumption->quantity,
-                'unit_price' => $consumption->unit_cost,
-                'line_total' => $lineTotal,
+                'quantity' => $qty,
+                'unit_price' => $unit,
+                'line_total' => $this->totals->lineTotal($qty, $unit),
             ]);
         }
 
         if ($invoice->lines()->count() === 0) {
             InvoiceLine::query()->create([
                 'invoice_id' => $invoice->id,
+                'line_type' => InvoiceLineType::Other,
+                'sort_order' => 0,
                 'description' => 'Servicio de mantenimiento rutina #'.$routine->id,
                 'quantity' => 1,
-                'unit_price' => $subtotal > 0 ? $subtotal : 0,
-                'line_total' => $subtotal > 0 ? $subtotal : 0,
+                'unit_price' => 0,
+                'line_total' => 0,
             ]);
         }
 
-        return $invoice->load('lines');
+        return $this->totals->applyTaxRate($invoice->fresh(['lines']), $taxRate);
     }
 }

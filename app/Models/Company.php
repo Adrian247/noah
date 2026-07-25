@@ -14,12 +14,16 @@ class Company extends Model
         'currency',
         'timezone',
         'is_active',
+        'billing_labor_rate_per_hour',
+        'billing_tax_rate',
     ];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'billing_labor_rate_per_hour' => 'decimal:2',
+            'billing_tax_rate' => 'decimal:4',
         ];
     }
 

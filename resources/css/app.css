@@ -4,6 +4,147 @@
 @source '../../storage/framework/views/*.php';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Inter', 'Roboto', ui-sans-serif, system-ui, sans-serif;
+
+    --color-primary-50: #eef2ff;
+    --color-primary-100: #e0e7ff;
+    --color-primary-500: #6366f1;
+    --color-primary-600: #4f46e5;
+    --color-primary-700: #4338ca;
+
+    --shadow-glass: 0 8px 32px rgb(15 23 42 / 0.08);
+}
+
+@layer base {
+    body {
+        @apply min-h-screen bg-slate-200 text-slate-900 antialiased;
+    }
+}
+
+@layer components {
+  /* Zona de contenido: siempre fondo claro y texto oscuro legible */
+    .app-main-surface {
+        @apply min-h-screen flex-1 bg-slate-50 text-slate-900;
+    }
+
+    .glass-panel {
+        @apply border border-slate-200/90 bg-white shadow-[var(--shadow-glass)];
+    }
+
+    .glass-sidebar {
+        @apply flex shrink-0 flex-col border-r border-slate-800/50 bg-slate-900 text-slate-100 shadow-xl transition-[width] duration-200 ease-out;
+    }
+
+    .glass-sidebar-collapsed {
+        @apply w-[4.25rem];
+    }
+
+    .glass-sidebar-expanded {
+        @apply w-64;
+    }
+
+    .nav-item {
+        @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/10 hover:text-white;
+    }
+
+    .nav-item-active {
+        @apply bg-primary-600 text-white shadow-md hover:bg-primary-600 hover:text-white;
+    }
+
+    .nav-section-label {
+        @apply mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-400;
+    }
+
+    .md-ripple-hover {
+        @apply transition active:scale-[0.98];
+    }
+
+    /* Inputs en páginas internas */
+    .field-input {
+        @apply rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400;
+    }
+
+    .nav-item-icon {
+        @apply shrink-0 text-current opacity-90;
+    }
+
+    .nav-item-label {
+        @apply overflow-hidden whitespace-nowrap transition-[max-width,opacity,margin] duration-200 ease-out;
+    }
+
+    .glass-sidebar-expanded .nav-item-label {
+        @apply max-w-[11rem] opacity-100;
+    }
+
+    .glass-sidebar-collapsed .nav-item-label {
+        @apply max-w-0 opacity-0;
+    }
+
+    .noah-login-panel {
+        animation: noah-login-in 0.45s ease-out both;
+    }
+
+    .noah-sidebar-enter {
+        animation: noah-sidebar-in 0.4s ease-out both;
+    }
+
+    .noah-nav-enter {
+        animation: noah-nav-in 0.35s ease-out both;
+    }
+}
+
+@keyframes noah-login-in {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes noah-sidebar-in {
+    from {
+        opacity: 0;
+        transform: translateX(-16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes noah-nav-in {
+    from {
+        opacity: 0;
+        transform: translateX(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.noah-page-enter-active {
+    transition:
+        opacity 0.22s ease-out,
+        transform 0.22s ease-out;
+}
+
+.noah-page-enter-from {
+    opacity: 0;
+    transform: translateY(8px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .noah-login-panel,
+    .noah-sidebar-enter,
+    .noah-nav-enter {
+        animation: none;
+    }
+
+    .noah-page-enter-active {
+        transition: none;
+    }
 }

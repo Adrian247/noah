@@ -16,6 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'company' => \App\Http\Middleware\SetCompanyContext::class,
+            'company.role' => \App\Http\Middleware\RequireCompanyRole::class,
+            'company.permission' => \App\Http\Middleware\RequireCompanyPermission::class,
+            'company.module' => \App\Http\Middleware\RequireCompanyModuleAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -4,13 +4,14 @@ namespace App\Models;
 
 use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SupplyItem extends Model
 {
     use BelongsToCompany;
 
-    protected $fillable = ['company_id', 'sku', 'name', 'unit', 'standard_cost'];
+    protected $fillable = ['company_id', 'supplier_id', 'sku', 'name', 'unit', 'standard_cost'];
 
     protected function casts(): array
     {
@@ -22,5 +23,10 @@ class SupplyItem extends Model
     public function consumptions(): HasMany
     {
         return $this->hasMany(RoutineConsumption::class);
+    }
+
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class);
     }
 }

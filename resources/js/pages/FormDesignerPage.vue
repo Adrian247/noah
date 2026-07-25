@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { api } from '@/api/client';
+import { useModuleAccess } from '@/composables/useModuleAccess';
 
 type Field = { key: string; type: string; label: string };
 type Section = { title: string; fields: Field[] };
@@ -20,6 +21,9 @@ type FormDef = {
 };
 
 const route = useRoute();
+const { canWriteModule } = useModuleAccess();
+const canWrite = computed(() => canWriteModule('design_forms'));
+
 const form = ref<FormDef | null>(null);
 const sections = ref<Section[]>([]);
 const loading = ref(true);
@@ -27,6 +31,11 @@ const message = ref<string | null>(null);
 const saving = ref(false);
 
 const draft = computed(() => form.value?.versions.find((v) => v.status === 'draft'));
+const published = computed(() =>
+    form.value?.versions
+        .filter((v) => v.status === 'published')
+        .sort((a, b) => b.version - a.version)[0],
+);
 
 async function load() {
     loading.value = true;
@@ -83,8 +92,12 @@ async function publish() {
     try {
         await saveDraft();
         await api(`/design/forms/${route.params.id}/publish`, { method: 'POST' });
-        message.value = 'Versión publicada.';
         await load();
+        const pub = published.value;
+        const d = draft.value;
+        message.value = pub
+            ? `Versión v${pub.version} publicada.${d ? ` Nuevo borrador v${d.version} para siguientes cambios.` : ''}`
+            : 'Versión publicada.';
     } catch (e) {
         message.value = (e as Error).message;
     } finally {
@@ -100,7 +113,9 @@ onMounted(load);
     <div v-else-if="form" class="max-w-3xl space-y-4">
         <h2 class="text-xl font-semibold">{{ form.name }}</h2>
         <p class="text-sm text-slate-600">
-            Borrador: v{{ draft?.version ?? '—' }} ({{ draft?.status ?? '—' }})
+            <span v-if="published">En producción: v{{ published.version }} (publicada).</span>
+            <span v-else class="text-amber-800">Aún no hay versión publicada.</span>
+            Borrador de trabajo: v{{ draft?.version ?? '—' }}.
         </p>
 
         <div v-for="(section, si) in sections" :key="si" class="rounded-lg border bg-white p-4 space-y-3">
@@ -139,7 +154,7 @@ onMounted(load);
             <button
                 type="button"
                 class="rounded-md border px-3 py-2 text-sm"
-                :disabled="saving"
+                :disabled="!canWrite || saving"
                 @click="saveDraft"
             >
                 Guardar borrador
@@ -147,12 +162,13 @@ onMounted(load);
             <button
                 type="button"
                 class="rounded-md bg-slate-900 px-3 py-2 text-sm text-white"
-                :disabled="saving"
+                :disabled="!canWrite || saving"
                 @click="publish"
             >
                 Publicar versión
             </button>
         </div>
+        <p v-if="!canWrite" class="text-sm text-slate-500">Solo lectura: no puedes editar ni publicar este formulario.</p>
         <p v-if="message" class="text-sm text-slate-600">{{ message }}</p>
     </div>
 </template>

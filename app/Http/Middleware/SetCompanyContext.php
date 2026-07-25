@@ -7,6 +7,7 @@ use App\Models\CompanyMembership;
 use App\Support\CurrentCompany;
 use Closure;
 use Illuminate\Http\Request;
+use Spatie\Permission\PermissionRegistrar;
 use Symfony\Component\HttpFoundation\Response;
 
 class SetCompanyContext
@@ -37,6 +38,8 @@ class SetCompanyContext
 
         app()->instance(CurrentCompany::class, new CurrentCompany($company));
         $request->attributes->set('membership', $membership);
+
+        app(PermissionRegistrar::class)->setPermissionsTeamId($company->id);
 
         return $next($request);
     }

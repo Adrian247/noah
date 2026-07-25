@@ -7,6 +7,7 @@ use App\Events\ExecutionSubmitted;
 use App\Mail\RoutinePendingValidationMail;
 use App\Models\CompanyMembership;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class NotifySupervisorsOfPendingValidation
@@ -24,8 +25,25 @@ class NotifySupervisorsOfPendingValidation
 
         $emails = User::query()->whereIn('id', $supervisorIds)->pluck('email')->unique();
 
+        if ($emails->isEmpty()) {
+            Log::warning('ExecutionSubmitted: no supervisor/admin emails for company', [
+                'company_id' => $companyId,
+                'routine_id' => $routine->id,
+            ]);
+
+            return;
+        }
+
         foreach ($emails as $email) {
-            Mail::to($email)->send(new RoutinePendingValidationMail($routine));
+            try {
+                Mail::to($email)->send(new RoutinePendingValidationMail($routine));
+            } catch (\Throwable $e) {
+                Log::error('ExecutionSubmitted: failed to send pending validation mail', [
+                    'email' => $email,
+                    'routine_id' => $routine->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
     }
 }

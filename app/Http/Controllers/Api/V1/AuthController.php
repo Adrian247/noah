@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
+use App\Services\Identity\CompanyAuthorizationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -12,7 +13,7 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    public function login(Request $request, AuditLogger $audit): JsonResponse
+    public function login(Request $request, AuditLogger $audit, CompanyAuthorizationService $authorization): JsonResponse
     {
         $credentials = $request->validate([
             'email' => ['required', 'email'],
@@ -42,20 +43,8 @@ class AuthController extends Controller
 
         return response()->json([
             'token' => $token,
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-            ],
-            'companies' => $user->memberships()
-                ->where('is_active', true)
-                ->with('company')
-                ->get()
-                ->map(fn ($m) => [
-                    'id' => $m->company->id,
-                    'name' => $m->company->name,
-                    'role' => $m->role->value,
-                ]),
+            'user' => ProfileController::formatUser($user),
+            'companies' => $this->formatCompanies($user, $authorization),
         ]);
     }
 
@@ -77,21 +66,31 @@ class AuthController extends Controller
         return response()->json(['message' => 'Logged out']);
     }
 
-    public function me(Request $request): JsonResponse
+    public function me(Request $request, CompanyAuthorizationService $authorization): JsonResponse
     {
         $user = $request->user();
 
         return response()->json([
-            'user' => $user,
-            'companies' => $user->memberships()
-                ->where('is_active', true)
-                ->with('company')
-                ->get()
-                ->map(fn ($m) => [
-                    'id' => $m->company->id,
-                    'name' => $m->company->name,
-                    'role' => $m->role->value,
-                ]),
+            'user' => ProfileController::formatUser($user),
+            'companies' => $this->formatCompanies($user, $authorization),
         ]);
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    private function formatCompanies(User $user, CompanyAuthorizationService $authorization)
+    {
+        return $user->memberships()
+            ->where('is_active', true)
+            ->with('company')
+            ->get()
+            ->map(fn ($m) => [
+                'id' => $m->company->id,
+                'name' => $m->company->name,
+                'role' => $m->role->value,
+                'permissions' => $authorization->permissionsForUser($user, $m->company->id),
+                'modules' => $authorization->modulesForMembership($m),
+            ]);
     }
 }

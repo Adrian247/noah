@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { api } from '@/api/client';
+import { useModuleAccess } from '@/composables/useModuleAccess';
+import ReadOnlyNotice from '@/components/ui/ReadOnlyNotice.vue';
 
 type CatalogItem = {
     id: number;
@@ -8,6 +10,9 @@ type CatalogItem = {
     name: string;
     manufacturer?: string | null;
 };
+
+const { canWriteModule } = useModuleAccess();
+const canWrite = computed(() => canWriteModule('catalog_items'));
 
 const items = ref<CatalogItem[]>([]);
 const loading = ref(true);
@@ -109,6 +114,7 @@ onMounted(load);
         <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
 
         <form
+            v-if="canWrite"
             class="max-w-lg space-y-3 rounded-lg border border-slate-200 bg-white p-4"
             @submit.prevent="submit"
         >
@@ -144,6 +150,7 @@ onMounted(load);
                 Guardar
             </button>
         </form>
+        <ReadOnlyNotice v-else module-label="Equipos" />
 
         <p v-if="loading" class="text-slate-500">Cargando…</p>
         <table v-else class="w-full text-left text-sm">
@@ -152,7 +159,7 @@ onMounted(load);
                     <th class="py-2">Código</th>
                     <th>Nombre</th>
                     <th>Fabricante</th>
-                    <th class="w-32"></th>
+                    <th v-if="canWrite" class="w-32"></th>
                 </tr>
             </thead>
             <tbody>
@@ -182,7 +189,7 @@ onMounted(load);
                         <td class="py-2 font-mono text-xs">{{ item.code }}</td>
                         <td>{{ item.name }}</td>
                         <td>{{ item.manufacturer ?? '—' }}</td>
-                        <td class="space-x-2 text-xs">
+                        <td v-if="canWrite" class="space-x-2 text-xs">
                             <button type="button" class="underline" @click="startEdit(item)">Editar</button>
                             <button type="button" class="text-red-700" @click="remove(item.id)">Borrar</button>
                         </td>

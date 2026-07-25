@@ -3,6 +3,12 @@ services:
     build:
       context: .
       dockerfile: docker/php/Dockerfile
+    command: >
+      sh -c "php artisan migrate --force &&
+      php artisan noah:bootstrap-permissions &&
+      php artisan storage:link --force 2>/dev/null || true &&
+      php artisan noah:ensure-demo &&
+      exec php-fpm"
     volumes:
       - .:/var/www/html
     depends_on:
@@ -97,6 +103,9 @@ services:
       CACHE_STORE: redis
       SESSION_DRIVER: redis
       QUEUE_CONNECTION: redis
+      MAIL_HOST: mailpit
+      MAIL_PORT: "1025"
+      MAIL_MAILER: smtp
 
 volumes:
   postgres_data:

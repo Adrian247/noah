@@ -103,6 +103,15 @@ class RoutineExecutionController extends Controller
 
         $workflow->onRejected($routine, $request->user(), $validated['reason']);
 
+        $execution = $routine->latestExecution;
+        if ($execution !== null) {
+            $execution->update([
+                'rejection_reason' => $validated['reason'],
+                'rejected_at' => now(),
+                'rejected_by' => $request->user()->id,
+            ]);
+        }
+
         $audit->fromRequest($request, 'routine.rejected', Routine::class, $routine->id, [
             'reason' => $validated['reason'],
         ]);

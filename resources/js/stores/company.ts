@@ -7,13 +7,15 @@ export const useCompanyStore = defineStore('company', () => {
     const current = ref<CompanyOption | null>(null);
 
     function hydrate(companies: CompanyOption[]) {
+        if (companies.length === 0) {
+            clear();
+            return;
+        }
         const saved = getCompanyId();
         const found = saved
             ? companies.find((c) => String(c.id) === saved)
-            : companies[0];
-        if (found) {
-            select(found);
-        }
+            : undefined;
+        select(found ?? companies[0]);
     }
 
     function select(company: CompanyOption) {

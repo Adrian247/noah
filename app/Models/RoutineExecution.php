@@ -19,6 +19,9 @@ class RoutineExecution extends Model
         'submitted_at',
         'validated_at',
         'validated_by',
+        'rejection_reason',
+        'rejected_at',
+        'rejected_by',
     ];
 
     protected function casts(): array
@@ -27,6 +30,7 @@ class RoutineExecution extends Model
             'responses' => 'array',
             'submitted_at' => 'datetime',
             'validated_at' => 'datetime',
+            'rejected_at' => 'datetime',
         ];
     }
 
@@ -48,5 +52,10 @@ class RoutineExecution extends Model
     public function consumptions(): HasMany
     {
         return $this->hasMany(RoutineConsumption::class);
+    }
+
+    public function evidences(): HasMany
+    {
+        return $this->hasMany(ExecutionEvidence::class, 'routine_execution_id');
     }
 }

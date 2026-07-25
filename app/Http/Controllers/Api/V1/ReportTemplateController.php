@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ReportTemplate;
 use App\Models\ReportTemplateVersion;
 use App\Services\Audit\AuditLogger;
+use App\Services\Forms\FormFieldCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -22,6 +23,8 @@ class ReportTemplateController extends Controller
             ->get()
             ->map(function (ReportTemplate $template) {
                 $latest = $template->versions->first();
+                $published = $template->versions->firstWhere('status', 'published');
+                $draft = $template->versions->firstWhere('status', 'draft');
 
                 return [
                     'id' => $template->id,
@@ -31,6 +34,16 @@ class ReportTemplateController extends Controller
                         'id' => $latest->id,
                         'version' => $latest->version,
                         'status' => $latest->status,
+                    ] : null,
+                    'published_version' => $published ? [
+                        'id' => $published->id,
+                        'version' => $published->version,
+                        'status' => $published->status,
+                    ] : null,
+                    'draft_version' => $draft ? [
+                        'id' => $draft->id,
+                        'version' => $draft->version,
+                        'status' => $draft->status,
                     ] : null,
                 ];
             });
@@ -68,10 +81,11 @@ class ReportTemplateController extends Controller
         return response()->json(['data' => $template->load('versions')], 201);
     }
 
-    public function show(ReportTemplate $reportTemplate): JsonResponse
+    public function show(ReportTemplate $reportTemplate, FormFieldCatalog $fields): JsonResponse
     {
         return response()->json([
             'data' => $reportTemplate->load(['versions' => fn ($q) => $q->orderByDesc('version')]),
+            'form_fields' => $fields->listForCurrentCompany(),
         ]);
     }
 

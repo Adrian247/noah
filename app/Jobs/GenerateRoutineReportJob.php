@@ -16,12 +16,19 @@ class GenerateRoutineReportJob implements ShouldQueue
 
     public function handle(ReportGenerationService $reports): void
     {
+        app()->instance(CurrentCompany::class, new CurrentCompany);
+
         $report = GeneratedReport::query()
+            ->withoutGlobalScopes()
             ->with(['routine.company', 'execution'])
             ->findOrFail($this->generatedReportId);
 
         app()->instance(CurrentCompany::class, new CurrentCompany($report->routine->company));
 
-        $reports->processQueuedReport($report);
+        try {
+            $reports->processQueuedReport($report);
+        } finally {
+            app()->instance(CurrentCompany::class, new CurrentCompany);
+        }
     }
 }

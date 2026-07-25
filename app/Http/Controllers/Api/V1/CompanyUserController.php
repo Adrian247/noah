@@ -1,0 +1,229 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Enums\MembershipRole;
+use App\Http\Controllers\Controller;
+use App\Models\CompanyMembership;
+use App\Models\User;
+use App\Services\Audit\AuditLogger;
+use App\Services\Identity\CompanyAuthorizationService;
+use App\Support\CurrentCompany;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+
+class CompanyUserController extends Controller
+{
+    public function __construct(
+        private readonly CompanyAuthorizationService $authorization,
+        private readonly AuditLogger $audit,
+    ) {}
+
+    public function index(): JsonResponse
+    {
+        $companyId = app(CurrentCompany::class)->id();
+
+        $memberships = CompanyMembership::query()
+            ->where('company_id', $companyId)
+            ->with('user')
+            ->orderBy('id')
+            ->get();
+
+        $labels = $this->authorization->roleLabels();
+
+        $data = $memberships->map(fn (CompanyMembership $m) => $this->formatMembership($m, $labels, $companyId));
+
+        return response()->json(['data' => $data]);
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $companyId = app(CurrentCompany::class)->id();
+
+        $validated = $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+            'name' => ['nullable', 'string', 'max:255'],
+            'role' => ['required', Rule::enum(MembershipRole::class)],
+            'extra_permissions' => ['sometimes', 'array'],
+            'extra_permissions.*' => ['string', 'max:64'],
+            'modules' => ['sometimes', 'array'],
+        ]);
+
+        $email = strtolower($validated['email']);
+        $user = User::query()->where('email', $email)->first();
+
+        if ($user === null) {
+            $user = User::query()->create([
+                'email' => $email,
+                'name' => $validated['name'] ?? Str::before($email, '@'),
+                'password' => Hash::make(Str::random(32)),
+            ]);
+        } elseif ($validated['name'] ?? null) {
+            $user->update(['name' => $validated['name']]);
+        }
+
+        $membership = CompanyMembership::query()->firstOrCreate(
+            ['company_id' => $companyId, 'user_id' => $user->id],
+            ['role' => $validated['role'], 'is_active' => true],
+        );
+
+        if (! $membership->wasRecentlyCreated) {
+            if ($membership->is_active && $membership->role->value === $validated['role']) {
+                throw ValidationException::withMessages([
+                    'email' => ['Este usuario ya pertenece a la empresa con ese rol.'],
+                ]);
+            }
+            $membership = $this->authorization->assignMembershipRole(
+                $membership,
+                MembershipRole::from($validated['role']),
+                true,
+            );
+        } else {
+            $this->authorization->syncMembershipRole($membership);
+        }
+
+        if (array_key_exists('extra_permissions', $validated)) {
+            $this->authorization->syncDirectPermissions($membership->fresh(['user']), $validated['extra_permissions']);
+        }
+
+        if (array_key_exists('modules', $validated)) {
+            $this->authorization->syncModuleAccess($membership->fresh(), $validated['modules']);
+        }
+
+        $this->audit->fromRequest(
+            $request,
+            'membership.granted',
+            CompanyMembership::class,
+            $membership->id,
+            ['user_id' => $user->id, 'role' => $validated['role']],
+        );
+
+        $labels = $this->authorization->roleLabels();
+
+        return response()->json([
+            'data' => $this->formatMembership($membership->fresh('user'), $labels, $companyId),
+        ], 201);
+    }
+
+    public function update(Request $request, User $user): JsonResponse
+    {
+        $companyId = app(CurrentCompany::class)->id();
+        $actor = $request->user();
+
+        $membership = CompanyMembership::query()
+            ->where('company_id', $companyId)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if ($membership === null) {
+            return response()->json(['message' => 'User not in this company.'], 404);
+        }
+
+        $validated = $request->validate([
+            'role' => ['sometimes', Rule::enum(MembershipRole::class)],
+            'is_active' => ['sometimes', 'boolean'],
+            'extra_permissions' => ['sometimes', 'array'],
+            'extra_permissions.*' => ['string', 'max:64'],
+            'modules' => ['sometimes', 'array'],
+        ]);
+
+        if (array_key_exists('is_active', $validated) && $validated['is_active'] === false) {
+            if ($actor !== null && $actor->id === $user->id) {
+                throw ValidationException::withMessages([
+                    'is_active' => ['No puedes desactivar tu propia membresía.'],
+                ]);
+            }
+        }
+
+        $newRole = isset($validated['role'])
+            ? MembershipRole::from($validated['role'])
+            : ($membership->role instanceof MembershipRole ? $membership->role : MembershipRole::from((string) $membership->role));
+
+        $isActive = $validated['is_active'] ?? $membership->is_active;
+
+        $previousRole = $membership->role instanceof MembershipRole
+            ? $membership->role->value
+            : (string) $membership->role;
+
+        $membership = $this->authorization->assignMembershipRole($membership, $newRole, $isActive);
+
+        if (array_key_exists('extra_permissions', $validated)) {
+            $this->authorization->syncDirectPermissions($membership, $validated['extra_permissions']);
+            $this->audit->fromRequest(
+                $request,
+                'membership.permissions_updated',
+                CompanyMembership::class,
+                $membership->id,
+                [
+                    'user_id' => $user->id,
+                    'extra_permissions' => $validated['extra_permissions'],
+                ],
+            );
+        }
+
+        if (array_key_exists('modules', $validated)) {
+            $this->authorization->syncModuleAccess($membership->fresh(), $validated['modules']);
+            $this->audit->fromRequest(
+                $request,
+                'membership.module_access_updated',
+                CompanyMembership::class,
+                $membership->id,
+                [
+                    'user_id' => $user->id,
+                    'modules' => $validated['modules'],
+                ],
+            );
+        }
+
+        $this->audit->fromRequest(
+            $request,
+            'membership.updated',
+            CompanyMembership::class,
+            $membership->id,
+            [
+                'user_id' => $user->id,
+                'previous_role' => $previousRole,
+                'role' => $newRole->value,
+                'is_active' => $isActive,
+            ],
+        );
+
+        $labels = $this->authorization->roleLabels();
+
+        return response()->json([
+            'data' => $this->formatMembership($membership->fresh('user'), $labels, $companyId),
+        ]);
+    }
+
+    /**
+     * @param  array<string, string>  $labels
+     * @return array<string, mixed>
+     */
+    private function formatMembership(CompanyMembership $m, array $labels, int $companyId): array
+    {
+        $roleValue = $m->role instanceof MembershipRole ? $m->role->value : (string) $m->role;
+        $rolePermissions = $this->authorization->rolePermissionsForMembership($m);
+        $extraPermissions = $this->authorization->directPermissionsForUser($m->user, $companyId);
+        $effective = $this->authorization->permissionsForUser($m->user, $companyId);
+        $modules = $this->authorization->modulesForMembership($m);
+
+        return [
+            'id' => $m->user->id,
+            'membership_id' => $m->id,
+            'name' => $m->user->name,
+            'email' => $m->user->email,
+            'role' => $roleValue,
+            'role_label' => $labels[$roleValue] ?? $roleValue,
+            'is_active' => $m->is_active,
+            'role_permissions' => $rolePermissions,
+            'extra_permissions' => $extraPermissions,
+            'effective_permissions' => $effective,
+            'modules' => $modules,
+            'module_access' => $m->module_access,
+        ];
+    }
+}

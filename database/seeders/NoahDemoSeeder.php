@@ -6,6 +6,7 @@ use App\Enums\MembershipRole;
 use App\Enums\RoutineStatus;
 use App\Models\Asset;
 use App\Models\CatalogItem;
+use App\Models\Client;
 use App\Models\Company;
 use App\Models\CompanyMembership;
 use App\Models\FormDefinition;
@@ -16,9 +17,11 @@ use App\Models\ReportTemplateVersion;
 use App\Models\Routine;
 use App\Models\RoutineType;
 use App\Models\Site;
+use App\Models\Supplier;
 use App\Models\SupplyItem;
 use App\Models\User;
 use App\Services\Workflow\WorkflowRuntime;
+use App\Services\Identity\CompanyAuthorizationService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -40,6 +43,17 @@ class NoahDemoSeeder extends Seeder
         $site = Site::query()->updateOrCreate(
             ['company_id' => $company->id, 'name' => 'Planta Norte'],
             ['address' => 'Av. Industria 100']
+        );
+
+        Client::query()->updateOrCreate(
+            ['company_id' => $company->id, 'code' => 'CLI-001'],
+            [
+                'legal_name' => 'Cliente Industrial Demo S.A. de C.V.',
+                'trade_name' => 'Cliente Demo',
+                'tax_id' => 'CID850101ABC',
+                'billing_email' => 'facturacion@clientedemo.example',
+                'is_active' => true,
+            ]
         );
 
         $admin = User::query()->updateOrCreate(
@@ -99,9 +113,22 @@ class NoahDemoSeeder extends Seeder
             ]
         );
 
+        $supplier = Supplier::query()->updateOrCreate(
+            ['company_id' => $company->id, 'code' => 'PROV-001'],
+            [
+                'name' => 'Refacciones del Norte',
+                'contact_email' => 'ventas@refnorte.example',
+            ]
+        );
+
         SupplyItem::query()->updateOrCreate(
             ['company_id' => $company->id, 'sku' => 'FIL-001'],
-            ['name' => 'Filtro de aceite', 'unit' => 'pza', 'standard_cost' => 450.00]
+            [
+                'name' => 'Filtro de aceite',
+                'unit' => 'pza',
+                'standard_cost' => 450.00,
+                'supplier_id' => $supplier->id,
+            ]
         );
 
         $formDef = FormDefinition::query()->updateOrCreate(
@@ -178,5 +205,7 @@ class NoahDemoSeeder extends Seeder
             ->where('company_id', $company->id)
             ->whereDoesntHave('workflowInstance')
             ->each(fn (Routine $routine) => $workflow->ensureInstance($routine->load('routineType.workflowDefinition')));
+
+        app(CompanyAuthorizationService::class)->bootstrapAllCompanies();
     }
 }

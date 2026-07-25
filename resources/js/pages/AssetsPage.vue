@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { api } from '@/api/client';
+import { useModuleAccess } from '@/composables/useModuleAccess';
+import ReadOnlyNotice from '@/components/ui/ReadOnlyNotice.vue';
 
 type Site = { id: number; name: string };
 type CatalogItem = { id: number; code: string; name: string };
@@ -12,6 +14,9 @@ type Asset = {
     site?: Site;
     catalog_item?: CatalogItem;
 };
+
+const { canWriteModule } = useModuleAccess();
+const canWrite = computed(() => canWriteModule('assets'));
 
 const assets = ref<Asset[]>([]);
 const sites = ref<Site[]>([]);
@@ -119,6 +124,7 @@ onMounted(load);
         <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
 
         <form
+            v-if="canWrite"
             class="max-w-lg space-y-3 rounded-lg border border-slate-200 bg-white p-4"
             @submit.prevent="submit"
         >
@@ -181,6 +187,7 @@ onMounted(load);
                 Guardar
             </button>
         </form>
+        <ReadOnlyNotice v-else module-label="Activos" />
 
         <p v-if="loading" class="text-slate-500">Cargando…</p>
         <table v-else class="w-full text-left text-sm">
@@ -190,7 +197,7 @@ onMounted(load);
                     <th>Sitio</th>
                     <th>Catálogo</th>
                     <th>Ubicación</th>
-                    <th></th>
+                    <th v-if="canWrite"></th>
                 </tr>
             </thead>
             <tbody>
@@ -210,7 +217,7 @@ onMounted(load);
                         <td>{{ asset.site?.name ?? '—' }}</td>
                         <td>{{ asset.catalog_item?.code ?? '—' }}</td>
                         <td>{{ asset.location_label ?? '—' }}</td>
-                        <td class="text-xs space-x-2">
+                        <td v-if="canWrite" class="text-xs space-x-2">
                             <button type="button" class="underline" @click="startEdit(asset)">Editar</button>
                             <button type="button" class="text-red-700" @click="remove(asset.id)">Borrar</button>
                         </td>

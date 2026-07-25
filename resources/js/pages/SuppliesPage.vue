@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { api } from '@/api/client';
+import { useModuleAccess } from '@/composables/useModuleAccess';
 
 type SupplyItem = {
     id: number;
@@ -9,6 +10,9 @@ type SupplyItem = {
     unit?: string | null;
     standard_cost?: string | number | null;
 };
+
+const { canWriteModule } = useModuleAccess();
+const canWrite = computed(() => canWriteModule('catalog_supplies'));
 
 const items = ref<SupplyItem[]>([]);
 const loading = ref(true);
@@ -101,6 +105,7 @@ onMounted(load);
         <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
 
         <form
+            v-if="canWrite"
             class="max-w-lg space-y-3 rounded-lg border border-slate-200 bg-white p-4"
             @submit.prevent="submit"
         >
@@ -146,6 +151,7 @@ onMounted(load);
                 Guardar
             </button>
         </form>
+        <p v-else class="text-sm text-slate-500">Solo lectura: no puedes crear ni editar insumos.</p>
 
         <p v-if="loading" class="text-slate-500">Cargando…</p>
         <table v-else class="w-full text-left text-sm">
@@ -155,7 +161,7 @@ onMounted(load);
                     <th>Nombre</th>
                     <th>Unidad</th>
                     <th>Costo</th>
-                    <th></th>
+                    <th v-if="canWrite"></th>
                 </tr>
             </thead>
             <tbody>
@@ -175,7 +181,7 @@ onMounted(load);
                         <td>{{ item.name }}</td>
                         <td>{{ item.unit ?? '—' }}</td>
                         <td>{{ item.standard_cost ?? '—' }}</td>
-                        <td class="text-xs space-x-2">
+                        <td v-if="canWrite" class="text-xs space-x-2">
                             <button type="button" class="underline" @click="startEdit(item)">Editar</button>
                             <button type="button" class="text-red-700" @click="remove(item.id)">Borrar</button>
                         </td>

@@ -1,14 +1,20 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { api } from '@/api/client';
+import { useModuleAccess } from '@/composables/useModuleAccess';
+import ReadOnlyNotice from '@/components/ui/ReadOnlyNotice.vue';
 
 type FormRow = {
     id: number;
     name: string;
     slug: string;
-    latest_version?: { version: number; status: string } | null;
+    published_version?: { version: number; status: string } | null;
+    draft_version?: { version: number; status: string } | null;
 };
+
+const { canWriteModule } = useModuleAccess();
+const canWrite = computed(() => canWriteModule('design_forms'));
 
 const forms = ref<FormRow[]>([]);
 const loading = ref(true);
@@ -50,8 +56,11 @@ onMounted(load);
 <template>
     <div class="space-y-4">
         <h2 class="text-xl font-semibold">Formularios</h2>
-        <p class="text-sm text-slate-600">Solo administradores pueden crear y publicar versiones.</p>
-        <form class="flex flex-wrap gap-2" @submit.prevent="createForm">
+        <p class="text-sm text-slate-600">
+            Tras <strong>Publicar</strong>, la versión queda en producción y se abre un borrador nuevo para el
+            siguiente cambio (es normal ver borrador vN+1).
+        </p>
+        <form v-if="canWrite" class="flex flex-wrap gap-2" @submit.prevent="createForm">
             <input
                 v-model="name"
                 placeholder="Nombre del formulario"
@@ -61,6 +70,7 @@ onMounted(load);
                 Crear
             </button>
         </form>
+        <ReadOnlyNotice v-else module-label="Formularios" />
         <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
         <p v-if="loading" class="text-slate-500">Cargando…</p>
         <ul v-else class="divide-y rounded-lg border bg-white">
@@ -71,9 +81,14 @@ onMounted(load);
                     </RouterLink>
                     <p class="text-xs text-slate-500">{{ f.slug }}</p>
                 </div>
-                <span class="text-xs text-slate-500">
-                    v{{ f.latest_version?.version ?? '—' }} · {{ f.latest_version?.status ?? '—' }}
-                </span>
+                <div class="text-right text-xs text-slate-500">
+                    <p v-if="f.published_version">
+                        En uso:
+                        <span class="font-medium text-emerald-800">v{{ f.published_version.version }} publicada</span>
+                    </p>
+                    <p v-else class="text-amber-800">Sin versión publicada</p>
+                    <p v-if="f.draft_version">Borrador: v{{ f.draft_version.version }}</p>
+                </div>
             </li>
         </ul>
     </div>

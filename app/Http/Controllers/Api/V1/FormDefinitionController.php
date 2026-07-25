@@ -22,6 +22,8 @@ class FormDefinitionController extends Controller
             ->get()
             ->map(function (FormDefinition $form) {
                 $latest = $form->versions->first();
+                $published = $form->versions->firstWhere('status', 'published');
+                $draft = $form->versions->firstWhere('status', 'draft');
 
                 return [
                     'id' => $form->id,
@@ -32,6 +34,17 @@ class FormDefinitionController extends Controller
                         'version' => $latest->version,
                         'status' => $latest->status,
                         'published_at' => $latest->published_at,
+                    ] : null,
+                    'published_version' => $published ? [
+                        'id' => $published->id,
+                        'version' => $published->version,
+                        'status' => $published->status,
+                        'published_at' => $published->published_at,
+                    ] : null,
+                    'draft_version' => $draft ? [
+                        'id' => $draft->id,
+                        'version' => $draft->version,
+                        'status' => $draft->status,
                     ] : null,
                 ];
             });

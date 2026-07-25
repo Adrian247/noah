@@ -33,4 +33,27 @@ class RoutineFlowApiTest extends TestCase
         $this->assertSame(RoutineStatus::PendingValidation, $routine->status);
         $this->assertNotNull($routine->latestExecution?->corrected_comments);
     }
+
+    public function test_routine_show_includes_evidences_relation(): void
+    {
+        $this->seed();
+        $user = User::query()->where('email', 'tecnico@noah.local')->first();
+        $company = Company::query()->first();
+        $routine = Routine::query()->first();
+        $token = $user->createToken('test')->plainTextToken;
+
+        $this->withToken($token)
+            ->withHeader('X-Company-Id', (string) $company->id)
+            ->postJson("/api/v1/routines/{$routine->id}/executions", [
+                'technician_comments' => 'prueba',
+                'duration_minutes' => 10,
+            ])
+            ->assertCreated();
+
+        $this->withToken($token)
+            ->withHeader('X-Company-Id', (string) $company->id)
+            ->getJson("/api/v1/routines/{$routine->id}")
+            ->assertOk()
+            ->assertJsonPath('data.latest_execution.evidences', []);
+    }
 }

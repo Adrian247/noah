@@ -15,3 +15,13 @@ Propuestas cerradas (histórico). El flujo activo está en [../changes/README.md
 | [009-report-designer-mvp](009-report-designer-mvp/) | Diseño | Plantillas PDF componentes básicos |
 | [010-workflow-designer-visual](010-workflow-designer-visual/) | Diseño | Canvas workflow + layout |
 | [011-async-report-queue](011-async-report-queue/) | Infra | PDF en cola Redis |
+| [012-mvp-operations-ui](012-mvp-operations-ui/) | Fase 1–2 | Dashboard KPIs, sitios, alta rutinas |
+| [013-mobile-sync-v1](013-mobile-sync-v1/) | Fase 3 | API sync móvil |
+| [014-evidence-storage](014-evidence-storage/) | Fase 3 | Evidencias en ejecución |
+| [015-suppliers-users-seed](015-suppliers-users-seed/) | Catálogo / ops | Proveedores, usuarios admin, seed auto |
+| [016-billing-module](016-billing-module/) | Facturación | Config empresa, detalle, documentación |
+| [017-ui-redesign-glass-material](017-ui-redesign-glass-material/) | UX/UI | Material + glass, componentes, shell |
+| [018-company-users-rbac](018-company-users-rbac/) | Identidad | RBAC Spatie, mantenedor usuarios |
+| [019-clients-module](019-clients-module/) | Facturación | Clientes y logo |
+| [020-invoice-prefactura-editable](020-invoice-prefactura-editable/) | Facturación | Prefactura editable |
+| [021-admin-user-permissions](021-admin-user-permissions/) | Identidad | Módulos lectura/escritura por usuario |

@@ -1,14 +1,20 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { api } from '@/api/client';
+import { useModuleAccess } from '@/composables/useModuleAccess';
+import ReadOnlyNotice from '@/components/ui/ReadOnlyNotice.vue';
 
 type ReportRow = {
     id: number;
     name: string;
     slug: string;
-    latest_version?: { version: number; status: string } | null;
+    published_version?: { version: number; status: string } | null;
+    draft_version?: { version: number; status: string } | null;
 };
+
+const { canWriteModule } = useModuleAccess();
+const canWrite = computed(() => canWriteModule('design_reports'));
 
 const reports = ref<ReportRow[]>([]);
 const loading = ref(true);
@@ -49,7 +55,11 @@ onMounted(load);
 <template>
     <div class="space-y-4">
         <h2 class="text-xl font-semibold">Plantillas de reporte</h2>
-        <form class="flex flex-wrap gap-2" @submit.prevent="createReport">
+        <p class="text-sm text-slate-600">
+            Publicar deja una versión en producción y abre un borrador nuevo. El enlace al tipo de rutina se hace en
+            <strong>Tipos de rutina</strong>.
+        </p>
+        <form v-if="canWrite" class="flex flex-wrap gap-2" @submit.prevent="createReport">
             <input
                 v-model="name"
                 placeholder="Nombre de plantilla"
@@ -59,15 +69,20 @@ onMounted(load);
                 Crear
             </button>
         </form>
+        <ReadOnlyNotice v-else module-label="Reportes" />
         <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
         <ul v-else class="divide-y rounded-lg border bg-white">
             <li v-for="r in reports" :key="r.id" class="flex justify-between px-4 py-3 text-sm">
                 <RouterLink class="font-medium underline" :to="`/app/design/reports/${r.id}`">
                     {{ r.name }}
                 </RouterLink>
-                <span class="text-xs text-slate-500">
-                    v{{ r.latest_version?.version }} · {{ r.latest_version?.status }}
-                </span>
+                <div class="text-right text-xs text-slate-500">
+                    <p v-if="r.published_version">
+                        En uso: <span class="font-medium text-emerald-800">v{{ r.published_version.version }} publicada</span>
+                    </p>
+                    <p v-else class="text-amber-800">Sin versión publicada</p>
+                    <p v-if="r.draft_version">Borrador: v{{ r.draft_version.version }}</p>
+                </div>
             </li>
         </ul>
     </div>

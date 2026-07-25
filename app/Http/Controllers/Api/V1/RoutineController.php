@@ -54,6 +54,7 @@ class RoutineController extends Controller
                 'assignee',
                 'executions',
                 'latestExecution.consumptions.supplyItem',
+                'latestExecution.evidences',
                 'generatedReports',
                 'invoice.lines',
                 'workflowInstance.transitions',

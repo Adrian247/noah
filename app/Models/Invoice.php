@@ -15,9 +15,11 @@ class Invoice extends Model
     protected $fillable = [
         'company_id',
         'routine_id',
+        'client_id',
         'number',
         'status',
         'currency',
+        'tax_rate_snapshot',
         'subtotal',
         'tax_total',
         'total',
@@ -28,11 +30,22 @@ class Invoice extends Model
     {
         return [
             'status' => InvoiceStatus::class,
+            'tax_rate_snapshot' => 'decimal:4',
             'subtotal' => 'decimal:2',
             'tax_total' => 'decimal:2',
             'total' => 'decimal:2',
             'issued_at' => 'datetime',
         ];
+    }
+
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
+    }
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
     }
 
     public function routine(): BelongsTo

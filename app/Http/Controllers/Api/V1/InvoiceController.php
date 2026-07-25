@@ -3,21 +3,27 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\InvoiceStatus;
-use App\Enums\MembershipRole;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Services\Audit\AuditLogger;
+use App\Services\Billing\InvoiceDraftEditor;
+use App\Services\Identity\CompanyAuthorizationService;
+use App\Support\CurrentCompany;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Illuminate\Validation\ValidationException;
 
 class InvoiceController extends Controller
 {
+    public function __construct(
+        private readonly CompanyAuthorizationService $authorization,
+        private readonly InvoiceDraftEditor $draftEditor,
+    ) {}
+
     public function index(): JsonResponse
     {
         $invoices = Invoice::query()
-            ->with(['lines', 'routine'])
+            ->with(['lines', 'routine', 'client'])
             ->orderByDesc('id')
             ->paginate(15);
 
@@ -26,15 +32,32 @@ class InvoiceController extends Controller
 
     public function show(Invoice $invoice): JsonResponse
     {
-        return response()->json(['data' => $invoice->load(['lines', 'routine'])]);
+        return response()->json([
+            'data' => $invoice->load(['lines' => fn ($q) => $q->orderBy('sort_order'), 'routine', 'client']),
+        ]);
+    }
+
+    public function updateDraft(Request $request, Invoice $invoice, AuditLogger $audit): JsonResponse
+    {
+        $this->authorizePermission($request, 'billing.draft.edit');
+
+        $invoice = $this->draftEditor->updateDraft($invoice, $request->all(), $request, $audit);
+
+        return response()->json(['data' => $invoice]);
     }
 
     public function issue(Request $request, Invoice $invoice, AuditLogger $audit): JsonResponse
     {
-        $this->authorizeBilling($request);
+        $this->authorizePermission($request, 'billing.issue');
 
         if ($invoice->status !== InvoiceStatus::Draft) {
             return response()->json(['message' => 'Only drafts can be issued.'], 422);
+        }
+
+        if ($invoice->client_id === null) {
+            throw ValidationException::withMessages([
+                'client_id' => ['Asigne un cliente en la prefactura antes de emitir.'],
+            ]);
         }
 
         $invoice->update([
@@ -49,17 +72,16 @@ class InvoiceController extends Controller
             'number' => $invoice->number,
         ]);
 
-        return response()->json(['data' => $invoice->fresh('lines')]);
+        return response()->json(['data' => $invoice->fresh(['lines', 'client'])]);
     }
 
-    private function authorizeBilling(Request $request): void
+    private function authorizePermission(Request $request, string $permission): void
     {
-        $membership = $request->attributes->get('membership');
-        $role = $membership->role;
-        $roleValue = $role instanceof MembershipRole ? $role->value : (string) $role;
+        $user = $request->user();
+        $companyId = app(CurrentCompany::class)->id();
 
-        if (! in_array($roleValue, [MembershipRole::Administrator->value, MembershipRole::Billing->value], true)) {
-            abort(403, 'Billing role required.');
+        if ($user === null || ! $this->authorization->userHasPermission($user, $companyId, $permission)) {
+            abort(403, 'Insufficient permissions for billing action.');
         }
     }
 }

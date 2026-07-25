@@ -1,45 +1,40 @@
-# Design system — Noah (borrador)
+# Design system — Noah
 
-Implementación prevista: **Tailwind CSS** + componentes Vue 3 (Headless UI o Radix-vue según preferencia en código).
+Implementación: **Tailwind CSS 4** + componentes Vue en `resources/js/components/ui/`.
 
-## Marca (pendiente)
+## Dirección visual (2026)
 
-- Nombre: **Noah**
-- Logo y paleta: TBD — usar tokens neutros hasta definir identidad.
+- **Material Design 3**: jerarquía tipográfica, botones con elevación suave, estados claros (success/warning/danger).
+- **Glassmorphism**: paneles `glass-panel` (blur + borde blanco semitransparente) sobre fondo degradado oscuro → claro.
+- Tipografía: **Inter** (Google Fonts).
 
-## Tokens propuestos
+## Tokens (`resources/css/app.css`)
 
 | Token | Uso |
 |-------|-----|
-| `primary` | Acciones principales, enlaces |
-| `surface` | Fondos de tarjetas |
-| `border` | Divisores |
-| `success` / `warning` / `danger` | Estados de rutina y sync |
-| `text-muted` | Metadatos, ayudas |
+| `primary-600` | CTA, ítem de nav activo |
+| `glass-panel` | Tarjetas principales |
+| `glass-sidebar` | Navegación lateral |
+| `nav-item` / `nav-item-active` | Enlaces del shell |
 
-## Tipografía
+## Componentes UI
 
-- UI: sans moderna (Inter, DM Sans o system stack).
-- Reportes PDF: configurable por plantilla (no fijada por design system admin).
+| Componente | Uso |
+|------------|-----|
+| `GlassCard` | Contenedor de contenido |
+| `AppButton` | primary / secondary / danger / ghost |
+| `StatusBadge` | Estados rutina y factura |
+| `PageHeader` | Título + subtítulo de página |
+| `AlertBanner` | info, success, warning, danger |
 
-## Componentes base (admin)
+## Shell
 
-- `AppShell` — sidebar + topbar + breadcrumb
-- `DataTable` — filtros, paginación server-side
-- `StatusBadge` — estados de rutina/sync
-- `FormField` — wrapper accesible label + error
-- `DesignerCanvas` — lienzo reportes/formularios
-- `ConfirmDialog`, `Toast`, `EmptyState`
+`AppShell.vue`: menú agrupado por flujo (Operación, Catálogos, Diseño, Facturación, Administración).
 
-## Densidad
+## Facturación (módulo)
 
-- Admin: densidad **comfortable** (no ultra-compacta) para usuarios de oficina variados.
-- Móvil: targets táctiles mínimo 44px.
+Ver [docs/BILLING.md](../../docs/BILLING.md) y pantallas `/app/billing`, `/app/billing/settings`.
 
 ## Modo oscuro
 
-Opcional fase 2; diseñar tokens con variables CSS desde inicio para facilitar.
-
-## Iconografía
-
-Lucide o Heroicons; consistencia en sidebar y estados.
+Fase posterior; tokens preparados para variables CSS.

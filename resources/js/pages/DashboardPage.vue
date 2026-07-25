@@ -1,11 +1,21 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { useCompanyStore } from '@/stores/company';
+import { RouterLink } from 'vue-router';
 import { api } from '@/api/client';
+import { useCompanyStore } from '@/stores/company';
+import GlassCard from '@/components/ui/GlassCard.vue';
+import PageHeader from '@/components/ui/PageHeader.vue';
+
+type Summary = {
+    routines_pending_validation: number;
+    routines_assigned: number;
+    routines_validated: number;
+    invoices_draft: number;
+};
 
 const company = useCompanyStore();
+const summary = ref<Summary | null>(null);
 const apiOk = ref(false);
-const routineCount = ref<number | null>(null);
 
 onMounted(async () => {
     try {
@@ -14,36 +24,68 @@ onMounted(async () => {
     } catch {
         apiOk.value = false;
     }
-
-    if (!company.current) {
-        return;
-    }
-
     try {
-        const res = await api<{ total: number }>('/routines?per_page=1');
-        routineCount.value = res.total;
+        const res = await api<{ data: Summary }>('/dashboard/summary');
+        summary.value = res.data;
     } catch {
-        routineCount.value = null;
+        summary.value = null;
     }
 });
+
+const cards = [
+    {
+        key: 'pending',
+        label: 'Pendientes de validación',
+        value: () => summary.value?.routines_pending_validation,
+        to: '/app/routines?status=pending_validation',
+        accent: 'border-amber-300/60 bg-amber-50/80',
+    },
+    {
+        key: 'assigned',
+        label: 'Rutinas asignadas',
+        value: () => summary.value?.routines_assigned,
+        to: '/app/routines?status=assigned',
+        accent: 'border-sky-300/60 bg-sky-50/80',
+    },
+    {
+        key: 'validated',
+        label: 'Validadas',
+        value: () => summary.value?.routines_validated,
+        to: '/app/routines?status=validated',
+        accent: 'border-emerald-300/60 bg-emerald-50/80',
+    },
+    {
+        key: 'invoices',
+        label: 'Facturas borrador',
+        value: () => summary.value?.invoices_draft,
+        to: '/app/billing',
+        accent: 'border-violet-300/60 bg-violet-50/80',
+    },
+];
 </script>
 
 <template>
-    <div class="max-w-2xl space-y-4">
-        <h2 class="text-xl font-semibold">Dashboard</h2>
-        <p class="text-slate-600">
-            Empresa activa:
-            <strong>{{ company.current?.name ?? '—' }}</strong>
-        </p>
-        <div class="grid gap-3 sm:grid-cols-2">
-            <div class="rounded-lg border border-slate-200 bg-white p-4">
-                <p class="text-sm text-slate-500">API</p>
-                <p class="font-medium">{{ apiOk ? 'Operativa' : 'No disponible' }}</p>
-            </div>
-            <div class="rounded-lg border border-slate-200 bg-white p-4">
-                <p class="text-sm text-slate-500">Rutinas (total)</p>
-                <p class="font-medium">{{ routineCount ?? '—' }}</p>
-            </div>
+    <div>
+        <PageHeader
+            :title="`Hola, ${company.current?.name ?? 'Noah'}`"
+            subtitle="Accesos rápidos según tu rol. Valida rutinas, revisa facturación o continúa en campo."
+        />
+        <div class="mb-4 flex gap-3">
+            <GlassCard padding="sm" class="inline-flex items-center gap-2 text-sm">
+                <span
+                    class="h-2 w-2 rounded-full"
+                    :class="apiOk ? 'bg-emerald-500' : 'bg-red-500'"
+                />
+                API {{ apiOk ? 'operativa' : 'no disponible' }}
+            </GlassCard>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <RouterLink v-for="c in cards" :key="c.key" :to="c.to" class="block md-ripple-hover">
+                <GlassCard hover :class="c.accent">
+                    <p class="text-sm font-medium text-slate-600">{{ c.label }}</p>
+                    <p class="mt-2 text-3xl font-semibold text-slate-900">{{ c.value() ?? '—' }}</p>
+                </GlassCard>
+            </RouterLink>
         </div>
     </div>
 </template>

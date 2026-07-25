@@ -3,6 +3,8 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { api } from '@/api/client';
 
+type FormFieldOption = { key: string; label: string; form_name: string };
+
 type Component = {
     type: string;
     text?: string;
@@ -25,16 +27,25 @@ type ReportTpl = {
 const route = useRoute();
 const tpl = ref<ReportTpl | null>(null);
 const components = ref<Component[]>([]);
+const formFields = ref<FormFieldOption[]>([]);
 const loading = ref(true);
 const message = ref<string | null>(null);
 
 const draft = computed(() => tpl.value?.versions.find((v) => v.status === 'draft'));
+const published = computed(() =>
+    tpl.value?.versions
+        .filter((v) => v.status === 'published')
+        .sort((a, b) => b.version - a.version)[0],
+);
 
 async function load() {
     loading.value = true;
     try {
-        const res = await api<{ data: ReportTpl }>(`/design/reports/${route.params.id}`);
+        const res = await api<{ data: ReportTpl; form_fields: FormFieldOption[] }>(
+            `/design/reports/${route.params.id}`,
+        );
         tpl.value = res.data;
+        formFields.value = res.form_fields ?? [];
         const d = res.data.versions.find((v) => v.status === 'draft');
         components.value = structuredClone(d?.components ?? []);
     } catch (e) {
@@ -49,7 +60,30 @@ function addTitle() {
 }
 
 function addParagraph() {
-    components.value.push({ type: 'paragraph', field: 'corrected_comments' });
+    const first = formFields.value[0];
+    components.value.push({ type: 'paragraph', field: first?.key ?? 'corrected_comments' });
+}
+
+function removeComponent(index: number) {
+    components.value.splice(index, 1);
+}
+
+function moveUp(index: number) {
+    if (index <= 0) {
+        return;
+    }
+    const copy = [...components.value];
+    [copy[index - 1], copy[index]] = [copy[index], copy[index - 1]];
+    components.value = copy;
+}
+
+function moveDown(index: number) {
+    if (index >= components.value.length - 1) {
+        return;
+    }
+    const copy = [...components.value];
+    [copy[index], copy[index + 1]] = [copy[index + 1], copy[index]];
+    components.value = copy;
 }
 
 async function save() {
@@ -74,7 +108,10 @@ onMounted(load);
     <div v-if="loading" class="text-slate-500">Cargando…</div>
     <div v-else-if="tpl" class="max-w-2xl space-y-4">
         <h2 class="text-xl font-semibold">{{ tpl.name }}</h2>
-        <p class="text-sm text-slate-600">Borrador v{{ draft?.version }} ({{ draft?.status }})</p>
+        <p class="text-sm text-slate-600">
+            <span v-if="published">En producción: v{{ published.version }}.</span>
+            Borrador de trabajo: v{{ draft?.version }}.
+        </p>
 
         <ul class="space-y-2">
             <li
@@ -82,18 +119,38 @@ onMounted(load);
                 :key="i"
                 class="rounded border bg-white p-3 text-sm space-y-2"
             >
-                <span class="font-mono text-xs text-slate-500">{{ c.type }}</span>
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <span class="font-mono text-xs text-slate-500">{{ c.type }} #{{ i + 1 }}</span>
+                    <div class="flex gap-2 text-xs">
+                        <button type="button" class="underline" :disabled="i === 0" @click="moveUp(i)">↑</button>
+                        <button
+                            type="button"
+                            class="underline"
+                            :disabled="i === components.length - 1"
+                            @click="moveDown(i)"
+                        >
+                            ↓
+                        </button>
+                        <button type="button" class="text-red-700 underline" @click="removeComponent(i)">
+                            Eliminar
+                        </button>
+                    </div>
+                </div>
                 <input
                     v-if="c.type === 'title'"
                     v-model="c.text"
                     class="w-full rounded border px-2 py-1"
+                    placeholder="Texto del título"
                 />
-                <input
-                    v-else-if="c.type === 'paragraph'"
-                    v-model="c.field"
-                    placeholder="field key"
-                    class="w-full rounded border px-2 py-1 font-mono text-xs"
-                />
+                <div v-else-if="c.type === 'paragraph'" class="space-y-1">
+                    <label class="block text-xs text-slate-500">Campo del formulario / ejecución</label>
+                    <select v-model="c.field" class="w-full rounded border px-2 py-1 text-sm">
+                        <option v-for="f in formFields" :key="f.key" :value="f.key">
+                            {{ f.label }}
+                        </option>
+                    </select>
+                    <p class="text-xs text-slate-400">Clave: <span class="font-mono">{{ c.field }}</span></p>
+                </div>
             </li>
         </ul>
 
@@ -103,9 +160,7 @@ onMounted(load);
         </div>
 
         <div class="flex gap-2">
-            <button type="button" class="rounded-md border px-3 py-2 text-sm" @click="save">
-                Guardar
-            </button>
+            <button type="button" class="rounded-md border px-3 py-2 text-sm" @click="save">Guardar</button>
             <button type="button" class="rounded-md bg-slate-900 px-3 py-2 text-sm text-white" @click="publish">
                 Publicar
             </button>

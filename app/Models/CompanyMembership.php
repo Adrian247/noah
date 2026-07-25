@@ -8,13 +8,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CompanyMembership extends Model
 {
-    protected $fillable = ['company_id', 'user_id', 'role', 'is_active'];
+    protected $fillable = ['company_id', 'user_id', 'role', 'is_active', 'module_access'];
 
     protected function casts(): array
     {
         return [
             'role' => MembershipRole::class,
             'is_active' => 'boolean',
+            'module_access' => 'array',
         ];
     }
 

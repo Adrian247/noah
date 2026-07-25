@@ -14,7 +14,7 @@ Roadmap orientativo; las fechas se fijan al iniciar implementación.
 
 ## Fase 1 — Núcleo web (MVP operativo)
 
-**Estado:** en progreso — flujo rutina con workflow runtime, auditoría y notificaciones email básicas. Pendiente: diseñadores form/reporte/workflow, CRUD completo en UI.
+**Estado:** **completado** en código (web MVP operativo).
 
 **Objetivo:** operar mantenimientos y reportes desde web sin móvil.
 
@@ -28,11 +28,11 @@ Roadmap orientativo; las fechas se fijan al iniciar implementación.
 | Inventory & costs | Consumo de insumos y registro de costos |
 | Audit básico | Quién cambió qué en entidades críticas |
 
-**No incluye aún:** móvil, workflow visual completo, facturación fiscal en producción.
+**No incluye aún:** móvil nativo, facturación fiscal en producción.
 
 ## Fase 2 — Flujo de negocio completo (web)
 
-**Estado:** parcial — workflow runtime lineal, IA en ejecución, billing borrador, email a supervisores. Pendiente: diseñadores y workflow visual.
+**Estado:** **completado** (workflow, IA gramatical, billing borrador, email, diseñadores MVP).
 
 | Entrega | Descripción |
 |---------|-------------|
@@ -44,11 +44,13 @@ Roadmap orientativo; las fechas se fijan al iniciar implementación.
 
 ## Fase 3 — Campo y sincronización
 
+**Estado:** **servidor v1 listo** (API sync + evidencias); **cliente Flutter pendiente**.
+
 | Entrega | Descripción |
 |---------|-------------|
-| Flutter app | Rutinas asignadas, captura offline |
-| Mobile Sync | Eventos, cola, subida de fotos |
-| Storage | MinIO/S3 en todos los entornos |
+| Flutter app | Rutinas asignadas, captura offline — ver `mobile/README.md` |
+| Mobile Sync | `POST /api/v1/sync` eventos idempotentes |
+| Storage | Evidencias en disco local; MinIO preparado en compose |
 
 ## Fase 4 — Plataforma y capacidades avanzadas
 

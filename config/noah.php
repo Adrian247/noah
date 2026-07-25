@@ -14,4 +14,12 @@ return [
         'path_prefix' => 'reports',
         'async' => filter_var(env('NOAH_REPORTS_ASYNC', true), FILTER_VALIDATE_BOOL),
     ],
+    'evidence' => [
+        'disk' => env('NOAH_EVIDENCE_DISK', 'evidence'),
+        'path_prefix' => 'executions',
+    ],
+    'billing' => [
+        'labor_rate_per_hour' => (float) env('NOAH_BILLING_LABOR_RATE', 0),
+        'tax_rate' => (float) env('NOAH_BILLING_TAX_RATE', 0.16),
+    ],
 ];

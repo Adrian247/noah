@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import DynamicFormRenderer from '@/components/domain/DynamicFormRenderer.vue';
 import { api, getToken, getCompanyId } from '@/api/client';
+import { useCompanyStore } from '@/stores/company';
 
 type FormVersion = {
     id: number;
@@ -29,6 +30,8 @@ type Execution = {
     duration_minutes?: number;
     responses?: Record<string, unknown>;
     consumptions?: ConsumptionLine[];
+    rejection_reason?: string | null;
+    rejected_at?: string | null;
 };
 
 type WorkflowTransition = {
@@ -44,7 +47,7 @@ type Routine = {
     asset?: { tag: string };
     routine_type?: { name: string; form_version?: FormVersion | null };
     latest_execution?: Execution;
-    generated_reports?: { id: number; status: string }[];
+    generated_reports?: { id: number; status: string; error_message?: string | null }[];
     invoice?: { id: number; status: string; total: string };
     workflow_instance?: {
         current_step_key: string;
@@ -54,6 +57,7 @@ type Routine = {
 };
 
 const route = useRoute();
+const companyStore = useCompanyStore();
 const routine = ref<Routine | null>(null);
 const supplies = ref<SupplyItem[]>([]);
 const loading = ref(true);
@@ -65,12 +69,55 @@ const technicianComments = ref('');
 const durationMinutes = ref(60);
 const consumptionSupplyId = ref('');
 const consumptionQty = ref('1');
+const showRejectPanel = ref(false);
+const rejectReason = ref('');
+const rejecting = ref(false);
 
 const formSchema = computed(() => routine.value?.routine_type?.form_version?.schema ?? null);
 const canExecute = computed(() => routine.value?.status === 'assigned');
+const canValidateReject = computed(() => {
+    const role = companyStore.current?.role;
+    return role === 'supervisor' || role === 'administrator';
+});
+const isPendingValidation = computed(() => routine.value?.status === 'pending_validation');
+const showRejectionNotice = computed(
+    () =>
+        routine.value?.status === 'assigned' &&
+        Boolean(routine.value?.latest_execution?.rejection_reason),
+);
+const reportPollTimer = ref<ReturnType<typeof setInterval> | null>(null);
 
-async function load() {
-    loading.value = true;
+function needsReportPoll(): boolean {
+    return (
+        routine.value?.generated_reports?.some((x) => ['queued', 'processing'].includes(x.status)) ??
+        false
+    );
+}
+
+function startReportPoll() {
+    if (reportPollTimer.value !== null) {
+        return;
+    }
+    reportPollTimer.value = setInterval(() => {
+        if (needsReportPoll()) {
+            void load({ silent: true });
+        } else {
+            stopReportPoll();
+        }
+    }, 3000);
+}
+
+function stopReportPoll() {
+    if (reportPollTimer.value !== null) {
+        clearInterval(reportPollTimer.value);
+        reportPollTimer.value = null;
+    }
+}
+
+async function load(options: { silent?: boolean } = {}) {
+    if (!options.silent) {
+        loading.value = true;
+    }
     message.value = null;
     try {
         const res = await api<{ data: Routine }>(`/routines/${route.params.id}`);
@@ -78,10 +125,17 @@ async function load() {
         if (res.data.latest_execution?.responses) {
             formResponses.value = { ...(res.data.latest_execution.responses as Record<string, string | number>) };
         }
+        if (needsReportPoll()) {
+            startReportPoll();
+        } else {
+            stopReportPoll();
+        }
     } catch (e) {
         message.value = (e as Error).message;
     } finally {
-        loading.value = false;
+        if (!options.silent) {
+            loading.value = false;
+        }
     }
 }
 
@@ -98,6 +152,7 @@ async function loadSupplies() {
 }
 
 async function downloadReport(reportId: number) {
+    message.value = null;
     const res = await fetch(`/api/v1/reports/${reportId}/download`, {
         headers: {
             Authorization: `Bearer ${getToken()}`,
@@ -105,6 +160,20 @@ async function downloadReport(reportId: number) {
             Accept: 'application/pdf',
         },
     });
+    const contentType = res.headers.get('content-type') ?? '';
+    if (!res.ok || !contentType.includes('pdf')) {
+        let detail = 'No se pudo descargar el PDF.';
+        try {
+            const body = await res.json();
+            if (body?.message) {
+                detail = body.message;
+            }
+        } catch {
+            /* not JSON */
+        }
+        message.value = detail;
+        return;
+    }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -115,22 +184,48 @@ async function downloadReport(reportId: number) {
 }
 
 async function validateRoutine() {
-    await api(`/routines/${route.params.id}/validate`, { method: 'POST' });
-    message.value = 'Rutina validada; generando reporte y borrador de factura.';
-    await load();
+    message.value = null;
+    try {
+        await api(`/routines/${route.params.id}/validate`, { method: 'POST' });
+        message.value = 'Rutina validada; generando reporte y borrador de factura.';
+        await load();
+    } catch (e) {
+        message.value = (e as Error).message;
+    }
 }
 
 async function rejectRoutine() {
-    const reason = window.prompt('Motivo del rechazo:');
-    if (!reason?.trim()) {
+    if (!rejectReason.value.trim()) {
+        message.value = 'Indica el motivo del rechazo.';
         return;
     }
-    await api(`/routines/${route.params.id}/reject`, {
-        method: 'POST',
-        body: JSON.stringify({ reason: reason.trim() }),
-    });
-    message.value = 'Rutina devuelta al técnico para corrección.';
-    await load();
+    rejecting.value = true;
+    message.value = null;
+    try {
+        await api(`/routines/${route.params.id}/reject`, {
+            method: 'POST',
+            body: JSON.stringify({ reason: rejectReason.value.trim() }),
+        });
+        showRejectPanel.value = false;
+        rejectReason.value = '';
+        message.value = 'Rutina devuelta al técnico para corrección.';
+        await load();
+    } catch (e) {
+        message.value = (e as Error).message;
+    } finally {
+        rejecting.value = false;
+    }
+}
+
+function openRejectPanel() {
+    showRejectPanel.value = true;
+    rejectReason.value = '';
+    message.value = null;
+}
+
+function cancelReject() {
+    showRejectPanel.value = false;
+    rejectReason.value = '';
 }
 
 async function submitExecution() {
@@ -176,6 +271,10 @@ async function submitExecution() {
 onMounted(async () => {
     await Promise.all([load(), loadSupplies()]);
 });
+
+onUnmounted(() => {
+    stopReportPoll();
+});
 </script>
 
 <template>
@@ -201,6 +300,17 @@ onMounted(async () => {
                 {{ t.occurred_at }} — {{ t.from_step ?? 'inicio' }} → {{ t.to_step }} ({{ t.trigger }})
             </li>
         </ul>
+
+        <div
+            v-if="showRejectionNotice"
+            class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-950"
+        >
+            <p class="font-medium">Devuelta para corrección</p>
+            <p class="mt-1">{{ routine.latest_execution?.rejection_reason }}</p>
+            <p v-if="routine.latest_execution?.rejected_at" class="mt-2 text-xs text-red-800">
+                {{ routine.latest_execution.rejected_at }}
+            </p>
+        </div>
 
         <div v-if="canExecute" class="space-y-4">
             <DynamicFormRenderer v-model="formResponses" :schema="formSchema" />
@@ -289,9 +399,52 @@ onMounted(async () => {
             </ul>
         </div>
 
+        <div
+            v-if="isPendingValidation && canValidateReject"
+            class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
+        >
+            Esta rutina espera tu validación como supervisor o administrador.
+        </div>
+        <div
+            v-else-if="isPendingValidation"
+            class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700"
+        >
+            Enviada a validación. Un supervisor o administrador debe aprobarla (revisa Mailpit en
+            <span class="font-mono text-xs">http://localhost:8025</span> si eres supervisor).
+        </div>
+
+        <div
+            v-if="isPendingValidation && canValidateReject && showRejectPanel"
+            class="rounded-lg border border-red-200 bg-white p-4 text-sm space-y-3"
+        >
+            <p class="font-medium text-red-900">Rechazar rutina</p>
+            <label class="block">
+                Motivo (visible para el técnico)
+                <textarea
+                    v-model="rejectReason"
+                    rows="3"
+                    class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5"
+                    placeholder="Ej. Falta evidencia fotográfica del filtro nuevo"
+                />
+            </label>
+            <div class="flex gap-2">
+                <button
+                    type="button"
+                    class="rounded-md bg-red-700 px-3 py-2 text-sm text-white disabled:opacity-50"
+                    :disabled="rejecting"
+                    @click="rejectRoutine"
+                >
+                    Confirmar rechazo
+                </button>
+                <button type="button" class="rounded-md border px-3 py-2 text-sm" @click="cancelReject">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+
         <div class="flex flex-wrap gap-2">
             <button
-                v-if="routine.status === 'pending_validation'"
+                v-if="isPendingValidation && canValidateReject && !showRejectPanel"
                 type="button"
                 class="rounded-md bg-emerald-700 px-3 py-2 text-sm text-white"
                 @click="validateRoutine"
@@ -299,10 +452,10 @@ onMounted(async () => {
                 Validar
             </button>
             <button
-                v-if="routine.status === 'pending_validation'"
+                v-if="isPendingValidation && canValidateReject && !showRejectPanel"
                 type="button"
                 class="rounded-md border border-red-300 px-3 py-2 text-sm text-red-800"
-                @click="rejectRoutine"
+                @click="openRejectPanel"
             >
                 Rechazar
             </button>
@@ -320,13 +473,22 @@ onMounted(async () => {
             v-if="routine.generated_reports?.some((x) => ['queued', 'processing'].includes(x.status))"
             class="text-sm text-amber-800"
         >
-            Generando PDF en segundo plano… recarga en unos segundos.
+            Generando PDF en segundo plano… se actualizará automáticamente.
+        </p>
+        <p
+            v-for="r in routine.generated_reports?.filter((x) => x.status === 'failed')"
+            :key="'err-' + r.id"
+            class="text-sm text-red-700"
+        >
+            Error al generar PDF: {{ r.error_message ?? 'desconocido' }}
         </p>
         <p v-if="routine.invoice" class="text-sm">
             Factura borrador #{{ routine.invoice.id }} — {{ routine.invoice.status }} — ${{
                 routine.invoice.total
             }}
         </p>
-        <p v-if="message" class="text-sm text-slate-600">{{ message }}</p>
+        <p v-if="message" class="text-sm" :class="message.includes('403') || message.includes('Supervisor') ? 'text-red-700' : 'text-slate-600'">
+            {{ message }}
+        </p>
     </div>
 </template>

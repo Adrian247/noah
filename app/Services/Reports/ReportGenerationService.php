@@ -59,7 +59,17 @@ class ReportGenerationService
             $pdf = Pdf::loadHTML($html)->setPaper('a4');
 
             $path = config('noah.reports.path_prefix').'/'.Str::uuid().'.pdf';
-            Storage::disk($report->disk)->put($path, $pdf->output());
+            $disk = Storage::disk($report->disk);
+            $prefix = config('noah.reports.path_prefix');
+            if (! $disk->exists($prefix)) {
+                $disk->makeDirectory($prefix);
+            }
+            $contents = $pdf->output();
+            $written = $disk->put($path, $contents);
+
+            if ($written === false || ! $disk->exists($path)) {
+                throw new \RuntimeException('No se pudo guardar el PDF en almacenamiento.');
+            }
 
             $report->update([
                 'status' => 'ready',
