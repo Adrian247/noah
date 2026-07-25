@@ -80,6 +80,44 @@
         @apply max-w-0 opacity-0;
     }
 
+    .login-glass-panel {
+        @apply rounded-2xl border border-white/10 bg-slate-900/55 shadow-[0_24px_80px_rgb(0_0_0/0.45)] backdrop-blur-xl;
+        animation: noah-login-in 0.55s ease-out both;
+    }
+
+    .login-glass-panel-dark {
+        @apply rounded-2xl border border-white/10 bg-slate-950/70 shadow-[0_16px_48px_rgb(0_0_0/0.5)] backdrop-blur-md;
+    }
+
+    .material-field {
+        @apply relative pt-5;
+    }
+
+    .material-field__label {
+        @apply pointer-events-none absolute left-0 top-6 text-sm text-slate-400 transition-all duration-200;
+    }
+
+    .material-field--filled .material-field__label,
+    .material-field:focus-within .material-field__label {
+        @apply top-0 text-xs font-medium text-amber-400/90;
+    }
+
+    .material-field__input {
+        @apply w-full border-0 border-b border-white/20 bg-transparent py-2 text-base text-slate-100 outline-none transition-colors;
+    }
+
+    .material-field__input:focus {
+        @apply border-amber-500/80;
+    }
+
+    .material-field__line {
+        @apply absolute bottom-0 left-0 h-0.5 w-0 bg-amber-500 transition-all duration-300;
+    }
+
+    .material-field:focus-within .material-field__line {
+        @apply w-full;
+    }
+
     .noah-login-panel {
         animation: noah-login-in 0.45s ease-out both;
     }

@@ -109,6 +109,15 @@ const navGroups = computed(() => {
                     icon: 'users',
                     moduleId: 'company_users',
                 },
+                ...(company.current?.role === 'administrator'
+                    ? [
+                          {
+                              to: '/app/admin/portal',
+                              label: 'Portal login',
+                              icon: 'building' as const,
+                          } satisfies NavItem,
+                      ]
+                    : []),
             ]),
         },
     ];

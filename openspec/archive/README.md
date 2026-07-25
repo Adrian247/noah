@@ -25,3 +25,4 @@ Propuestas cerradas (histórico). El flujo activo está en [../changes/README.md
 | [019-clients-module](019-clients-module/) | Facturación | Clientes y logo |
 | [020-invoice-prefactura-editable](020-invoice-prefactura-editable/) | Facturación | Prefactura editable |
 | [021-admin-user-permissions](021-admin-user-permissions/) | Identidad | Módulos lectura/escritura por usuario |
+| [022-industrial-login-portal](022-industrial-login-portal/) | UX/UI | Login dashboard industrial, portal público, admin |

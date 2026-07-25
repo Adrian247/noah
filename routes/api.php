@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AssetController;
 use App\Http\Controllers\Api\V1\AuditController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\PortalController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\BillingSettingsController;
 use App\Http\Controllers\Api\V1\ClientController;
@@ -31,6 +32,8 @@ Route::prefix('v1')->group(function (): void {
         'message' => 'Noah API',
         'product' => 'noah',
     ]));
+
+    Route::get('/portal', [PortalController::class, 'show']);
 
     Route::post('/auth/login', [AuthController::class, 'login']);
 
@@ -73,11 +76,13 @@ Route::prefix('v1')->group(function (): void {
             Route::delete('/clients/{client}', [ClientController::class, 'destroy'])
                 ->middleware('company.module:clients,write');
 
-            Route::middleware(['company.permission:company.users.manage', 'company.role:administrator'])->group(function (): void {
+            Route::middleware('company.role:administrator')->group(function (): void {
                 Route::get('/company/users', [CompanyUserController::class, 'index']);
                 Route::post('/company/users', [CompanyUserController::class, 'store']);
                 Route::put('/company/users/{user}', [CompanyUserController::class, 'update']);
                 Route::get('/company/roles', [CompanyRoleController::class, 'index']);
+                Route::get('/portal/settings', [PortalController::class, 'show']);
+                Route::put('/portal/settings', [PortalController::class, 'update']);
             });
 
             Route::post('/sync', [SyncController::class, 'sync']);

@@ -147,6 +147,12 @@ const router = createRouter({
                     component: () => import('@/pages/CompanyUsersPage.vue'),
                     meta: { title: 'Usuarios', requiresRole: 'administrator' },
                 },
+                {
+                    path: 'admin/portal',
+                    name: 'portal-settings',
+                    component: () => import('@/pages/PortalSettingsPage.vue'),
+                    meta: { title: 'Portal login', requiresRole: 'administrator' },
+                },
             ],
         },
     ],
