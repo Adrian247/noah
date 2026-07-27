@@ -24,6 +24,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     async function login(email: string, password: string) {
         error.value = null;
+        const normalizedEmail = email.trim().toLowerCase();
         try {
             const data = await api<{
                 token: string;
@@ -31,7 +32,7 @@ export const useAuthStore = defineStore('auth', () => {
                 companies: CompanyOption[];
             }>('/auth/login', {
                 method: 'POST',
-                body: JSON.stringify({ email, password, device_name: 'noah-web' }),
+                body: JSON.stringify({ email: normalizedEmail, password, device_name: 'noah-web' }),
             });
             token.value = data.token;
             setToken(data.token);

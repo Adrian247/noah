@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { api } from '@/api/client';
+import { useToast } from '@/composables/useToast';
 
 type StepMeta = { type: string; label: string };
 type Transition = { from: string; to: string; trigger: string; actions?: string[] };
@@ -25,7 +26,7 @@ type Workflow = {
 const route = useRoute();
 const workflow = ref<Workflow | null>(null);
 const definition = ref<Definition | null>(null);
-const message = ref<string | null>(null);
+const toast = useToast();
 const saving = ref(false);
 const dragging = ref<string | null>(null);
 const dragOffset = ref({ x: 0, y: 0 });
@@ -166,16 +167,15 @@ async function save() {
         return;
     }
     saving.value = true;
-    message.value = null;
     try {
         await api(`/design/workflows/${route.params.id}/definition`, {
             method: 'PUT',
             body: JSON.stringify({ definition: definition.value }),
         });
-        message.value = 'Workflow guardado.';
+        toast.success('Workflow guardado.');
         await load();
     } catch (e) {
-        message.value = (e as Error).message;
+        toast.error((e as Error).message);
     } finally {
         saving.value = false;
     }
@@ -187,7 +187,7 @@ onMounted(load);
 <template>
     <div v-if="workflow && definition" class="space-y-4">
         <h2 class="text-xl font-semibold">{{ workflow.name }}</h2>
-        <div class="max-w-3xl space-y-2 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">
+        <div class="max-w-3xl space-y-2 portal-form-panel p-4 text-sm text-slate-700">
             <p class="font-medium">Cómo leer este diagrama</p>
             <ul class="list-inside list-disc space-y-1 text-slate-600">
                 <li>
@@ -263,7 +263,7 @@ onMounted(load);
                 :class="
                     node.type === 'end'
                         ? 'border-emerald-400 bg-emerald-50'
-                        : 'border-slate-300 bg-white'
+                        : 'border-slate-300 portal-form-panel'
                 "
                 :style="{ left: `${node.pos.x}px`, top: `${node.pos.y}px` }"
                 @mousedown.prevent="onNodeDown(node.id, $event)"
@@ -306,6 +306,5 @@ onMounted(load);
         >
             Guardar diseño
         </button>
-        <p v-if="message" class="text-sm text-slate-600">{{ message }}</p>
     </div>
 </template>

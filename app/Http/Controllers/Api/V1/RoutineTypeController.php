@@ -7,21 +7,83 @@ use App\Http\Controllers\Controller;
 use App\Models\FormVersion;
 use App\Models\ReportTemplateVersion;
 use App\Models\RoutineType;
+use App\Support\CurrentCompany;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class RoutineTypeController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        return response()->json([
-            'data' => RoutineType::query()
-                ->with(['formVersion.definition', 'reportTemplateVersion.template', 'workflowDefinition'])
-                ->where('is_active', true)
-                ->orderBy('name')
-                ->get(),
+        $query = RoutineType::query()
+            ->with(['formVersion.definition', 'reportTemplateVersion.template', 'workflowDefinition'])
+            ->orderBy('name');
+
+        if (! $request->boolean('all')) {
+            $query->where('is_active', true);
+        }
+
+        return response()->json(['data' => $query->get()]);
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $this->authorizeAdministrator($request);
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'slug' => ['nullable', 'string', 'max:128'],
         ]);
+
+        $companyId = app(CurrentCompany::class)->id();
+        if ($companyId === null) {
+            abort(400, 'Company context required.');
+        }
+
+        $slug = $data['slug'] ?? Str::slug($data['name']);
+        if (RoutineType::query()->where('company_id', $companyId)->where('slug', $slug)->exists()) {
+            throw ValidationException::withMessages(['slug' => ['Ya existe un tipo con ese slug.']]);
+        }
+
+        $type = RoutineType::query()->create([
+            'company_id' => $companyId,
+            'name' => $data['name'],
+            'slug' => $slug,
+            'is_active' => true,
+        ]);
+
+        return response()->json(['data' => $type->fresh(['formVersion.definition', 'reportTemplateVersion.template', 'workflowDefinition'])], 201);
+    }
+
+    public function update(Request $request, RoutineType $routineType): JsonResponse
+    {
+        $this->authorizeAdministrator($request);
+
+        $data = $request->validate([
+            'name' => ['sometimes', 'string', 'max:255'],
+            'is_active' => ['sometimes', 'boolean'],
+        ]);
+
+        $routineType->update($data);
+
+        return response()->json([
+            'data' => $routineType->fresh(['formVersion.definition', 'reportTemplateVersion.template', 'workflowDefinition']),
+        ]);
+    }
+
+    public function destroy(Request $request, RoutineType $routineType): JsonResponse
+    {
+        $this->authorizeAdministrator($request);
+
+        if ($routineType->routines()->exists()) {
+            return response()->json(['message' => 'No se puede eliminar: hay rutinas de este tipo. Desactívalo en su lugar.'], 422);
+        }
+
+        $routineType->delete();
+
+        return response()->json(null, 204);
     }
 
     public function updateDesign(Request $request, RoutineType $routineType): JsonResponse
@@ -33,7 +95,7 @@ class RoutineTypeController extends Controller
             'report_template_version_id' => ['nullable', 'integer', 'exists:report_template_versions,id'],
         ]);
 
-        $companyId = app(\App\Support\CurrentCompany::class)->id();
+        $companyId = app(CurrentCompany::class)->id();
 
         if (! empty($data['form_version_id'])) {
             $this->assertPublishedFormVersion($data['form_version_id'], $companyId);

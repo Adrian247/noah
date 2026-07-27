@@ -16,6 +16,8 @@ class Company extends Model
         'is_active',
         'billing_labor_rate_per_hour',
         'billing_tax_rate',
+        'form_max_image_size_kb',
+        'form_allowed_image_mimes',
     ];
 
     protected function casts(): array
@@ -24,6 +26,7 @@ class Company extends Model
             'is_active' => 'boolean',
             'billing_labor_rate_per_hour' => 'decimal:2',
             'billing_tax_rate' => 'decimal:4',
+            'form_allowed_image_mimes' => 'array',
         ];
     }
 

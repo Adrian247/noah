@@ -2,7 +2,12 @@
 import { computed, onMounted, ref } from 'vue';
 import { api } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { useToast } from '@/composables/useToast';
 import ReadOnlyNotice from '@/components/ui/ReadOnlyNotice.vue';
+import PageHeader from '@/components/ui/PageHeader.vue';
+import MaterialSelect from '@/components/ui/MaterialSelect.vue';
+import MaterialField from '@/components/ui/MaterialField.vue';
+import AppButton from '@/components/ui/AppButton.vue';
 
 type WorkflowDef = { id: number; name: string };
 type VersionOption = { id: number; version: number };
@@ -23,6 +28,7 @@ type RoutineType = {
 };
 
 const { canWriteModule } = useModuleAccess();
+const toast = useToast();
 const canWrite = computed(() => canWriteModule('design_routine_types'));
 
 const types = ref<RoutineType[]>([]);
@@ -30,14 +36,20 @@ const workflows = ref<WorkflowDef[]>([]);
 const formCatalog = ref<FormCatalog[]>([]);
 const reportCatalog = ref<ReportCatalog[]>([]);
 const loading = ref(true);
-const error = ref<string | null>(null);
-const message = ref<string | null>(null);
+
+const showCreate = ref(false);
+const newName = ref('');
+const newSlug = ref('');
+const creating = ref(false);
+
+const emptyOption = { value: '', label: '— Sin enlazar —' };
+const workflowEmptyOption = { value: '', label: '—' };
 
 const formOptions = computed(() =>
     formCatalog.value
         .filter((f) => f.published_version)
         .map((f) => ({
-            id: f.published_version!.id,
+            value: String(f.published_version!.id),
             label: `${f.name} · v${f.published_version!.version}`,
         })),
 );
@@ -46,16 +58,32 @@ const reportOptions = computed(() =>
     reportCatalog.value
         .filter((r) => r.published_version)
         .map((r) => ({
-            id: r.published_version!.id,
+            value: String(r.published_version!.id),
             label: `${r.name} · v${r.published_version!.version}`,
         })),
 );
+
+const workflowOptions = computed(() =>
+    workflows.value.map((w) => ({ value: String(w.id), label: w.name })),
+);
+
+function formSelectOptions() {
+    return [emptyOption, ...formOptions.value];
+}
+
+function reportSelectOptions() {
+    return [emptyOption, ...reportOptions.value];
+}
+
+function workflowSelectOptions() {
+    return [workflowEmptyOption, ...workflowOptions.value];
+}
 
 async function load() {
     loading.value = true;
     try {
         const [typesRes, wfRes, formsRes, reportsRes] = await Promise.all([
-            api<{ data: RoutineType[] }>('/routine-types'),
+            api<{ data: RoutineType[] }>('/routine-types?all=1'),
             api<{ data: WorkflowDef[] }>('/design/workflows'),
             api<{ data: FormCatalog[] }>('/design/forms'),
             api<{ data: ReportCatalog[] }>('/design/reports'),
@@ -65,14 +93,80 @@ async function load() {
         formCatalog.value = formsRes.data;
         reportCatalog.value = reportsRes.data;
     } catch (e) {
-        error.value = (e as Error).message;
+        toast.error((e as Error).message);
     } finally {
         loading.value = false;
     }
 }
 
+async function createType() {
+    if (!newName.value.trim()) {
+        toast.warning('Indica el nombre del tipo.');
+        return;
+    }
+    creating.value = true;
+    try {
+        await api('/routine-types', {
+            method: 'POST',
+            body: JSON.stringify({
+                name: newName.value.trim(),
+                slug: newSlug.value.trim() || undefined,
+            }),
+        });
+        newName.value = '';
+        newSlug.value = '';
+        showCreate.value = false;
+        toast.success('Tipo de rutina creado.');
+        await load();
+    } catch (e) {
+        toast.error((e as Error).message);
+    } finally {
+        creating.value = false;
+    }
+}
+
+async function renameType(type: RoutineType, name: string) {
+    if (name.trim() === type.name) {
+        return;
+    }
+    try {
+        await api(`/routine-types/${type.id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ name: name.trim() }),
+        });
+        toast.success('Nombre actualizado.');
+        await load();
+    } catch (e) {
+        toast.error((e as Error).message);
+    }
+}
+
+async function toggleActive(type: RoutineType) {
+    try {
+        await api(`/routine-types/${type.id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ is_active: !type.is_active }),
+        });
+        await load();
+    } catch (e) {
+        toast.error((e as Error).message);
+    }
+}
+
+async function deleteType(type: RoutineType) {
+    if (!window.confirm(`¿Eliminar el tipo «${type.name}»?`)) {
+        return;
+    }
+    try {
+        await api(`/routine-types/${type.id}`, { method: 'DELETE' });
+        toast.success('Tipo eliminado.');
+        await load();
+    } catch (e) {
+        toast.error((e as Error).message);
+    }
+}
+
 async function saveWorkflow(type: RoutineType, workflowId: string) {
-    message.value = null;
     try {
         await api(`/routine-types/${type.id}/workflow`, {
             method: 'PUT',
@@ -80,15 +174,14 @@ async function saveWorkflow(type: RoutineType, workflowId: string) {
                 workflow_definition_id: workflowId ? Number(workflowId) : null,
             }),
         });
-        message.value = 'Workflow actualizado.';
+        toast.success('Workflow actualizado.');
         await load();
     } catch (e) {
-        message.value = (e as Error).message;
+        toast.error((e as Error).message);
     }
 }
 
 async function saveFormVersion(type: RoutineType, formVersionId: string) {
-    message.value = null;
     try {
         await api(`/routine-types/${type.id}/design`, {
             method: 'PUT',
@@ -96,15 +189,14 @@ async function saveFormVersion(type: RoutineType, formVersionId: string) {
                 form_version_id: formVersionId ? Number(formVersionId) : null,
             }),
         });
-        message.value = 'Formulario enlazado al tipo de rutina.';
+        toast.success('Formulario enlazado al tipo de rutina.');
         await load();
     } catch (e) {
-        message.value = (e as Error).message;
+        toast.error((e as Error).message);
     }
 }
 
 async function saveReportVersion(type: RoutineType, reportVersionId: string) {
-    message.value = null;
     try {
         await api(`/routine-types/${type.id}/design`, {
             method: 'PUT',
@@ -112,10 +204,10 @@ async function saveReportVersion(type: RoutineType, reportVersionId: string) {
                 report_template_version_id: reportVersionId ? Number(reportVersionId) : null,
             }),
         });
-        message.value = 'Reporte enlazado al tipo de rutina.';
+        toast.success('Reporte enlazado al tipo de rutina.');
         await load();
     } catch (e) {
-        message.value = (e as Error).message;
+        toast.error((e as Error).message);
     }
 }
 
@@ -123,75 +215,116 @@ onMounted(load);
 </script>
 
 <template>
-    <div class="space-y-4">
-        <h2 class="text-xl font-semibold">Tipos de rutina</h2>
-        <p class="text-sm text-slate-600">
-            Aquí se define qué <strong>versión publicada</strong> de formulario y reporte usa cada tipo. Primero
-            publica en Diseño → Formularios / Reportes (D1 y D2), luego elige la versión en los desplegables.
-        </p>
-        <p v-if="loading" class="text-slate-500">Cargando…</p>
-        <p v-else-if="error" class="text-red-600">{{ error }}</p>
-        <ReadOnlyNotice v-if="!loading && !error && !canWrite" module-label="Tipos de rutina" />
-        <table v-if="!loading && !error" class="w-full text-left text-sm">
+    <div class="portal-page">
+        <PageHeader
+            title="Tipos de rutina"
+            subtitle="Crea tipos y define qué versión publicada de formulario y reporte usa cada uno."
+        />
+        <div v-if="canWrite" class="mb-4 flex flex-wrap items-end gap-3">
+            <AppButton v-if="!showCreate" variant="secondary" @click="showCreate = true">
+                Nuevo tipo
+            </AppButton>
+            <div v-else class="portal-form-panel flex flex-wrap items-end gap-3 p-4">
+                <MaterialField v-model="newName" label="Nombre *" class="min-w-[14rem]" />
+                <MaterialField
+                    v-model="newSlug"
+                    label="Slug (opcional)"
+                    class="min-w-[12rem]"
+                    placeholder="auto-desde-nombre"
+                />
+                <AppButton :disabled="creating" @click="createType">Crear</AppButton>
+                <AppButton variant="ghost" @click="showCreate = false">Cancelar</AppButton>
+            </div>
+        </div>
+        <p v-if="loading" class="text-portal-muted">Cargando…</p>
+        <ReadOnlyNotice v-if="!loading && !canWrite" module-label="Tipos de rutina" />
+        <div v-if="!loading" class="portal-table-wrap">
+        <table class="portal-data-table">
             <thead>
-                <tr class="border-b text-slate-500">
+                <tr class="border-b">
                     <th class="py-2">Nombre</th>
+                    <th>Estado</th>
                     <th>Formulario (publicado)</th>
                     <th>Reporte (publicado)</th>
                     <th>Workflow</th>
+                    <th v-if="canWrite" class="py-2">Acciones</th>
                 </tr>
             </thead>
             <tbody>
-                <tr v-for="t in types" :key="t.id" class="border-b border-slate-100 align-top">
-                    <td class="py-2 font-medium">{{ t.name }}</td>
-                    <td class="py-2">
-                        <select
-                            class="max-w-xs w-full rounded border border-slate-300 px-2 py-1 text-xs"
-                            :disabled="!canWrite"
-                            :value="String(t.form_version_id ?? '')"
-                            @change="saveFormVersion(t, ($event.target as HTMLSelectElement).value)"
+                <tr v-for="t in types" :key="t.id" class="border-b align-top">
+                    <td class="py-3 pr-2">
+                        <input
+                            v-if="canWrite"
+                            :value="t.name"
+                            class="w-full min-w-[10rem] rounded-md border border-white/15 bg-transparent px-2 py-1.5 text-sm text-portal-heading"
+                            @change="(e) => renameType(t, (e.target as HTMLInputElement).value)"
+                        />
+                        <span v-else class="text-portal-heading font-medium">{{ t.name }}</span>
+                        <p class="text-portal-muted mt-1 font-mono text-xs">{{ t.slug }}</p>
+                    </td>
+                    <td class="py-3">
+                        <span
+                            class="text-xs font-medium"
+                            :class="t.is_active ? 'text-emerald-600' : 'text-slate-500'"
                         >
-                            <option value="">— Sin enlazar —</option>
-                            <option v-for="o in formOptions" :key="o.id" :value="String(o.id)">
-                                {{ o.label }}
-                            </option>
-                        </select>
-                        <p v-if="!formOptions.length" class="mt-1 text-xs text-amber-800">
+                            {{ t.is_active ? 'Activo' : 'Inactivo' }}
+                        </span>
+                    </td>
+                    <td class="max-w-xs py-3 pr-2">
+                        <MaterialSelect
+                            compact
+                            :disabled="!canWrite"
+                            :model-value="String(t.form_version_id ?? '')"
+                            label="Formulario"
+                            :options="formSelectOptions()"
+                            @update:model-value="(v) => saveFormVersion(t, String(v))"
+                        />
+                        <p v-if="!formOptions.length" class="mt-1 text-xs text-amber-600">
                             Publica un formulario en D1.
                         </p>
                     </td>
-                    <td class="py-2">
-                        <select
-                            class="max-w-xs w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                    <td class="max-w-xs py-3 pr-2">
+                        <MaterialSelect
+                            compact
                             :disabled="!canWrite"
-                            :value="String(t.report_template_version_id ?? '')"
-                            @change="saveReportVersion(t, ($event.target as HTMLSelectElement).value)"
-                        >
-                            <option value="">— Sin enlazar —</option>
-                            <option v-for="o in reportOptions" :key="o.id" :value="String(o.id)">
-                                {{ o.label }}
-                            </option>
-                        </select>
-                        <p v-if="!reportOptions.length" class="mt-1 text-xs text-amber-800">
+                            :model-value="String(t.report_template_version_id ?? '')"
+                            label="Reporte"
+                            :options="reportSelectOptions()"
+                            @update:model-value="(v) => saveReportVersion(t, String(v))"
+                        />
+                        <p v-if="!reportOptions.length" class="mt-1 text-xs text-amber-600">
                             Publica un reporte en D2.
                         </p>
                     </td>
-                    <td class="py-2">
-                        <select
-                            class="rounded border border-slate-300 px-2 py-1 text-xs"
+                    <td class="max-w-[10rem] py-3">
+                        <MaterialSelect
+                            compact
                             :disabled="!canWrite"
-                            :value="String(t.workflow_definition_id ?? '')"
-                            @change="saveWorkflow(t, ($event.target as HTMLSelectElement).value)"
+                            :model-value="String(t.workflow_definition_id ?? '')"
+                            label="Workflow"
+                            :options="workflowSelectOptions()"
+                            @update:model-value="(v) => saveWorkflow(t, String(v))"
+                        />
+                    </td>
+                    <td v-if="canWrite" class="space-y-2 py-3">
+                        <button
+                            type="button"
+                            class="block text-sm text-amber-700 underline"
+                            @click="toggleActive(t)"
                         >
-                            <option value="">—</option>
-                            <option v-for="w in workflows" :key="w.id" :value="String(w.id)">
-                                {{ w.name }}
-                            </option>
-                        </select>
+                            {{ t.is_active ? 'Desactivar' : 'Activar' }}
+                        </button>
+                        <button
+                            type="button"
+                            class="block text-sm text-red-500 underline"
+                            @click="deleteType(t)"
+                        >
+                            Eliminar
+                        </button>
                     </td>
                 </tr>
             </tbody>
         </table>
-        <p v-if="message" class="text-sm text-slate-600">{{ message }}</p>
+        </div>
     </div>
 </template>

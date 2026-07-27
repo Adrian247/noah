@@ -8,6 +8,8 @@ use App\Http\Controllers\Controller;
 use App\Models\FormDefinition;
 use App\Models\FormVersion;
 use App\Services\Audit\AuditLogger;
+use App\Services\Forms\FormDesignSettings;
+use App\Services\Forms\FormSchemaValidator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -79,14 +81,18 @@ class FormDefinitionController extends Controller
         return response()->json(['data' => $form->load('versions')], 201);
     }
 
-    public function show(FormDefinition $form): JsonResponse
+    public function show(FormDefinition $form, FormDesignSettings $designSettings): JsonResponse
     {
         return response()->json([
             'data' => $form->load(['versions' => fn ($q) => $q->orderByDesc('version')]),
+            'form_design' => [
+                'settings' => $designSettings->forCurrentCompany(),
+                'option_catalogs' => $designSettings->optionCatalogsForCurrentCompany(),
+            ],
         ]);
     }
 
-    public function updateSchema(Request $request, FormDefinition $form, AuditLogger $audit): JsonResponse
+    public function updateSchema(Request $request, FormDefinition $form, AuditLogger $audit, FormSchemaValidator $schemaValidator): JsonResponse
     {
         $this->authorizeDesigner($request);
 
@@ -94,6 +100,8 @@ class FormDefinitionController extends Controller
             'schema' => ['required', 'array'],
             'schema.sections' => ['required', 'array'],
         ]);
+
+        $schemaValidator->validate($data['schema']);
 
         $draft = $form->versions()->where('status', 'draft')->orderByDesc('version')->first();
 

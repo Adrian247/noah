@@ -8,6 +8,7 @@ use App\Models\Routine;
 use App\Models\SupplyItem;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\VehicleDemoFormResponses;
 use Tests\TestCase;
 
 class RoutineExecutionConsumptionsTest extends TestCase
@@ -28,7 +29,7 @@ class RoutineExecutionConsumptionsTest extends TestCase
             ->postJson("/api/v1/routines/{$routine->id}/executions", [
                 'technician_comments' => 'cambio de filtro',
                 'duration_minutes' => 45,
-                'responses' => ['horometro' => 1200],
+                'responses' => VehicleDemoFormResponses::required(),
                 'consumptions' => [
                     ['supply_item_id' => $supply->id, 'quantity' => 2],
                 ],

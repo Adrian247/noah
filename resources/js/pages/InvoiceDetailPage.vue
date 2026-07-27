@@ -3,10 +3,10 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute, RouterLink } from 'vue-router';
 import { api } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { useToast } from '@/composables/useToast';
 import GlassCard from '@/components/ui/GlassCard.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
-import AlertBanner from '@/components/ui/AlertBanner.vue';
 import AppButton from '@/components/ui/AppButton.vue';
 
 type LineType = 'supply' | 'labor' | 'other';
@@ -48,6 +48,7 @@ type Invoice = {
 };
 
 const route = useRoute();
+const toast = useToast();
 const { canWriteModule } = useModuleAccess();
 const canWriteBilling = computed(() => canWriteModule('billing'));
 const canEdit = computed(() => canWriteBilling.value);
@@ -60,8 +61,6 @@ const editLines = ref<DraftLine[]>([]);
 const loading = ref(true);
 const saving = ref(false);
 const issuing = ref(false);
-const error = ref<string | null>(null);
-const message = ref<string | null>(null);
 
 const isDraft = computed(() => invoice.value?.status === 'draft');
 
@@ -92,7 +91,6 @@ function syncLaborFromMeta(line: DraftLine) {
 
 async function load() {
     loading.value = true;
-    error.value = null;
     try {
         const [invRes, clientsRes] = await Promise.all([
             api<{ data: Invoice }>(`/billing/invoices/${route.params.id}`),
@@ -103,7 +101,7 @@ async function load() {
         clientId.value = invRes.data.client_id ?? invRes.data.client?.id ?? null;
         editLines.value = invRes.data.lines.map(lineImport);
     } catch (e) {
-        error.value = (e as Error).message;
+        toast.error((e as Error).message);
     } finally {
         loading.value = false;
     }
@@ -139,8 +137,6 @@ async function saveDraft() {
         return;
     }
     saving.value = true;
-    message.value = null;
-    error.value = null;
     editLines.value.forEach((line, i) => {
         line.sort_order = i;
         if (line.line_type === 'labor') {
@@ -157,9 +153,9 @@ async function saveDraft() {
         });
         invoice.value = res.data;
         editLines.value = res.data.lines.map(lineImport);
-        message.value = 'Prefactura guardada.';
+        toast.success('Prefactura guardada.');
     } catch (e) {
-        error.value = (e as Error).message;
+        toast.error((e as Error).message);
     } finally {
         saving.value = false;
     }
@@ -170,16 +166,15 @@ async function issueInvoice() {
         return;
     }
     issuing.value = true;
-    error.value = null;
     try {
         await saveDraft();
         const res = await api<{ data: Invoice }>(`/billing/invoices/${invoice.value!.id}/issue`, {
             method: 'POST',
         });
         invoice.value = res.data;
-        message.value = 'Factura emitida.';
+        toast.success('Factura emitida.');
     } catch (e) {
-        error.value = (e as Error).message;
+        toast.error((e as Error).message);
     } finally {
         issuing.value = false;
     }
@@ -203,9 +198,8 @@ onMounted(load);
             :subtitle="invoice.number ? `Folio ${invoice.number}` : 'Sin folio fiscal'"
         />
         <p v-if="loading" class="text-slate-500">Cargando…</p>
-        <AlertBanner v-else-if="error" variant="danger">{{ error }}</AlertBanner>
-        <template v-else-if="invoice">
-            <AlertBanner v-if="message" variant="success">{{ message }}</AlertBanner>
+        <p v-else-if="!invoice" class="text-portal-muted text-sm">No se pudo cargar esta prefactura.</p>
+        <template v-else>
             <GlassCard padding="lg" class="max-w-4xl">
                 <div class="mb-4 flex flex-wrap items-center gap-3">
                     <StatusBadge :status="invoice.status" />

@@ -1,17 +1,16 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useCompanyStore } from '@/stores/company';
 import { api } from '@/api/client';
 import BacteriumNetwork from '@/components/BacteriumNetwork.vue';
+import AppAtmosphere from '@/components/AppAtmosphere.vue';
 import NoahBrand from '@/components/ui/NoahBrand.vue';
 import AppButton from '@/components/ui/AppButton.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
 
 type PortalContent = {
-    hero_image_url?: string | null;
-    hero_image_alt?: string | null;
     service_title?: string | null;
     service_description?: string | null;
     service_highlights?: string[];
@@ -22,31 +21,33 @@ type PortalContent = {
     contact_hours?: string | null;
 };
 
+const capabilities = [
+    {
+        num: '01',
+        title: 'Rutinas y validación',
+        text: 'Ejecución en campo, evidencias y aprobación de supervisores.',
+    },
+    {
+        num: '02',
+        title: 'Diseño configurable',
+        text: 'Formularios, reportes PDF y workflows sin desplegar código.',
+    },
+    {
+        num: '03',
+        title: 'Powered by AI',
+        text: 'AI Gateway con plantillas auditables y proveedor intercambiable.',
+    },
+];
+
 const email = ref('admin@noah.local');
-const password = ref('password');
+const password = ref('noah_application');
+const passwordReadonly = ref(true);
 const loading = ref(false);
 const portal = ref<PortalContent | null>(null);
-const parallaxX = ref(0);
-const parallaxY = ref(0);
 
 const router = useRouter();
 const auth = useAuthStore();
 const company = useCompanyStore();
-
-const parallaxStyle = computed(() => ({
-    transform: `translate3d(${parallaxX.value * 0.02}px, ${parallaxY.value * 0.02}px, 0) scale(1.08)`,
-}));
-
-const serviceLayerStyle = computed(() => ({
-    transform: `translate3d(${parallaxX.value * -0.01}px, ${parallaxY.value * -0.01}px, 0)`,
-}));
-
-function onPointerMove(event: PointerEvent) {
-    const cx = window.innerWidth / 2;
-    const cy = window.innerHeight / 2;
-    parallaxX.value = event.clientX - cx;
-    parallaxY.value = event.clientY - cy;
-}
 
 async function loadPortal() {
     try {
@@ -57,10 +58,31 @@ async function loadPortal() {
     }
 }
 
-async function submit() {
-    loading.value = true;
+const demoHint = ref<string | null>(null);
+
+async function loadDemoHealth() {
     try {
-        await auth.login(email.value, password.value);
+        const res = await api<{
+            demo?: { accounts_ready: boolean; password: string };
+        }>('/health');
+        if (res.demo && !res.demo.accounts_ready) {
+            demoHint.value =
+                'No hay cuentas demo. Reparando… vuelve a intentar en unos segundos o ejecuta: docker compose exec app php artisan noah:refresh-demo';
+            window.setTimeout(() => void loadDemoHealth(), 2500);
+        } else {
+            demoHint.value = null;
+        }
+    } catch {
+        demoHint.value = null;
+    }
+}
+
+async function submit() {
+    applyDemoCredentials();
+    loading.value = true;
+    auth.error = null;
+    try {
+        await auth.login(email.value.trim(), password.value);
         company.hydrate(auth.companies);
         await router.push('/app/dashboard');
     } finally {
@@ -68,32 +90,57 @@ async function submit() {
     }
 }
 
+const DEMO_EMAIL = 'admin@noah.local';
+const DEMO_PASSWORD = 'noah_application';
+
+function applyDemoCredentials() {
+    if (email.value === '' || email.value === 'admin@noah.local') {
+        email.value = DEMO_EMAIL;
+    }
+    if (password.value === '' || password.value === 'password') {
+        password.value = DEMO_PASSWORD;
+    }
+}
+
+function onPasswordFocus() {
+    passwordReadonly.value = false;
+    applyDemoCredentials();
+}
+
 onMounted(() => {
     void loadPortal();
-    window.addEventListener('pointermove', onPointerMove);
-});
-
-onUnmounted(() => {
-    window.removeEventListener('pointermove', onPointerMove);
+    void loadDemoHealth();
+    applyDemoCredentials();
+    window.setTimeout(applyDemoCredentials, 150);
+    window.setTimeout(applyDemoCredentials, 600);
 });
 </script>
 
 <template>
-    <div class="login-dashboard relative min-h-screen overflow-hidden bg-slate-950 text-slate-100">
-        <BacteriumNetwork subdued />
-        <div class="login-dashboard__grid relative z-10 min-h-screen lg:grid lg:grid-cols-2">
-            <section class="flex flex-col justify-center px-6 py-10 sm:px-10 lg:px-14 xl:px-20">
-                <div class="login-glass-panel mx-auto w-full max-w-md p-8 sm:p-10">
-                    <div class="mb-8 flex flex-col gap-2">
+    <div class="login-shell relative min-h-dvh text-slate-100 lg:h-dvh lg:overflow-hidden">
+        <BacteriumNetwork subdued warm />
+
+        <AppAtmosphere />
+
+        <div class="relative z-10 grid min-h-dvh w-full lg:h-full lg:min-h-0 lg:grid-cols-[minmax(340px,40%)_1fr]">
+            <!-- Columna login: pegada a la izquierda -->
+            <section
+                class="flex items-center justify-start px-6 py-12 sm:px-10 lg:py-0 lg:pl-10 xl:pl-16 2xl:pl-24"
+            >
+                <div class="login-glass-premium login-stagger w-full max-w-[22rem] p-8 sm:max-w-sm sm:p-9">
+                    <div class="login-reveal mb-7">
                         <NoahBrand size="lg" :show-wordmark="true" variant="sidebar" />
-                        <p class="text-sm text-slate-400">Acceso seguro a operaciones industriales</p>
+                        <p class="mt-3 text-sm leading-relaxed text-slate-400">
+                            Acceso seguro a operaciones industriales
+                        </p>
                     </div>
 
-                    <form class="space-y-6" @submit.prevent="submit">
+                    <form class="login-reveal space-y-5" autocomplete="off" @submit.prevent="submit">
                         <MaterialField
                             v-model="email"
                             label="Correo electrónico"
                             type="email"
+                            name="noah-email"
                             required
                             autocomplete="username"
                         />
@@ -101,92 +148,138 @@ onUnmounted(() => {
                             v-model="password"
                             label="Contraseña"
                             type="password"
+                            name="noah-password"
                             required
-                            autocomplete="current-password"
+                            placeholder="noah_application"
+                            autocomplete="off"
+                            :readonly="passwordReadonly"
+                            @focus="onPasswordFocus"
                         />
                         <Transition name="login-fade">
-                            <p v-if="auth.error" class="text-sm text-red-400">{{ auth.error }}</p>
+                            <p v-if="demoHint" class="text-sm text-amber-400">{{ demoHint }}</p>
+                            <p v-if="auth.error" class="text-sm text-red-400">
+                                {{ auth.error }}
+                                <span class="mt-1 block text-xs text-slate-500">
+                                    Demo local:
+                                    <span class="font-mono">admin@noah.local</span>
+                                    /
+                                    <span class="font-mono">noah_application</span>
+                                    — si falla:
+                                    <span class="font-mono">docker compose exec app php artisan noah:refresh-demo</span>
+                                </span>
+                            </p>
                         </Transition>
-                        <AppButton type="submit" class="w-full !bg-amber-500 !text-slate-950 hover:!bg-amber-400" :disabled="loading">
+                        <AppButton
+                            type="submit"
+                            variant="primary"
+                            class="login-cta w-full py-3 font-semibold"
+                            :disabled="loading"
+                        >
                             {{ loading ? 'Entrando…' : 'Iniciar sesión' }}
                         </AppButton>
+                        <p class="text-center text-xs text-slate-500">
+                            Demo local:
+                            <span class="font-mono text-slate-400">admin@noah.local</span>
+                            /
+                            <span class="font-mono text-slate-400">noah_application</span>
+                        </p>
                     </form>
 
-                    <div class="mt-8 space-y-4 border-t border-white/10 pt-6 text-sm">
-                        <div>
-                            <h3 class="font-semibold text-amber-400/90">
-                                {{ portal?.help_title ?? 'Ayuda' }}
-                            </h3>
-                            <p class="mt-1 text-slate-400">
-                                {{ portal?.help_text }}
-                            </p>
-                        </div>
-                        <div>
-                            <h3 class="font-semibold text-slate-200">Contacto</h3>
-                            <ul class="mt-2 space-y-1 text-slate-400">
-                                <li v-if="portal?.contact_email">
-                                    <a
-                                        class="text-amber-400/90 hover:text-amber-300"
-                                        :href="`mailto:${portal.contact_email}`"
-                                    >
-                                        {{ portal.contact_email }}
-                                    </a>
-                                </li>
-                                <li v-if="portal?.contact_phone">{{ portal.contact_phone }}</li>
-                                <li v-if="portal?.contact_hours">{{ portal.contact_hours }}</li>
-                            </ul>
-                        </div>
+                    <div class="login-reveal mt-7 border-t border-white/10 pt-6 text-sm leading-relaxed text-slate-400">
+                        <p class="font-medium text-amber-400/95">{{ portal?.help_title ?? 'Ayuda' }}</p>
+                        <p class="mt-2">{{ portal?.help_text }}</p>
                     </div>
-                </div>
-            </section>
 
-            <section class="relative hidden min-h-[28rem] overflow-hidden lg:block">
-                <div
-                    class="login-hero-layer absolute inset-0 will-change-transform"
-                    :style="parallaxStyle"
-                >
-                    <img
-                        v-if="portal?.hero_image_url"
-                        :src="portal.hero_image_url"
-                        :alt="portal.hero_image_alt ?? ''"
-                        class="h-full w-full object-cover object-center opacity-40"
-                    />
-                    <div class="absolute inset-0 bg-gradient-to-l from-slate-950 via-slate-950/70 to-transparent" />
-                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-900/40" />
-                </div>
-
-                <div
-                    class="login-service-panel absolute bottom-10 left-10 right-10 will-change-transform"
-                    :style="serviceLayerStyle"
-                >
-                    <div class="login-glass-panel-dark p-8">
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-amber-500/80">
-                            Servicio Noah
-                        </p>
-                        <h2 class="mt-2 text-2xl font-bold text-white">
-                            {{ portal?.service_title }}
-                        </h2>
-                        <p class="mt-3 text-sm leading-relaxed text-slate-300">
-                            {{ portal?.service_description }}
-                        </p>
-                        <ul v-if="portal?.service_highlights?.length" class="mt-4 space-y-2 text-sm text-slate-400">
-                            <li
-                                v-for="(item, i) in portal.service_highlights"
-                                :key="i"
-                                class="flex gap-2"
+                    <div class="login-reveal mt-6 border-t border-white/10 pt-5 text-sm lg:hidden">
+                        <p class="font-medium text-slate-200">Contacto</p>
+                        <p class="mt-2 text-slate-300">
+                            <a
+                                v-if="portal?.contact_email"
+                                class="text-amber-400/95 hover:underline"
+                                :href="`mailto:${portal.contact_email}`"
                             >
-                                <span class="text-amber-500">▸</span>
-                                <span>{{ item }}</span>
-                            </li>
-                        </ul>
+                                {{ portal.contact_email }}
+                            </a>
+                            <span v-else>soporte@noah.local</span>
+                        </p>
+                        <p class="mt-1 text-slate-400">{{ portal?.contact_phone ?? '+52 55 0000 0000' }}</p>
+                        <p class="mt-1 text-slate-500">
+                            {{ portal?.contact_hours ?? 'Lun–Vie 8:00–18:00 (hora Ciudad de México)' }}
+                        </p>
                     </div>
                 </div>
             </section>
-        </div>
 
-        <div class="login-glass-panel-dark relative z-10 mx-4 mb-8 p-6 lg:hidden">
-            <h2 class="text-lg font-semibold text-white">{{ portal?.service_title }}</h2>
-            <p class="mt-2 text-sm text-slate-400">{{ portal?.service_description }}</p>
+            <!-- Columna narrativa: anclada arriba-izquierda del espacio libre -->
+            <section
+                class="login-stagger hidden flex-col justify-between px-8 pb-12 pt-14 lg:flex xl:px-14 xl:pb-14 xl:pt-16 2xl:pr-24"
+            >
+                <div class="login-reveal max-w-3xl">
+                    <div class="mb-5 inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1">
+                        <span class="h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
+                        <span class="text-[11px] font-semibold uppercase tracking-wide text-amber-200/90">
+                            Plataforma Noah
+                        </span>
+                    </div>
+                    <h1 class="max-w-2xl text-4xl font-extrabold leading-[1.12] tracking-tight xl:text-5xl 2xl:text-[3.25rem]">
+                        <span class="login-headline-accent">
+                            {{ portal?.service_title ?? 'Gestión técnica industrial' }}
+                        </span>
+                    </h1>
+                    <p class="mt-5 max-w-xl text-base leading-relaxed text-slate-300/95 xl:text-lg">
+                        {{
+                            portal?.service_description ??
+                            'Rutinas, validación, evidencias y facturación en una sola plataforma.'
+                        }}
+                    </p>
+                    <ul
+                        v-if="portal?.service_highlights?.length"
+                        class="mt-6 flex flex-wrap gap-2"
+                    >
+                        <li
+                            v-for="(item, i) in portal.service_highlights"
+                            :key="i"
+                            class="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-medium text-slate-300 backdrop-blur-sm"
+                        >
+                            {{ item }}
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="login-reveal mt-10 grid max-w-4xl gap-4 sm:grid-cols-3">
+                    <article
+                        v-for="cap in capabilities"
+                        :key="cap.num"
+                        class="login-cap-card rounded-2xl p-5 backdrop-blur-sm"
+                    >
+                        <p class="font-mono text-xs font-semibold text-amber-500/80">{{ cap.num }}</p>
+                        <h2 class="mt-2 text-sm font-semibold text-white">{{ cap.title }}</h2>
+                        <p class="mt-2 text-xs leading-relaxed text-slate-400">{{ cap.text }}</p>
+                    </article>
+                </div>
+
+                <footer class="login-reveal mt-10 max-w-4xl border-t border-white/10 pt-6">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Contacto</p>
+                    <div
+                        class="mt-3 flex flex-col gap-3 text-sm text-slate-300 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-8 sm:gap-y-2"
+                    >
+                        <a
+                            v-if="portal?.contact_email"
+                            class="text-amber-400/95 transition hover:text-amber-300"
+                            :href="`mailto:${portal.contact_email}`"
+                        >
+                            {{ portal.contact_email }}
+                        </a>
+                        <span v-else class="text-slate-300">soporte@noah.local</span>
+                        <span class="hidden text-slate-600 sm:inline" aria-hidden="true">·</span>
+                        <span>{{ portal?.contact_phone ?? '+52 55 0000 0000' }}</span>
+                        <span class="hidden text-slate-600 sm:inline" aria-hidden="true">·</span>
+                        <span class="text-slate-500">
+                            {{ portal?.contact_hours ?? 'Lun–Vie 8:00–18:00 (hora Ciudad de México)' }}
+                        </span>
+                    </div>
+                </footer>
+            </section>
         </div>
     </div>
 </template>
@@ -194,14 +287,11 @@ onUnmounted(() => {
 <style scoped>
 .login-fade-enter-active,
 .login-fade-leave-active {
-    transition:
-        opacity 0.2s ease,
-        transform 0.2s ease;
+    transition: opacity 0.2s ease;
 }
 
 .login-fade-enter-from,
 .login-fade-leave-to {
     opacity: 0;
-    transform: translateY(-4px);
 }
 </style>

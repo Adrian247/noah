@@ -5,6 +5,8 @@ const props = defineProps<{
     isProcessing?: boolean;
     /** Atenúa el dibujo en fondos claros */
     subdued?: boolean;
+    /** Tinte ámbar/industrial para pantalla de login */
+    warm?: boolean;
 }>();
 
 const canvasWrapper = ref<HTMLDivElement | null>(null);
@@ -30,6 +32,15 @@ let running = false;
 
 const colorIdle = { r: 79, g: 70, b: 229 };
 const colorActive = { r: 99, g: 102, b: 241 };
+const colorWarmIdle = { r: 180, g: 120, b: 40 };
+const colorWarmActive = { r: 251, g: 191, b: 36 };
+
+function palette() {
+    if (props.warm) {
+        return { idle: colorWarmIdle, active: colorWarmActive };
+    }
+    return { idle: colorIdle, active: colorActive };
+}
 
 function intensityFactor() {
     return props.subdued ? 0.72 : 1;
@@ -104,12 +115,13 @@ function animate() {
     time += 0.01;
     ctx.clearRect(0, 0, width, height);
 
+    const { idle, active } = palette();
     const targetLevel = props.isProcessing ? 1 : 0;
     transitionLevel += (targetLevel - transitionLevel) * 0.05;
 
-    const r = colorIdle.r + (colorActive.r - colorIdle.r) * transitionLevel;
-    const g = colorIdle.g + (colorActive.g - colorIdle.g) * transitionLevel;
-    const b = colorIdle.b + (colorActive.b - colorIdle.b) * transitionLevel;
+    const r = idle.r + (active.r - idle.r) * transitionLevel;
+    const g = idle.g + (active.g - idle.g) * transitionLevel;
+    const b = idle.b + (active.b - idle.b) * transitionLevel;
     const currentColor = `${r}, ${g}, ${b}`;
     const speedMultiplier = 1 + transitionLevel * 3.5;
     const connectionDistance = 120 + transitionLevel * 40;
@@ -227,9 +239,9 @@ watch(
 );
 
 watch(
-    () => props.subdued,
+    () => [props.subdued, props.warm],
     () => {
-        /* intensityFactor reads props each frame */
+        /* intensityFactor / palette read props each frame */
     },
 );
 </script>

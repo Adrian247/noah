@@ -13,25 +13,43 @@ use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\ExecutionEvidenceController;
 use App\Http\Controllers\Api\V1\CatalogItemController;
 use App\Http\Controllers\Api\V1\FormDefinitionController;
+use App\Http\Controllers\Api\V1\FormDesignSettingsController;
+use App\Http\Controllers\Api\V1\FormOptionCatalogController;
 use App\Http\Controllers\Api\V1\GeneratedReportController;
 use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\RoutineController;
 use App\Http\Controllers\Api\V1\RoutineExecutionController;
+use App\Http\Controllers\Api\V1\RoutineFormFieldUploadController;
 use App\Http\Controllers\Api\V1\RoutineTypeController;
+use App\Http\Controllers\Api\V1\ReportSectionTemplateController;
 use App\Http\Controllers\Api\V1\ReportTemplateController;
 use App\Http\Controllers\Api\V1\SiteController;
 use App\Http\Controllers\Api\V1\SupplierController;
 use App\Http\Controllers\Api\V1\SyncController;
 use App\Http\Controllers\Api\V1\SupplyItemController;
 use App\Http\Controllers\Api\V1\WorkflowDefinitionController;
+use App\Support\DemoEnvironmentBootstrap;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
-    Route::get('/health', fn () => response()->json([
-        'status' => 'ok',
-        'message' => 'Noah API',
-        'product' => 'noah',
-    ]));
+    Route::get('/health', function () {
+        DemoEnvironmentBootstrap::ensureAccountsIfMissing();
+
+        $payload = [
+            'status' => 'ok',
+            'message' => 'Noah API',
+            'product' => 'noah',
+        ];
+
+        if (app()->environment('local')) {
+            $payload['demo'] = [
+                'accounts_ready' => \App\Models\User::query()->where('email', 'admin@noah.local')->exists(),
+                'password' => config('noah.demo_password'),
+            ];
+        }
+
+        return response()->json($payload);
+    });
 
     Route::get('/portal', [PortalController::class, 'show']);
 
@@ -114,6 +132,19 @@ Route::prefix('v1')->group(function (): void {
             Route::delete('/assets/{asset}', [AssetController::class, 'destroy'])
                 ->middleware('company.module:assets,write');
 
+            Route::get('/design/forms/settings', [FormDesignSettingsController::class, 'show'])
+                ->middleware('company.module:design_forms,read');
+            Route::put('/design/forms/settings', [FormDesignSettingsController::class, 'update'])
+                ->middleware('company.module:design_forms,write');
+            Route::get('/design/forms/option-catalogs', [FormOptionCatalogController::class, 'index'])
+                ->middleware('company.module:design_forms,read');
+            Route::post('/design/forms/option-catalogs', [FormOptionCatalogController::class, 'store'])
+                ->middleware('company.module:design_forms,write');
+            Route::put('/design/forms/option-catalogs/{optionCatalog}', [FormOptionCatalogController::class, 'update'])
+                ->middleware('company.module:design_forms,write');
+            Route::delete('/design/forms/option-catalogs/{optionCatalog}', [FormOptionCatalogController::class, 'destroy'])
+                ->middleware('company.module:design_forms,write');
+
             Route::get('/design/forms', [FormDefinitionController::class, 'index'])
                 ->middleware('company.module:design_forms,read');
             Route::post('/design/forms', [FormDefinitionController::class, 'store'])
@@ -129,9 +160,27 @@ Route::prefix('v1')->group(function (): void {
                 ->middleware('company.module:design_reports,read');
             Route::post('/design/reports', [ReportTemplateController::class, 'store'])
                 ->middleware('company.module:design_reports,write');
+            Route::get('/design/reports/section-templates', [ReportSectionTemplateController::class, 'index'])
+                ->middleware('company.module:design_reports,read');
+            Route::post('/design/reports/section-templates', [ReportSectionTemplateController::class, 'store'])
+                ->middleware('company.module:design_reports,write');
+            Route::put('/design/reports/section-templates/{reportSectionTemplate}', [ReportSectionTemplateController::class, 'update'])
+                ->middleware('company.module:design_reports,write');
+            Route::delete('/design/reports/section-templates/{reportSectionTemplate}', [ReportSectionTemplateController::class, 'destroy'])
+                ->middleware('company.module:design_reports,write');
+            Route::get('/design/reports/{reportTemplate}/preview', [ReportTemplateController::class, 'preview'])
+                ->middleware('company.module:design_reports,read');
+            Route::post('/design/reports/{reportTemplate}/preview', [ReportTemplateController::class, 'previewDraft'])
+                ->middleware('company.module:design_reports,read');
+            Route::put('/design/reports/{reportTemplate}', [ReportTemplateController::class, 'update'])
+                ->middleware('company.module:design_reports,write');
             Route::get('/design/reports/{reportTemplate}', [ReportTemplateController::class, 'show'])
                 ->middleware('company.module:design_reports,read');
             Route::put('/design/reports/{reportTemplate}/components', [ReportTemplateController::class, 'updateComponents'])
+                ->middleware('company.module:design_reports,write');
+            Route::post('/design/reports/{reportTemplate}/cover-image', [ReportTemplateController::class, 'uploadCoverImage'])
+                ->middleware('company.module:design_reports,write');
+            Route::delete('/design/reports/{reportTemplate}/cover-image', [ReportTemplateController::class, 'deleteCoverImage'])
                 ->middleware('company.module:design_reports,write');
             Route::post('/design/reports/{reportTemplate}/publish', [ReportTemplateController::class, 'publish'])
                 ->middleware('company.module:design_reports,write');
@@ -148,6 +197,12 @@ Route::prefix('v1')->group(function (): void {
 
             Route::get('/routine-types', [RoutineTypeController::class, 'index'])
                 ->middleware('company.module:design_routine_types,read');
+            Route::post('/routine-types', [RoutineTypeController::class, 'store'])
+                ->middleware('company.module:design_routine_types,write');
+            Route::put('/routine-types/{routineType}', [RoutineTypeController::class, 'update'])
+                ->middleware('company.module:design_routine_types,write');
+            Route::delete('/routine-types/{routineType}', [RoutineTypeController::class, 'destroy'])
+                ->middleware('company.module:design_routine_types,write');
             Route::put('/routine-types/{routineType}/design', [RoutineTypeController::class, 'updateDesign'])
                 ->middleware('company.module:design_routine_types,write');
 
@@ -157,6 +212,8 @@ Route::prefix('v1')->group(function (): void {
                 ->middleware('company.module:routines,write');
             Route::get('/routines/{routine}', [RoutineController::class, 'show'])
                 ->middleware('company.module:routines,read');
+            Route::post('/routines/{routine}/form-field-upload', [RoutineFormFieldUploadController::class, 'store'])
+                ->middleware('company.permission:routines.execute,routines.assign');
             Route::post('/routines/{routine}/executions', [RoutineExecutionController::class, 'store'])
                 ->middleware('company.permission:routines.execute,routines.assign');
             Route::post('/routines/{routine}/evidences', [ExecutionEvidenceController::class, 'store'])

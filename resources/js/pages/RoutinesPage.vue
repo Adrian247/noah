@@ -4,6 +4,12 @@ import { RouterLink, useRoute } from 'vue-router';
 import { api } from '@/api/client';
 import { useCompanyStore } from '@/stores/company';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { useToast } from '@/composables/useToast';
+import PageHeader from '@/components/ui/PageHeader.vue';
+import AppButton from '@/components/ui/AppButton.vue';
+import AppModal from '@/components/ui/AppModal.vue';
+import MaterialSelect from '@/components/ui/MaterialSelect.vue';
+import MaterialField from '@/components/ui/MaterialField.vue';
 
 type Routine = {
     id: number;
@@ -19,10 +25,10 @@ type UserRow = { id: number; name: string; email: string };
 
 const route = useRoute();
 const company = useCompanyStore();
+const toast = useToast();
 const { canWriteModule } = useModuleAccess();
 const routines = ref<Routine[]>([]);
 const loading = ref(true);
-const error = ref<string | null>(null);
 const statusFilter = ref((route.query.status as string) ?? '');
 
 const showCreate = ref(false);
@@ -40,6 +46,28 @@ const createForm = ref({
 
 const canCreate = computed(() => canWriteModule('routines'));
 
+const statusChips = [
+    { value: '', label: 'Todas' },
+    { value: 'assigned', label: 'Asignadas' },
+    { value: 'pending_validation', label: 'Pendientes' },
+    { value: 'validated', label: 'Validadas' },
+];
+
+const siteOptions = computed(() =>
+    sites.value.map((s) => ({ value: String(s.id), label: s.name })),
+);
+const assetOptions = computed(() => [
+    { value: '', label: 'Selecciona…' },
+    ...filteredAssets.value.map((a) => ({ value: String(a.id), label: a.tag })),
+]);
+const routineTypeOptions = computed(() =>
+    routineTypes.value.map((t) => ({ value: String(t.id), label: t.name })),
+);
+const technicianOptions = computed(() => [
+    { value: '', label: 'Sin asignar' },
+    ...technicians.value.map((u) => ({ value: String(u.id), label: `${u.name} (${u.email})` })),
+]);
+
 const filteredAssets = computed(() =>
     createForm.value.site_id
         ? assets.value.filter((a) => String(a.site_id) === createForm.value.site_id)
@@ -48,7 +76,6 @@ const filteredAssets = computed(() =>
 
 async function load() {
     loading.value = true;
-    error.value = null;
     try {
         const qs = statusFilter.value
             ? `?status=${encodeURIComponent(statusFilter.value)}&per_page=50`
@@ -56,7 +83,7 @@ async function load() {
         const res = await api<{ data: Routine[] }>(`/routines${qs}`);
         routines.value = res.data;
     } catch (e) {
-        error.value = (e as Error).message;
+        toast.error((e as Error).message);
     } finally {
         loading.value = false;
     }
@@ -87,8 +114,18 @@ async function loadCreateData() {
     }
 }
 
+function openCreate() {
+    createForm.value = {
+        site_id: sites.value[0] ? String(sites.value[0].id) : '',
+        asset_id: '',
+        routine_type_id: routineTypes.value[0] ? String(routineTypes.value[0].id) : '',
+        assigned_to: '',
+        scheduled_at: '',
+    };
+    showCreate.value = true;
+}
+
 async function createRoutine() {
-    error.value = null;
     try {
         await api('/routines', {
             method: 'POST',
@@ -103,9 +140,10 @@ async function createRoutine() {
             }),
         });
         showCreate.value = false;
+        toast.success('Rutina creada.');
         await load();
     } catch (e) {
-        error.value = (e as Error).message;
+        toast.error((e as Error).message);
     }
 }
 
@@ -126,79 +164,34 @@ onMounted(async () => {
 </script>
 
 <template>
-    <div class="space-y-4">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-            <h2 class="text-xl font-semibold">Rutinas</h2>
-            <button
-                v-if="canCreate"
-                type="button"
-                class="rounded-md bg-slate-900 px-3 py-2 text-sm text-white"
-                @click="showCreate = !showCreate"
-            >
+    <div class="portal-page">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <PageHeader class="flex-1" title="Rutinas" subtitle="Filtra por estado y crea nuevas asignaciones." />
+            <AppButton v-if="canCreate" type="button" class="shrink-0" @click="openCreate">
                 Nueva rutina
+            </AppButton>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <button
+                v-for="chip in statusChips"
+                :key="chip.value || 'all'"
+                type="button"
+                class="filter-chip"
+                :class="{ 'filter-chip--active': statusFilter === chip.value }"
+                @click="
+                    statusFilter = chip.value;
+                    load();
+                "
+            >
+                {{ chip.label }}
             </button>
         </div>
-        <div class="flex flex-wrap gap-2 text-sm">
-            <button
-                type="button"
-                class="rounded-md border px-2 py-1"
-                :class="!statusFilter ? 'bg-slate-200' : ''"
-                @click="statusFilter = ''; load()"
-            >
-                Todas
-            </button>
-            <button
-                v-for="s in ['assigned', 'pending_validation', 'validated']"
-                :key="s"
-                type="button"
-                class="rounded-md border px-2 py-1"
-                :class="statusFilter === s ? 'bg-slate-200' : ''"
-                @click="statusFilter = s; load()"
-            >
-                {{ s }}
-            </button>
-        </div>
-        <form
-            v-if="showCreate && canCreate"
-            class="max-w-xl space-y-3 rounded-lg border bg-white p-4 text-sm"
-            @submit.prevent="createRoutine"
-        >
-            <label class="block">
-                Sitio
-                <select v-model="createForm.site_id" required class="mt-1 w-full rounded-md border px-2 py-1.5">
-                    <option v-for="s in sites" :key="s.id" :value="String(s.id)">{{ s.name }}</option>
-                </select>
-            </label>
-            <label class="block">
-                Activo
-                <select v-model="createForm.asset_id" required class="mt-1 w-full rounded-md border px-2 py-1.5">
-                    <option value="" disabled>Selecciona…</option>
-                    <option v-for="a in filteredAssets" :key="a.id" :value="String(a.id)">{{ a.tag }}</option>
-                </select>
-            </label>
-            <label class="block">
-                Tipo de rutina
-                <select v-model="createForm.routine_type_id" required class="mt-1 w-full rounded-md border px-2 py-1.5">
-                    <option v-for="t in routineTypes" :key="t.id" :value="String(t.id)">{{ t.name }}</option>
-                </select>
-            </label>
-            <label v-if="technicians.length" class="block">
-                Asignar a
-                <select v-model="createForm.assigned_to" class="mt-1 w-full rounded-md border px-2 py-1.5">
-                    <option value="">Sin asignar</option>
-                    <option v-for="u in technicians" :key="u.id" :value="String(u.id)">
-                        {{ u.name }} ({{ u.email }})
-                    </option>
-                </select>
-            </label>
-            <button type="submit" class="rounded-md bg-emerald-700 px-3 py-2 text-white">Crear</button>
-        </form>
-        <p v-if="loading" class="text-slate-500">Cargando…</p>
-        <p v-else-if="error" class="text-red-600">{{ error }}</p>
-        <p v-else-if="routines.length === 0" class="text-slate-500">Sin rutinas.</p>
-        <table v-else class="w-full text-left text-sm">
+        <p v-if="loading" class="text-portal-muted">Cargando…</p>
+        <p v-else-if="routines.length === 0" class="text-portal-muted">Sin rutinas.</p>
+        <div v-else class="portal-table-wrap">
+            <table class="portal-data-table">
             <thead>
-                <tr class="border-b text-slate-500">
+                <tr class="border-b">
                     <th class="py-2">ID</th>
                     <th>Tipo</th>
                     <th>Activo</th>
@@ -206,21 +199,67 @@ onMounted(async () => {
                 </tr>
             </thead>
             <tbody>
-                <tr
-                    v-for="r in routines"
-                    :key="r.id"
-                    class="border-b border-slate-100 hover:bg-slate-50"
-                >
+                <tr v-for="r in routines" :key="r.id" class="border-b">
                     <td class="py-2">
-                        <RouterLink class="text-slate-900 underline" :to="`/app/routines/${r.id}`">
+                        <RouterLink class="text-portal-link underline" :to="`/app/routines/${r.id}`">
                             {{ r.id }}
                         </RouterLink>
                     </td>
-                    <td>{{ r.routine_type?.name ?? '—' }}</td>
-                    <td>{{ r.asset?.tag ?? '—' }}</td>
-                    <td>{{ r.status }}</td>
+                    <td class="text-portal-heading">{{ r.routine_type?.name ?? '—' }}</td>
+                    <td class="text-portal-muted">{{ r.asset?.tag ?? '—' }}</td>
+                    <td class="text-portal-muted">{{ r.status }}</td>
                 </tr>
             </tbody>
         </table>
+        </div>
+
+        <AppModal
+            :open="showCreate && canCreate"
+            title="Nueva rutina"
+            size="sm"
+            @close="showCreate = false"
+        >
+            <form id="routine-create-form" class="space-y-4" @submit.prevent="createRoutine">
+                <MaterialSelect
+                    v-model="createForm.site_id"
+                    label="Sitio"
+                    :options="siteOptions"
+                    required
+                />
+                <MaterialSelect
+                    v-model="createForm.asset_id"
+                    label="Activo"
+                    :options="assetOptions"
+                    required
+                />
+                <MaterialSelect
+                    v-model="createForm.routine_type_id"
+                    label="Tipo de rutina"
+                    :options="routineTypeOptions"
+                    required
+                />
+                <MaterialSelect
+                    v-if="technicians.length"
+                    v-model="createForm.assigned_to"
+                    label="Asignar a"
+                    :options="technicianOptions"
+                />
+                <MaterialField
+                    v-model="createForm.scheduled_at"
+                    label="Programada (opcional)"
+                    type="datetime-local"
+                />
+            </form>
+            <template #footer>
+                <button
+                    type="button"
+                    class="text-portal-muted rounded-xl px-4 py-2 text-sm hover:bg-white/5"
+                    @click="showCreate = false"
+                >
+                    Cancelar
+                </button>
+                <AppButton type="submit" form="routine-create-form">Crear rutina</AppButton>
+            </template>
+        </AppModal>
     </div>
 </template>

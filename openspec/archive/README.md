@@ -26,3 +26,11 @@ Propuestas cerradas (histórico). El flujo activo está en [../changes/README.md
 | [020-invoice-prefactura-editable](020-invoice-prefactura-editable/) | Facturación | Prefactura editable |
 | [021-admin-user-permissions](021-admin-user-permissions/) | Identidad | Módulos lectura/escritura por usuario |
 | [022-industrial-login-portal](022-industrial-login-portal/) | UX/UI | Login dashboard industrial, portal público, admin |
+| [023-forms-field-config](023-forms-field-config/) | Diseño | Catálogos de opciones y ajustes de imágenes en formularios |
+| [024-routine-form-execution](024-routine-form-execution/) | Operación | Ejecución dinámica, consumos, validación y evidencias |
+| [025-report-designer-advanced](025-report-designer-advanced/) | Diseño | Reportes: header/footer, numeración, secciones |
+| [026-form-photo-gallery](026-form-photo-gallery/) | Operación | Galería multi-foto y captions en formularios |
+| [027-report-designer-enhancements](027-report-designer-enhancements/) | Diseño | Portada, tipografía, vista previa en vivo |
+| [028-modal-sticky-actions](028-modal-sticky-actions/) | UX/UI | Modales CRUD y acciones ancladas |
+| [029-report-preview-and-editor](029-report-preview-and-editor/) | Diseño | Miniaturas listado, editor enriquecido, PDF |
+| [030-material-field-label-fix](030-material-field-label-fix/) | UX/UI | Etiquetas Material, toasts globales, contraste UI |

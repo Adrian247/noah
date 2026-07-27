@@ -51,7 +51,7 @@ npm install && npm run build
 | Mailpit | http://localhost:8025 |
 | MinIO | http://localhost:9001 |
 
-Demo: `admin@noah.local` / `password`
+Demo: `admin@noah.local` / `noah_application` — ritual y cuentas: [docs/DEMO_ENV.md](docs/DEMO_ENV.md).
 
 ## Licencia
 

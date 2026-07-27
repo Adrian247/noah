@@ -16,23 +16,118 @@
 }
 
 @layer base {
-    body {
+    [data-theme='dark'] {
+        --portal-heading: #f8fafc;
+        --portal-muted: #94a3b8;
+        --portal-link: #fbbf24;
+    }
+
+    [data-theme='light'] {
+        --portal-heading: #0f172a;
+        --portal-muted: #475569;
+        --portal-link: #b45309;
+    }
+
+    [data-theme='dark'] body {
+        @apply min-h-screen bg-[#07080c] text-slate-100 antialiased;
+    }
+
+    [data-theme='light'] body {
         @apply min-h-screen bg-slate-200 text-slate-900 antialiased;
     }
 }
 
 @layer components {
-  /* Zona de contenido: siempre fondo claro y texto oscuro legible */
+    .app-portal-shell {
+        @apply relative min-h-dvh text-slate-100;
+        background: #07080c;
+    }
+
     .app-main-surface {
-        @apply min-h-screen flex-1 bg-slate-50 text-slate-900;
+        @apply relative z-10 min-h-0 min-w-0 flex-1 bg-transparent text-slate-100;
+    }
+
+    .portal-topbar {
+        @apply mx-4 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3 sm:px-6;
+    }
+
+    .portal-topbar__name {
+        @apply text-slate-100;
+    }
+
+    .portal-topbar__email {
+        @apply text-slate-400;
+    }
+
+    .portal-topbar__logout {
+        @apply text-slate-400 hover:text-amber-300;
+    }
+
+    .dashboard-stat-value {
+        color: var(--portal-heading);
+    }
+
+    .filter-chip {
+        @apply rounded-lg border border-white/15 px-3 py-1.5 text-sm font-medium transition;
+        color: var(--portal-muted);
+    }
+
+    .filter-chip:hover {
+        @apply border-white/25 bg-white/5;
+        color: var(--portal-heading);
+    }
+
+    .filter-chip--active {
+        @apply border-amber-500/45 bg-amber-500/20;
+        color: rgb(254 243 199);
+    }
+
+    .filter-chip--active:hover {
+        @apply bg-amber-500/25;
+        color: rgb(255 251 235);
+    }
+
+    .noah-glass-card {
+        border: 1px solid rgb(255 255 255 / 0.1);
+        background: rgb(10 12 18 / 0.48);
+        box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08);
+        -webkit-backdrop-filter: blur(32px) saturate(1.65);
+        backdrop-filter: blur(32px) saturate(1.65);
+        color: var(--portal-heading);
+    }
+
+    .noah-glass-card--hover {
+        transition:
+            transform 0.25s ease,
+            border-color 0.25s ease,
+            box-shadow 0.25s ease;
+    }
+
+    .noah-glass-card--hover:hover {
+        transform: translateY(-2px);
+        border-color: rgb(245 158 11 / 0.22);
+        box-shadow:
+            inset 0 1px 0 rgb(255 255 255 / 0.1),
+            0 12px 32px -12px rgb(245 158 11 / 0.12);
     }
 
     .glass-panel {
-        @apply border border-slate-200/90 bg-white shadow-[var(--shadow-glass)];
+        border-radius: 1.35rem;
+        border: 1px solid rgb(255 255 255 / 0.11);
+        background: rgb(10 12 18 / 0.52);
+        box-shadow:
+            inset 0 1px 0 rgb(255 255 255 / 0.14),
+            inset 0 -1px 0 rgb(0 0 0 / 0.25),
+            0 28px 56px -20px rgb(0 0 0 / 0.65);
+        -webkit-backdrop-filter: blur(44px) saturate(1.75);
+        backdrop-filter: blur(44px) saturate(1.75);
     }
 
     .glass-sidebar {
-        @apply flex shrink-0 flex-col border-r border-slate-800/50 bg-slate-900 text-slate-100 shadow-xl transition-[width] duration-200 ease-out;
+        @apply relative z-10 flex shrink-0 flex-col border-r border-white/10 text-slate-100 shadow-2xl transition-[width] duration-200 ease-out;
+        background: rgb(8 10 16 / 0.72);
+        -webkit-backdrop-filter: blur(40px) saturate(1.7);
+        backdrop-filter: blur(40px) saturate(1.7);
     }
 
     .glass-sidebar-collapsed {
@@ -48,7 +143,7 @@
     }
 
     .nav-item-active {
-        @apply bg-primary-600 text-white shadow-md hover:bg-primary-600 hover:text-white;
+        @apply border border-amber-500/30 bg-amber-500/15 text-amber-100 shadow-none hover:bg-amber-500/20 hover:text-amber-50;
     }
 
     .nav-section-label {
@@ -59,9 +154,133 @@
         @apply transition active:scale-[0.98];
     }
 
-    /* Inputs en páginas internas */
+    /* Inputs en el portal */
     .field-input {
-        @apply rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400;
+        @apply rounded-xl border border-white/12 bg-white/5 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500;
+    }
+
+    /* Compatibilidad oscuro: paneles legacy en páginas internas */
+    [data-theme='dark'] .app-portal-shell main .text-slate-900 {
+        @apply text-slate-50;
+    }
+
+    [data-theme='dark'] .app-portal-shell main .text-slate-800 {
+        @apply text-slate-100;
+    }
+
+    [data-theme='dark'] .app-portal-shell main .text-slate-700 {
+        @apply text-slate-200;
+    }
+
+    [data-theme='dark'] .app-portal-shell main .text-slate-600 {
+        @apply text-slate-400;
+    }
+
+    [data-theme='dark'] .app-portal-shell main .text-slate-500 {
+        @apply text-slate-400;
+    }
+
+    [data-theme='dark'] .app-portal-shell main .text-primary-700 {
+        @apply text-amber-400;
+    }
+
+    [data-theme='dark'] .app-portal-shell main .text-primary-600 {
+        @apply text-amber-400;
+    }
+
+    [data-theme='dark'] .app-portal-shell main .bg-white {
+        background: rgb(10 12 18 / 0.45);
+        -webkit-backdrop-filter: blur(24px) saturate(1.5);
+        backdrop-filter: blur(24px) saturate(1.5);
+    }
+
+    [data-theme='dark'] .app-portal-shell main .border-slate-200,
+    [data-theme='dark'] .app-portal-shell main .border-slate-300 {
+        border-color: rgb(255 255 255 / 0.12);
+    }
+
+    [data-theme='dark'] .app-portal-shell main .divide-y > :not([hidden]) ~ :not([hidden]) {
+        border-color: rgb(255 255 255 / 0.08);
+    }
+
+    [data-theme='dark'] .app-portal-shell main .text-red-600,
+    [data-theme='dark'] .app-portal-shell main .text-red-700 {
+        @apply text-red-400;
+    }
+
+    [data-theme='dark'] .app-portal-shell main .text-emerald-800 {
+        @apply text-emerald-400;
+    }
+
+    [data-theme='dark'] .app-portal-shell main table thead {
+        @apply text-slate-400;
+    }
+
+    [data-theme='dark'] .app-portal-shell main table tbody tr {
+        border-color: rgb(255 255 255 / 0.08);
+    }
+
+    [data-theme='dark'] .app-portal-shell main a.underline,
+    [data-theme='dark'] .app-portal-shell main button.underline {
+        @apply text-amber-400/90 hover:text-amber-300;
+    }
+
+    .text-portal-heading {
+        color: var(--portal-heading);
+    }
+
+    .text-portal-muted {
+        color: var(--portal-muted);
+    }
+
+    .text-portal-link {
+        color: color-mix(in srgb, var(--portal-link) 95%, transparent);
+    }
+
+    .text-portal-link:hover {
+        color: var(--portal-link);
+    }
+
+    .invoice-list-title {
+        font-size: 1.0625rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--portal-heading);
+    }
+
+    [data-theme='dark'] .invoice-list-title {
+        color: #ffffff;
+    }
+
+    .portal-form-panel {
+        border: 1px solid rgb(255 255 255 / 0.1);
+        background: rgb(10 12 18 / 0.48);
+        box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08);
+        -webkit-backdrop-filter: blur(32px) saturate(1.65);
+        backdrop-filter: blur(32px) saturate(1.65);
+        @apply space-y-4 rounded-xl p-5;
+    }
+
+    .portal-media-upload {
+        @apply rounded-xl border border-dashed p-4;
+        border-color: rgb(255 255 255 / 0.18);
+        background: rgb(255 255 255 / 0.04);
+    }
+
+    .app-button-secondary {
+        @apply border border-white/15 bg-white/5 text-slate-200 hover:bg-white/10;
+    }
+
+    .portal-list-panel {
+        border: 1px solid rgb(255 255 255 / 0.1);
+        background: rgb(10 12 18 / 0.35);
+        -webkit-backdrop-filter: blur(24px) saturate(1.5);
+        backdrop-filter: blur(24px) saturate(1.5);
+        @apply divide-y rounded-xl;
+    }
+
+    [data-theme='dark'] .portal-list-panel > :not([hidden]) ~ :not([hidden]) {
+        border-color: rgb(255 255 255 / 0.08);
     }
 
     .nav-item-icon {
@@ -80,13 +299,151 @@
         @apply max-w-0 opacity-0;
     }
 
-    .login-glass-panel {
-        @apply rounded-2xl border border-white/10 bg-slate-900/55 shadow-[0_24px_80px_rgb(0_0_0/0.45)] backdrop-blur-xl;
-        animation: noah-login-in 0.55s ease-out both;
+    .login-glass-frost {
+        border-radius: 1rem;
+        border: 1px solid rgb(255 255 255 / 0.14);
+        background: rgb(15 18 28 / 0.55);
+        box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1);
+        -webkit-backdrop-filter: blur(24px) saturate(1.4);
+        backdrop-filter: blur(24px) saturate(1.4);
     }
 
-    .login-glass-panel-dark {
-        @apply rounded-2xl border border-white/10 bg-slate-950/70 shadow-[0_16px_48px_rgb(0_0_0/0.5)] backdrop-blur-md;
+    .login-shell {
+        background: #07080c;
+    }
+
+    .login-glass-premium {
+        border-radius: 1.35rem;
+        border: 1px solid rgb(255 255 255 / 0.11);
+        background: rgb(10 12 18 / 0.52);
+        box-shadow:
+            inset 0 1px 0 rgb(255 255 255 / 0.14),
+            inset 0 -1px 0 rgb(0 0 0 / 0.25),
+            0 28px 56px -20px rgb(0 0 0 / 0.65);
+        -webkit-backdrop-filter: blur(44px) saturate(1.75);
+        backdrop-filter: blur(44px) saturate(1.75);
+    }
+
+    .login-vignette {
+        background: radial-gradient(
+            ellipse 120% 90% at 50% 50%,
+            transparent 35%,
+            rgb(0 0 0 / 0.55) 100%
+        );
+    }
+
+    .login-grain {
+        opacity: 0.045;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .login-headline-accent {
+        background: linear-gradient(105deg, #fff 0%, #fde68a 42%, #f59e0b 58%, #e2e8f0 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    .login-cap-card {
+        border: 1px solid rgb(255 255 255 / 0.08);
+        background: linear-gradient(145deg, rgb(255 255 255 / 0.06) 0%, rgb(255 255 255 / 0.02) 100%);
+        transition:
+            transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+            border-color 0.35s ease,
+            box-shadow 0.35s ease;
+    }
+
+    .login-cap-card:hover {
+        transform: translateY(-3px);
+        border-color: rgb(245 158 11 / 0.22);
+        box-shadow: 0 16px 40px -16px rgb(245 158 11 / 0.15);
+    }
+
+    .login-cta {
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 48%, #d97706 100%);
+        color: #0a0a0a !important;
+        font-weight: 700;
+        box-shadow:
+            0 1px 0 rgb(255 255 255 / 0.25) inset,
+            0 12px 28px -8px rgb(245 158 11 / 0.45);
+        transition:
+            transform 0.2s ease,
+            box-shadow 0.25s ease,
+            filter 0.25s ease;
+    }
+
+    .login-cta:hover:not(:disabled) {
+        filter: brightness(1.06);
+        box-shadow:
+            0 1px 0 rgb(255 255 255 / 0.3) inset,
+            0 16px 36px -6px rgb(245 158 11 / 0.55);
+    }
+
+    .login-cta:active:not(:disabled) {
+        transform: scale(0.98);
+    }
+
+    .login-stagger > .login-reveal {
+        opacity: 0;
+        animation: login-reveal 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .login-stagger > .login-reveal:nth-child(1) {
+        animation-delay: 0.06s;
+    }
+
+    .login-stagger > .login-reveal:nth-child(2) {
+        animation-delay: 0.14s;
+    }
+
+    .login-stagger > .login-reveal:nth-child(3) {
+        animation-delay: 0.22s;
+    }
+
+    .login-stagger > .login-reveal:nth-child(4) {
+        animation-delay: 0.3s;
+    }
+
+    .login-stagger > .login-reveal:nth-child(5) {
+        animation-delay: 0.38s;
+    }
+
+    .login-stagger > .login-reveal:nth-child(6) {
+        animation-delay: 0.46s;
+    }
+
+    .login-reveal-slow {
+        opacity: 0;
+        animation: login-reveal 1s cubic-bezier(0.22, 1, 0.36, 1) 0.2s forwards;
+    }
+
+    @keyframes login-reveal {
+        from {
+            opacity: 0;
+            transform: translateY(18px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .app-toast-enter-active,
+    .app-toast-leave-active {
+        transition:
+            opacity 0.22s ease,
+            transform 0.22s ease;
+    }
+
+    .app-toast-enter-from,
+    .app-toast-leave-to {
+        opacity: 0;
+        transform: translateX(1rem);
+    }
+
+    .app-toast-move {
+        transition: transform 0.22s ease;
     }
 
     .material-field {
@@ -116,6 +473,118 @@
 
     .material-field:focus-within .material-field__line {
         @apply w-full;
+    }
+
+    .material-field--compact {
+        @apply pt-3;
+    }
+
+    .material-field--compact .material-field__label {
+        @apply top-5 text-xs;
+    }
+
+    .material-field--compact.material-field--filled .material-field__label,
+    .material-field--compact:focus-within .material-field__label {
+        @apply top-0;
+    }
+
+    .material-field--compact .material-field__input {
+        @apply py-1 text-sm;
+    }
+
+    .material-field__textarea {
+        min-height: 4.5rem;
+    }
+
+    .portal-data-table {
+        @apply w-full text-left text-sm;
+    }
+
+    .portal-table-wrap {
+        @apply w-full overflow-x-auto;
+    }
+
+    .portal-page {
+        @apply space-y-6;
+    }
+
+    .portal-status-active {
+        @apply bg-emerald-500/20 text-emerald-200;
+    }
+
+    .portal-status-inactive {
+        background: rgb(255 255 255 / 0.1);
+        color: var(--portal-muted);
+    }
+
+    .portal-data-table thead {
+        color: var(--portal-muted);
+    }
+
+    .portal-data-table tbody tr {
+        border-color: rgb(255 255 255 / 0.08);
+    }
+
+    [data-theme='light'] .portal-data-table tbody tr {
+        border-color: rgb(15 23 42 / 0.08);
+    }
+
+    .material-field--select .material-field__label {
+        @apply top-0 text-xs font-medium text-amber-400/90;
+    }
+
+    .material-field--placeholder .material-field__label {
+        @apply top-0 text-xs font-medium text-amber-400/90;
+    }
+
+    .material-field--native-picker .material-field__label {
+        @apply top-0 text-xs font-medium text-amber-400/90;
+    }
+
+    .material-field--select .material-field__input {
+        @apply pt-1;
+    }
+
+    .material-field--select.material-field--compact .material-field__input {
+        @apply pt-0.5;
+    }
+
+    .material-field__select {
+        cursor: pointer;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+        background-position: right 0 center;
+        background-repeat: no-repeat;
+        background-size: 1.25rem;
+        padding-right: 1.75rem;
+    }
+
+    .material-field__select:disabled {
+        @apply cursor-not-allowed opacity-60;
+    }
+
+    [data-theme='light'] .material-field__label {
+        @apply text-slate-500;
+    }
+
+    [data-theme='light'] .material-field--filled .material-field__label,
+    [data-theme='light'] .material-field:focus-within .material-field__label,
+    [data-theme='light'] .material-field--select .material-field__label,
+    [data-theme='light'] .material-field--placeholder .material-field__label,
+    [data-theme='light'] .material-field--native-picker .material-field__label {
+        @apply text-amber-700;
+    }
+
+    [data-theme='light'] .material-field__input {
+        @apply border-slate-300 text-slate-900;
+    }
+
+    [data-theme='light'] .material-field__input:focus {
+        @apply border-amber-600;
+    }
+
+    [data-theme='light'] .material-field__line {
+        @apply bg-amber-600;
     }
 
     .noah-login-panel {
@@ -175,11 +644,330 @@
     transform: translateY(8px);
 }
 
+/* ——— Tema claro ——— */
+[data-theme='light'] .app-portal-shell main .text-slate-900 {
+    @apply text-slate-900;
+}
+
+[data-theme='light'] .app-portal-shell main .text-slate-800 {
+    @apply text-slate-800;
+}
+
+[data-theme='light'] .app-portal-shell main .text-slate-700 {
+    @apply text-slate-700;
+}
+
+[data-theme='light'] .app-portal-shell main .text-slate-600 {
+    @apply text-slate-600;
+}
+
+[data-theme='light'] .app-portal-shell main .text-slate-500 {
+    @apply text-slate-600;
+}
+
+[data-theme='light'] .app-portal-shell main .text-primary-600,
+[data-theme='light'] .app-portal-shell main .text-primary-700 {
+    @apply text-amber-800;
+}
+
+[data-theme='light'] .app-portal-shell {
+    @apply text-slate-900;
+    background: #e2e8f0;
+}
+
+[data-theme='light'] .app-main-surface {
+    @apply text-slate-900;
+}
+
+[data-theme='light'] .noah-glass-card {
+    border-color: rgb(15 23 42 / 0.1);
+    background: rgb(255 255 255 / 0.92);
+    box-shadow: var(--shadow-glass);
+    backdrop-filter: none;
+    color: var(--portal-heading);
+}
+
+[data-theme='light'] .app-portal-shell .glass-panel {
+    border-color: rgb(15 23 42 / 0.08);
+    background: rgb(255 255 255 / 0.95);
+    box-shadow: var(--shadow-glass);
+    backdrop-filter: none;
+}
+
+/* Login: siempre estética oscura aunque la app use tema claro */
+[data-theme='light'] body:has(.login-shell) {
+    @apply bg-[#07080c] text-slate-100;
+}
+
+[data-theme='light'] .login-shell .login-glass-premium {
+    border-color: rgb(255 255 255 / 0.11);
+    background: rgb(10 12 18 / 0.52);
+    box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 0.14),
+        inset 0 -1px 0 rgb(0 0 0 / 0.25),
+        0 28px 56px -20px rgb(0 0 0 / 0.65);
+    -webkit-backdrop-filter: blur(44px) saturate(1.75);
+    backdrop-filter: blur(44px) saturate(1.75);
+}
+
+[data-theme='light'] .login-shell .material-field__label {
+    @apply text-slate-400;
+}
+
+[data-theme='light'] .login-shell .material-field--filled .material-field__label,
+[data-theme='light'] .login-shell .material-field:focus-within .material-field__label {
+    @apply text-amber-400/90;
+}
+
+[data-theme='light'] .login-shell .material-field__input {
+    @apply border-white/20 text-slate-100;
+}
+
+[data-theme='light'] .login-shell .material-field__input:focus {
+    @apply border-amber-500/60;
+}
+
+[data-theme='light'] .login-shell .material-field__line {
+    @apply bg-amber-500/80;
+}
+
+[data-theme='light'] .glass-sidebar {
+    @apply border-slate-200 bg-slate-900 text-slate-100;
+    backdrop-filter: none;
+}
+
+[data-theme='light'] .field-input {
+    @apply border-slate-300 bg-white text-slate-900;
+}
+
+[data-theme='light'] .app-portal-shell main .portal-status-active {
+    @apply bg-emerald-100 text-emerald-900;
+}
+
+[data-theme='light'] .app-portal-shell main .portal-status-inactive {
+    @apply bg-slate-200 text-slate-600;
+}
+
+[data-theme='light'] .portal-form-panel {
+    @apply border-slate-200 bg-white shadow-sm;
+    backdrop-filter: none;
+}
+
+[data-theme='light'] .portal-media-upload {
+    @apply border-slate-300 bg-slate-50;
+}
+
+[data-theme='light'] .app-button-secondary {
+    @apply border-slate-300 bg-white text-slate-800 hover:bg-slate-50;
+}
+
+[data-theme='light'] .portal-list-panel {
+    @apply divide-slate-200 border-slate-200 bg-white;
+    backdrop-filter: none;
+}
+
+/* Sidebar sigue oscuro en tema claro: texto claro en ítem activo */
+[data-theme='light'] .glass-sidebar .nav-item-active {
+    @apply border-amber-400/50 bg-amber-500/25 text-amber-50 hover:bg-amber-500/30 hover:text-white;
+}
+
+[data-theme='light'] .portal-topbar .portal-topbar__name {
+    @apply text-slate-900;
+}
+
+[data-theme='light'] .portal-topbar .portal-topbar__email {
+    @apply text-slate-600;
+}
+
+[data-theme='light'] .portal-topbar .portal-topbar__logout {
+    @apply text-slate-600 hover:text-amber-800;
+}
+
+[data-theme='light'] .portal-topbar .portal-topbar__company {
+    @apply border-slate-300 bg-white text-slate-900;
+}
+
+[data-theme='light'] .filter-chip {
+    @apply border-slate-300 bg-white/80;
+    color: var(--portal-muted);
+}
+
+[data-theme='light'] .filter-chip:hover {
+    @apply border-slate-400 bg-white;
+    color: var(--portal-heading);
+}
+
+[data-theme='light'] .filter-chip--active {
+    @apply border-amber-500 bg-amber-100;
+    color: rgb(120 53 15);
+}
+
+[data-theme='light'] .filter-chip--active:hover {
+    @apply border-amber-600 bg-amber-100;
+    color: rgb(69 26 3);
+}
+
+.report-card-grid {
+    display: grid;
+    gap: 1.25rem;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+
+.report-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 1rem;
+    border: 1px solid rgb(255 255 255 / 0.14);
+    background: rgb(10 12 18 / 0.72);
+    box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 0.1),
+        0 10px 32px -12px rgb(0 0 0 / 0.65);
+    -webkit-backdrop-filter: blur(28px) saturate(1.5);
+    backdrop-filter: blur(28px) saturate(1.5);
+    text-decoration: none;
+    color: var(--portal-heading);
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.report-card:hover,
+.report-card:focus-visible {
+    transform: translateY(-3px);
+    border-color: rgb(245 158 11 / 0.35);
+    box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 0.12),
+        0 16px 40px -12px rgb(0 0 0 / 0.7),
+        0 0 0 1px rgb(245 158 11 / 0.12);
+}
+
+.report-card-preview {
+    position: relative;
+    height: 200px;
+    flex-shrink: 0;
+    overflow: hidden;
+    background: #e8edf3;
+    border-bottom: 1px solid rgb(255 255 255 / 0.1);
+}
+
+.report-card-preview::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    z-index: 1;
+    height: 1.5rem;
+    pointer-events: none;
+    background: linear-gradient(to bottom, transparent, rgb(8 10 16 / 0.35));
+}
+
+.report-card-iframe {
+    display: block;
+    width: 100%;
+    height: 200px;
+    border: 0;
+    pointer-events: none;
+    background: #fff;
+}
+
+.report-card-preview-placeholder {
+    display: flex;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    background: rgb(255 255 255 / 0.06);
+}
+
+.report-card-body {
+    position: relative;
+    z-index: 2;
+    margin-top: -1px;
+    flex: 1;
+    padding: 0.875rem 1rem 1rem;
+    background: rgb(8 10 16 / 0.92);
+    border-top: 1px solid rgb(255 255 255 / 0.08);
+}
+
+.report-card-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: flex;
+    align-items: flex-end;
+    padding: 1rem;
+    background: linear-gradient(to top, rgb(15 23 42 / 0.92), transparent 55%);
+    color: #f8fafc;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.report-card:hover .report-card-overlay,
+.report-card:focus-visible .report-card-overlay {
+    opacity: 1;
+}
+
+[data-theme='light'] .report-card {
+    border-color: rgb(15 23 42 / 0.12);
+    background: rgb(255 255 255 / 0.96);
+    box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 0.9),
+        0 10px 28px -10px rgb(15 23 42 / 0.18);
+    backdrop-filter: none;
+}
+
+[data-theme='light'] .report-card:hover,
+[data-theme='light'] .report-card:focus-visible {
+    border-color: rgb(245 158 11 / 0.45);
+    box-shadow:
+        0 14px 36px -10px rgb(15 23 42 / 0.22),
+        0 0 0 1px rgb(245 158 11 / 0.15);
+}
+
+[data-theme='light'] .report-card-preview {
+    background: #f1f5f9;
+    border-bottom-color: rgb(15 23 42 / 0.08);
+}
+
+[data-theme='light'] .report-card-preview::after {
+    background: linear-gradient(to bottom, transparent, rgb(248 250 252 / 0.9));
+}
+
+[data-theme='light'] .report-card-body {
+    background: rgb(248 250 252);
+    border-top-color: rgb(15 23 42 / 0.08);
+}
+
+.report-md-btn {
+    border-radius: 0.375rem;
+    border: 1px solid rgb(255 255 255 / 0.2);
+    padding: 0.15rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--portal-heading);
+}
+
+.report-md-btn:hover {
+    background: rgb(255 255 255 / 0.08);
+}
+
 @media (prefers-reduced-motion: reduce) {
     .noah-login-panel,
     .noah-sidebar-enter,
     .noah-nav-enter {
         animation: none;
+    }
+
+    .login-stagger > .login-reveal,
+    .login-reveal-slow {
+        opacity: 1;
+        animation: none;
+    }
+
+    .login-cap-card:hover {
+        transform: none;
     }
 
     .noah-page-enter-active {

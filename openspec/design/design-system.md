@@ -25,6 +25,7 @@ Implementación: **Tailwind CSS 4** + componentes Vue en `resources/js/component
 | `AppButton` | primary / secondary / danger / ghost |
 | `StatusBadge` | Estados rutina y factura |
 | `PageHeader` | Título + subtítulo de página |
+| `AppModal` | Diálogo con cuerpo scrollable y **pie fijo** para acciones (Guardar/Cancelar) |
 | `AlertBanner` | info, success, warning, danger |
 
 ## Shell

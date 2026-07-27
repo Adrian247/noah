@@ -11,3 +11,5 @@ alwaysApply: true
 - Antes de implementar: leer `openspec/AGENTS.md`, glosario, ADRs y dominio relevante.
 - Arquitectura: monolito modular Laravel + Vue; motores de formularios, reportes y workflow; IA solo vía AI Gateway.
 - Usar lenguaje del glosario: `openspec/glossary/ubiquitous-language.md`.
+- **Ritual demo (obligatorio al cerrar tareas):** si tocaste seeders, usuarios `@noah.local`, permisos o login demo → ejecutar `docker compose exec app php artisan noah:refresh-demo` y **decir al usuario** las credenciales (`docs/DEMO_ENV.md`). Contraseña: `noah_application` salvo `NOAH_DEMO_PASSWORD`.
+- Atajo solo contraseñas: `noah:ensure-demo --reset-credentials`.

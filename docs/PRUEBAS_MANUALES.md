@@ -6,17 +6,21 @@ Guía para validar el producto en **http://localhost:8888** (Docker: `docker com
 
 1. Contenedores: `app`, `web`, `postgres`, `redis`, `queue`, `mailpit` (MinIO opcional para evidencias futuras en S3).
 2. Al arrancar `app` se ejecutan `migrate`, `storage:link` y `noah:ensure-demo` si no hay usuarios.
-3. Si el login falla: `docker compose exec app php artisan db:seed --force`
+3. Si el login falla o tras actualizar el seed demo:
+   ```bash
+   docker compose exec app php artisan noah:refresh-demo
+   ```
+   Ver credenciales en [DEMO_ENV.md](DEMO_ENV.md).
 4. Mailpit: **http://localhost:8025**
 
 ### Credenciales demo
 
 | Email | Rol | Contraseña |
 |-------|-----|------------|
-| admin@noah.local | Administrador | password |
-| supervisor@noah.local | Supervisor | password |
-| tecnico@noah.local | Técnico | password |
-| facturacion@noah.local | Facturación | password |
+| admin@noah.local | Administrador | noah_application |
+| supervisor@noah.local | Supervisor | noah_application |
+| tecnico@noah.local | Técnico | noah_application |
+| facturacion@noah.local | Facturación | noah_application |
 
 ---
 
@@ -64,18 +68,31 @@ Guía para validar el producto en **http://localhost:8888** (Docker: `docker com
 
 ## D. Diseño (metadatos)
 
-Orden recomendado: **D1 → D2 → D3 → D4**. El tipo de rutina del seed (**Preventivo compresor**) ya existe; solo hay que publicar versiones y **enlazarlas en D4**.
+Orden recomendado: **D0** (caso demo ya enlazado) o **D1 → D2 → D3 → D4** si creas plantillas nuevas.
+
+### D0 — Caso demo: revisión mayor SUV premium
+
+Tras `NoahDemoSeeder`:
+
+| Pieza | Nombre |
+|--------|--------|
+| Formulario | *Revisión mayor vehículo — agencia premium* |
+| Reporte | *Informe revisión mayor vehículo* (campos alineados al formulario) |
+| Tipo de rutina | *Revisión mayor vehículo (premium)* |
+| Rutina | Activo `VEH-4582-MX` → técnico `tecnico@noah.local` |
+
+Secciones del formulario: **kilometraje**, **frenos**, **filtros**, **aceite**, **batería**, **luces**, **fusibles**, fotos recomendadas y bloque **Revisiones Plus** (opcional). Flujo: **B4** → **B6–B7** (PDF).
 
 | # | Dónde | Pasos | Resultado esperado |
 |---|--------|--------|-------------------|
 | D1 | Diseño → **Formularios** | Editar → Guardar borrador → **Publicar versión** | Lista: “vN publicada” + borrador vN+1 |
-| D2 | Diseño → **Reportes** | Abrir plantilla (ej. *Reporte estándar* del seed o una nueva) → editar componentes → **Publicar** | Igual que D1: versión publicada + borrador nuevo |
+| D2 | Diseño → **Reportes** → pestaña **Plantillas** | Abrir *Informe revisión mayor vehículo* → revisar componentes alineados al formulario → **Publicar** si editaste | Igual que D1: versión publicada + borrador nuevo |
 | D3 | Diseño → **Workflows** | Canvas, guardar definición | Layout y transiciones persisten |
-| D4 | Diseño → **Tipos de rutina** | En la fila *Preventivo compresor*, elegir en los desplegables la versión **publicada** de formulario y reporte; workflow si aplica | Al cambiar, mensaje “Formulario/Reporte enlazado…”; columnas muestran la v elegida |
+| D4 | Diseño → **Tipos de rutina** | En la fila *Revisión mayor vehículo (premium)*, elegir en los desplegables la versión **publicada** de formulario y reporte; workflow si aplica | Al cambiar, mensaje “Formulario/Reporte enlazado…”; columnas muestran la v elegida |
 
 **Cómo validar D2 en concreto**
 
-1. Entra a **Reportes** → abre *Reporte estándar* (viene del demo) o crea una plantilla.
+1. Entra a **Reportes** → pestaña **Plantillas** → *Informe revisión mayor vehículo*.
 2. Añade o cambia un componente (título, párrafo con campo `corrected_comments`, etc.) → **Publicar**.
 3. No hace falta “enlazar” en esta pantalla: el enlace es en **Tipos de rutina (D4)**.
 4. Comprueba el PDF tras validar una rutina (flujo B6–B7): debe reflejar la plantilla publicada enlazada al tipo.
@@ -105,7 +122,7 @@ Simula la app de campo con `curl` o Postman.
 ```bash
 curl -s -X POST http://localhost:8888/api/v1/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"email":"tecnico@noah.local","password":"password","device_name":"curl"}'
+  -d '{"email":"tecnico@noah.local","password":"noah_application","device_name":"curl"}'
 ```
 
 **Pull** (rutinas asignadas):

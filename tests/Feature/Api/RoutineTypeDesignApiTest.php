@@ -38,4 +38,29 @@ class RoutineTypeDesignApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.form_version_id', $formVersion->id);
     }
+
+    public function test_admin_can_create_update_and_delete_routine_type(): void
+    {
+        $this->seed();
+        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $company = Company::query()->first();
+
+        Sanctum::actingAs($admin);
+
+        $create = $this->withHeader('X-Company-Id', (string) $company->id)
+            ->postJson('/api/v1/routine-types', ['name' => 'Prueba CRUD'])
+            ->assertCreated()
+            ->assertJsonPath('data.name', 'Prueba CRUD');
+
+        $id = $create->json('data.id');
+
+        $this->withHeader('X-Company-Id', (string) $company->id)
+            ->putJson("/api/v1/routine-types/{$id}", ['is_active' => false])
+            ->assertOk()
+            ->assertJsonPath('data.is_active', false);
+
+        $this->withHeader('X-Company-Id', (string) $company->id)
+            ->deleteJson("/api/v1/routine-types/{$id}")
+            ->assertNoContent();
+    }
 }

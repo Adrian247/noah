@@ -10,6 +10,10 @@ import { useModuleAccess } from '@/composables/useModuleAccess';
 import UserAvatar from '@/components/ui/UserAvatar.vue';
 import NavIcon, { type NavIconName } from '@/components/ui/NavIcon.vue';
 import NoahBrand from '@/components/ui/NoahBrand.vue';
+import BacteriumNetwork from '@/components/BacteriumNetwork.vue';
+import AppAtmosphere from '@/components/AppAtmosphere.vue';
+import AppToastHost from '@/components/ui/AppToastHost.vue';
+import { useTheme } from '@/composables/useTheme';
 
 type NavItem = {
     to: string;
@@ -32,6 +36,7 @@ const avatarError = ref<string | null>(null);
 const fileInput = ref<HTMLInputElement | null>(null);
 const avatarMenuRef = ref<HTMLElement | null>(null);
 
+const { isDark } = useTheme();
 const companyName = computed(() => company.current?.name ?? 'Empresa');
 
 function filterNavItems(items: NavItem[]): NavItem[] {
@@ -87,21 +92,12 @@ const navGroups = computed(() => {
                     match: 'exact',
                     moduleId: 'billing',
                 },
-                ...(canWriteModule('billing') || can('billing.settings')
-                    ? [
-                          {
-                              to: '/app/billing/settings',
-                              label: 'Configuración',
-                              icon: 'cog',
-                              moduleId: 'billing',
-                          } satisfies NavItem,
-                      ]
-                    : []),
             ]),
         },
         {
             label: 'Administración',
             items: filterNavItems([
+                { to: '/app/settings', label: 'Configuración', icon: 'cog' },
                 { to: '/app/audit', label: 'Auditoría', icon: 'shield', moduleId: 'audit' },
                 {
                     to: '/app/admin/users',
@@ -109,15 +105,6 @@ const navGroups = computed(() => {
                     icon: 'users',
                     moduleId: 'company_users',
                 },
-                ...(company.current?.role === 'administrator'
-                    ? [
-                          {
-                              to: '/app/admin/portal',
-                              label: 'Portal login',
-                              icon: 'building' as const,
-                          } satisfies NavItem,
-                      ]
-                    : []),
             ]),
         },
     ];
@@ -215,7 +202,11 @@ async function onAvatarSelected(event: Event) {
 </script>
 
 <template>
-    <div class="flex min-h-screen bg-slate-200">
+    <div class="app-portal-shell flex min-h-dvh overflow-hidden">
+        <AppToastHost />
+        <BacteriumNetwork v-if="isDark" subdued warm />
+        <AppAtmosphere v-if="isDark" />
+
         <aside
             class="glass-sidebar noah-sidebar-enter"
             :class="collapsed ? 'glass-sidebar-collapsed' : 'glass-sidebar-expanded'"
@@ -266,14 +257,12 @@ async function onAvatarSelected(event: Event) {
                 {{ companyName }}
             </p>
         </aside>
-        <div class="app-main-surface flex min-w-0 flex-1 flex-col">
-            <header
-                class="glass-panel mx-4 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3 sm:px-6"
-            >
+        <div class="app-main-surface flex flex-col">
+            <header class="portal-topbar" :class="isDark ? 'login-glass-premium' : 'glass-panel'">
                 <div ref="avatarMenuRef" class="relative flex items-center gap-3">
                     <button
                         type="button"
-                        class="flex items-center gap-3 rounded-xl py-1 pr-2 text-left hover:bg-slate-100"
+                        class="flex items-center gap-3 rounded-xl py-1 pr-2 text-left hover:bg-white/5"
                         @click="avatarMenuOpen = !avatarMenuOpen"
                     >
                         <UserAvatar
@@ -282,8 +271,8 @@ async function onAvatarSelected(event: Event) {
                             size="md"
                         />
                         <div class="hidden sm:block">
-                            <p class="text-sm font-medium text-slate-900">{{ auth.user?.name }}</p>
-                            <p class="text-xs text-slate-500">{{ auth.user?.email }}</p>
+                            <p class="portal-topbar__name text-sm font-medium">{{ auth.user?.name }}</p>
+                            <p class="portal-topbar__email text-xs">{{ auth.user?.email }}</p>
                         </div>
                     </button>
                     <input
@@ -295,25 +284,25 @@ async function onAvatarSelected(event: Event) {
                     />
                     <div
                         v-if="avatarMenuOpen"
-                        class="absolute left-0 top-full z-20 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-3 shadow-lg"
+                        class="login-glass-premium absolute left-0 top-full z-20 mt-2 w-56 p-3"
                     >
-                        <p class="mb-2 text-xs font-medium text-slate-500">Foto de perfil</p>
+                        <p class="mb-2 text-xs font-medium text-slate-400">Foto de perfil</p>
                         <button
                             type="button"
-                            class="w-full rounded-lg bg-primary-600 px-3 py-2 text-sm text-white hover:bg-primary-700 disabled:opacity-50"
+                            class="login-cta w-full rounded-lg px-3 py-2 text-sm disabled:opacity-50"
                             :disabled="avatarUploading"
                             @click="openAvatarPicker"
                         >
                             {{ avatarUploading ? 'Subiendo…' : 'Elegir imagen' }}
                         </button>
-                        <p v-if="avatarError" class="mt-2 text-xs text-red-600">{{ avatarError }}</p>
-                        <p class="mt-2 text-[10px] text-slate-400">JPG, PNG o WebP · máx. 2 MB</p>
+                        <p v-if="avatarError" class="mt-2 text-xs text-red-400">{{ avatarError }}</p>
+                        <p class="mt-2 text-[10px] text-slate-500">JPG, PNG o WebP · máx. 2 MB</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
                     <select
                         v-if="auth.companies.length"
-                        class="field-input max-w-[12rem]"
+                        class="portal-topbar__company field-input max-w-[12rem]"
                         :value="company.current?.id"
                         @change="onCompanyChange"
                     >
@@ -323,14 +312,14 @@ async function onAvatarSelected(event: Event) {
                     </select>
                     <button
                         type="button"
-                        class="text-sm font-medium text-slate-600 hover:text-slate-900"
+                        class="portal-topbar__logout text-sm font-medium transition"
                         @click="logout"
                     >
                         Salir
                     </button>
                 </div>
             </header>
-            <main class="flex-1 p-4 sm:p-6">
+            <main class="flex-1 overflow-y-auto p-4 sm:p-6">
                 <RouterView v-slot="{ Component }">
                     <Transition name="noah-page" mode="out-in">
                         <component :is="Component" />

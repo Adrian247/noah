@@ -182,7 +182,7 @@ class CompanyUsersApiTest extends TestCase
     {
         $this->postJson('/api/v1/auth/login', [
             'email' => 'admin@noah.local',
-            'password' => 'password',
+            'password' => config('noah.demo_password'),
         ])
             ->assertOk()
             ->assertJsonStructure(['companies' => [['permissions']]]);

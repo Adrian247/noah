@@ -9,6 +9,7 @@ use App\Models\Routine;
 use App\Support\CurrentCompany;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Tests\Support\VehicleDemoFormResponses;
 use Tests\TestCase;
 
 class GenerateRoutineReportJobTest extends TestCase
@@ -29,7 +30,7 @@ class GenerateRoutineReportJobTest extends TestCase
         $technician = \App\Models\User::query()->where('email', 'tecnico@noah.local')->firstOrFail();
         $execution = $routine->executions()->create([
             'performed_by' => $technician->id,
-            'responses' => ['horometro' => 100],
+            'responses' => VehicleDemoFormResponses::required(),
             'technician_comments' => 'Prueba job PDF',
             'status' => 'submitted',
             'submitted_at' => now(),

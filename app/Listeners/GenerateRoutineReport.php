@@ -12,7 +12,7 @@ class GenerateRoutineReport
 
     public function handle(RoutineValidated $event): void
     {
-        $routine = $event->routine->load(['company', 'routineType.reportTemplateVersion', 'asset', 'site']);
+        $routine = $event->routine->load(['company', 'routineType.formVersion', 'routineType.reportTemplateVersion', 'asset', 'site']);
         app()->instance(CurrentCompany::class, new CurrentCompany($routine->company));
 
         try {

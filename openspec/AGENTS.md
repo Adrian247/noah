@@ -28,6 +28,10 @@ Prioridad: **modelo de dominio correcto** y **bajo acoplamiento** antes que velo
 3. Respetar bounded contexts; evitar acoplar módulos.
 4. Usar el lenguaje del [glosario](glossary/ubiquitous-language.md).
 
+## Entorno demo (implementación)
+
+Tras cambios en seeders, usuarios demo o permisos: ejecutar `php artisan noah:refresh-demo` y comunicar credenciales (`docs/DEMO_ENV.md`).
+
 ## Stack (referencia)
 
 | Capa | Tecnología |

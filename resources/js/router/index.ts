@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { getToken, getCompanyId } from '@/api/client';
+import { applyLoginTheme, applyStoredThemeForApp } from '@/lib/theme';
 import AppShell from '@/layouts/AppShell.vue';
 
 const router = createRouter({
@@ -47,9 +48,7 @@ const router = createRouter({
                 },
                 {
                     path: 'billing/settings',
-                    name: 'billing-settings',
-                    component: () => import('@/pages/BillingSettingsPage.vue'),
-                    meta: { title: 'Configuración facturación', moduleId: 'billing' },
+                    redirect: { name: 'settings', hash: '#facturacion' },
                 },
                 {
                     path: 'billing/:id',
@@ -106,6 +105,12 @@ const router = createRouter({
                     meta: { title: 'Formularios', moduleId: 'design_forms' },
                 },
                 {
+                    path: 'design/forms/settings',
+                    name: 'form-field-config',
+                    component: () => import('@/pages/FormFieldConfigPage.vue'),
+                    meta: { title: 'Configuración de campos', moduleId: 'design_forms' },
+                },
+                {
                     path: 'design/forms/:id',
                     name: 'form-designer',
                     component: () => import('@/pages/FormDesignerPage.vue'),
@@ -116,6 +121,12 @@ const router = createRouter({
                     name: 'reports-list',
                     component: () => import('@/pages/ReportsListPage.vue'),
                     meta: { title: 'Reportes', moduleId: 'design_reports' },
+                },
+                {
+                    path: 'design/reports/settings',
+                    name: 'report-section-config',
+                    component: () => import('@/pages/ReportSectionConfigPage.vue'),
+                    meta: { title: 'Configuración de reportes', moduleId: 'design_reports' },
                 },
                 {
                     path: 'design/reports/:id',
@@ -153,12 +164,24 @@ const router = createRouter({
                     component: () => import('@/pages/PortalSettingsPage.vue'),
                     meta: { title: 'Portal login', requiresRole: 'administrator' },
                 },
+                {
+                    path: 'settings',
+                    name: 'settings',
+                    component: () => import('@/pages/SettingsPage.vue'),
+                    meta: { title: 'Configuración' },
+                },
             ],
         },
     ],
 });
 
 router.beforeEach(async (to) => {
+    if (to.meta.guest) {
+        applyLoginTheme();
+    } else {
+        applyStoredThemeForApp();
+    }
+
     const authed = Boolean(getToken());
     if (to.meta.requiresAuth && !authed) {
         return { name: 'login' };

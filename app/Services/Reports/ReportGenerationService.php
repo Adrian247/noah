@@ -46,6 +46,7 @@ class ReportGenerationService
 
         $routine = $report->routine()->with([
             'routineType.reportTemplateVersion',
+            'routineType.formVersion.definition',
             'asset.catalogItem',
             'site',
             'company',
@@ -55,8 +56,18 @@ class ReportGenerationService
         $templateVersion = $routine->routineType?->reportTemplateVersion;
 
         try {
-            $html = $this->htmlBuilder->build($routine, $execution, $templateVersion?->components ?? []);
+            $html = $this->htmlBuilder->build(
+                $routine,
+                $execution,
+                $templateVersion?->components ?? [],
+                $templateVersion?->page_settings ?? [],
+                $templateVersion?->id,
+            );
+
+            $enablePhp = str_contains($html, 'type="text/php"');
             $pdf = Pdf::loadHTML($html)->setPaper('a4');
+            $pdf->getDomPDF()->set_option('isPhpEnabled', $enablePhp);
+            $pdf->getDomPDF()->set_option('isRemoteEnabled', false);
 
             $path = config('noah.reports.path_prefix').'/'.Str::uuid().'.pdf';
             $disk = Storage::disk($report->disk);

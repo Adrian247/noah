@@ -2,9 +2,11 @@
 import { computed, onMounted, ref } from 'vue';
 import { api } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { useToast } from '@/composables/useToast';
 import PageHeader from '@/components/ui/PageHeader.vue';
-import GlassCard from '@/components/ui/GlassCard.vue';
+import AppModal from '@/components/ui/AppModal.vue';
 import AppButton from '@/components/ui/AppButton.vue';
+import MaterialField from '@/components/ui/MaterialField.vue';
 import UserAvatar from '@/components/ui/UserAvatar.vue';
 import { getToken, getCompanyId } from '@/api/client';
 
@@ -21,12 +23,12 @@ type Client = {
 };
 
 const { canWriteModule, isVisible } = useModuleAccess();
+const toast = useToast();
 const canEdit = computed(() => canWriteModule('clients'));
 const canView = computed(() => isVisible('clients'));
 
 const clients = ref<Client[]>([]);
 const loading = ref(true);
-const message = ref<string | null>(null);
 const showForm = ref(false);
 const editingId = ref<number | null>(null);
 const form = ref({
@@ -102,7 +104,6 @@ async function uploadLogoForEditing() {
         return;
     }
     logoUploading.value = true;
-    message.value = null;
     try {
         const updated = await uploadClientLogo(editingId.value, logoFile.value);
         formLogoUrl.value = updated.logo_url ?? null;
@@ -113,7 +114,7 @@ async function uploadLogoForEditing() {
         logoPreview.value = null;
         await load();
     } catch (e) {
-        message.value = (e as Error).message;
+        toast.error((e as Error).message);
     } finally {
         logoUploading.value = false;
     }
@@ -121,12 +122,11 @@ async function uploadLogoForEditing() {
 
 async function load() {
     loading.value = true;
-    message.value = null;
     try {
         const res = await api<{ data: Client[] }>('/clients');
         clients.value = res.data;
     } catch (e) {
-        message.value = (e as Error).message;
+        toast.error((e as Error).message);
     } finally {
         loading.value = false;
     }
@@ -166,7 +166,6 @@ async function save() {
     if (!canEdit.value) {
         return;
     }
-    message.value = null;
     const body = {
         code: form.value.code || null,
         legal_name: form.value.legal_name,
@@ -188,11 +187,13 @@ async function save() {
                 await uploadClientLogo(created.data.id, logoFile.value);
             }
         }
+        const wasEdit = Boolean(editingId.value);
         showForm.value = false;
         resetLogoState();
+        toast.success(wasEdit ? 'Cliente actualizado.' : 'Cliente creado.');
         await load();
     } catch (e) {
-        message.value = (e as Error).message;
+        toast.error((e as Error).message);
     }
 }
 
@@ -202,9 +203,10 @@ async function deactivate(c: Client) {
     }
     try {
         await api(`/clients/${c.id}`, { method: 'DELETE' });
+        toast.success('Cliente desactivado.');
         await load();
     } catch (e) {
-        message.value = (e as Error).message;
+        toast.error((e as Error).message);
     }
 }
 
@@ -212,29 +214,37 @@ onMounted(load);
 </script>
 
 <template>
-    <div class="space-y-6">
-        <PageHeader
-            title="Clientes"
-            subtitle="Clientes de facturación: datos fiscales y contacto para prefacturas y emisión."
-        />
-
-        <p v-if="!canView" class="text-sm text-slate-500">No tienes acceso al módulo de clientes.</p>
+    <div class="portal-page">
+        <div v-if="!canView">
+            <PageHeader
+                title="Clientes"
+                subtitle="Clientes de facturación: datos fiscales y contacto para prefacturas y emisión."
+            />
+            <p class="text-portal-muted text-sm">No tienes acceso al módulo de clientes.</p>
+        </div>
 
         <template v-else>
-        <div v-if="canEdit" class="flex justify-end">
-            <AppButton type="button" @click="openCreate">Nuevo cliente</AppButton>
-        </div>
-        <p v-else class="text-sm text-slate-500">
-            Solo lectura. Pide a un administrador permiso para editar clientes y subir imágenes.
-        </p>
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <PageHeader
+                    class="flex-1"
+                    title="Clientes"
+                    subtitle="Clientes de facturación: datos fiscales y contacto para prefacturas y emisión."
+                />
+                <AppButton v-if="canEdit" type="button" class="shrink-0" @click="openCreate">
+                    Nuevo cliente
+                </AppButton>
+            </div>
+            <p v-if="!canEdit" class="text-portal-muted text-sm">
+                Solo lectura. Pide a un administrador permiso para editar clientes y subir imágenes.
+            </p>
 
-        <p v-if="loading" class="text-slate-500">Cargando…</p>
+        <p v-if="loading" class="text-portal-muted">Cargando…</p>
 
-        <GlassCard v-else class="overflow-x-auto">
-            <table class="w-full min-w-[36rem] text-left text-sm">
+        <div v-else class="portal-table-wrap">
+            <table class="portal-data-table min-w-[36rem]">
                 <thead>
-                    <tr class="border-b border-slate-200 text-slate-500">
-                        <th class="py-2 pr-3 w-12" />
+                    <tr class="border-b">
+                        <th class="w-12 py-2 pr-3" />
                         <th class="py-2 pr-3">Código</th>
                         <th class="py-2 pr-3">Razón social</th>
                         <th class="py-2 pr-3">RFC</th>
@@ -246,7 +256,7 @@ onMounted(load);
                     <tr
                         v-for="c in clients"
                         :key="c.id"
-                        class="border-b border-slate-100"
+                        class="border-b"
                         :class="!c.is_active ? 'opacity-60' : ''"
                     >
                         <td class="py-2 pr-3">
@@ -256,19 +266,19 @@ onMounted(load);
                                 size="sm"
                             />
                         </td>
-                        <td class="py-2 pr-3 font-mono text-xs">{{ c.code ?? '—' }}</td>
+                        <td class="text-portal-muted py-2 pr-3 font-mono text-xs">{{ c.code ?? '—' }}</td>
                         <td class="py-2 pr-3">
-                            <p class="font-medium text-slate-900">{{ c.legal_name }}</p>
-                            <p v-if="c.trade_name" class="text-xs text-slate-500">{{ c.trade_name }}</p>
+                            <p class="text-portal-heading font-medium">{{ c.legal_name }}</p>
+                            <p v-if="c.trade_name" class="text-portal-muted text-xs">{{ c.trade_name }}</p>
                         </td>
-                        <td class="py-2 pr-3">{{ c.tax_id ?? '—' }}</td>
-                        <td class="py-2 pr-3">
+                        <td class="text-portal-muted py-2 pr-3">{{ c.tax_id ?? '—' }}</td>
+                        <td class="text-portal-muted py-2 pr-3">
                             {{ c.is_active ? 'Activo' : 'Inactivo' }}
                         </td>
                         <td v-if="canEdit" class="py-2 text-right">
                             <button
                                 type="button"
-                                class="mr-2 text-primary-600 hover:text-primary-700"
+                                class="text-portal-link mr-2"
                                 @click="openEdit(c)"
                             >
                                 Editar
@@ -276,7 +286,7 @@ onMounted(load);
                             <button
                                 v-if="c.is_active"
                                 type="button"
-                                class="text-red-600 hover:text-red-700"
+                                class="text-red-400 hover:text-red-300"
                                 @click="deactivate(c)"
                             >
                                 Desactivar
@@ -285,103 +295,74 @@ onMounted(load);
                     </tr>
                 </tbody>
             </table>
-        </GlassCard>
+        </div>
+        <p v-if="!loading && clients.length === 0" class="text-portal-muted text-sm">No hay clientes registrados.</p>
 
-        <p v-if="message" class="text-sm text-red-600">{{ message }}</p>
 
-        <div
-            v-if="showForm && canEdit"
-            class="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/40 p-4"
-            @click.self="showForm = false"
+        <AppModal
+            :open="showForm && canEdit"
+            :title="editingId ? 'Editar cliente' : 'Nuevo cliente'"
+            size="sm"
+            @close="showForm = false"
         >
-            <GlassCard class="max-h-[90vh] w-full max-w-lg overflow-y-auto" padding="lg">
-                <h3 class="text-lg font-semibold">{{ editingId ? 'Editar cliente' : 'Nuevo cliente' }}</h3>
-                <div class="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
-                    <p class="text-sm font-medium text-slate-800">Imagen del cliente</p>
-                    <p class="mt-0.5 text-xs text-slate-500">Logo o foto (como avatar). JPG, PNG o WebP · máx. 2 MB.</p>
-                    <div class="mt-3 flex flex-wrap items-center gap-4">
-                        <button
-                            type="button"
-                            class="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+            <div class="portal-media-upload">
+                <p class="text-portal-heading text-sm font-medium">Imagen del cliente</p>
+                <p class="text-portal-muted mt-0.5 text-xs">Logo o foto (como avatar). JPG, PNG o WebP · máx. 2 MB.</p>
+                <div class="mt-3 flex flex-wrap items-center gap-4">
+                    <button
+                        type="button"
+                        class="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                        :disabled="logoUploading"
+                        @click="openLogoPicker"
+                    >
+                        <UserAvatar :name="form.legal_name || 'Cliente'" :avatar-url="displayLogoUrl" size="lg" />
+                    </button>
+                    <div class="flex flex-col gap-2">
+                        <input
+                            ref="logoInput"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            class="hidden"
                             :disabled="logoUploading"
-                            @click="openLogoPicker"
-                        >
-                            <UserAvatar
-                                :name="form.legal_name || 'Cliente'"
-                                :avatar-url="displayLogoUrl"
-                                size="lg"
-                            />
-                        </button>
-                        <div class="flex flex-col gap-2">
-                            <input
-                                ref="logoInput"
-                                type="file"
-                                accept="image/jpeg,image/png,image/webp"
-                                class="hidden"
-                                :disabled="logoUploading"
-                                @change="onLogoSelected"
-                            />
-                            <AppButton
-                                type="button"
-                                variant="secondary"
-                                :disabled="logoUploading"
-                                @click="openLogoPicker"
-                            >
-                                {{ logoUploading ? 'Subiendo…' : 'Elegir imagen' }}
-                            </AppButton>
-                            <p v-if="!editingId && logoFile" class="text-xs text-primary-700">
-                                Se subirá al guardar el cliente.
-                            </p>
-                            <p v-else-if="editingId" class="text-xs text-slate-500">
-                                También puedes hacer clic en el círculo para cambiar la imagen.
-                            </p>
-                        </div>
+                            @change="onLogoSelected"
+                        />
+                        <AppButton type="button" variant="secondary" :disabled="logoUploading" @click="openLogoPicker">
+                            {{ logoUploading ? 'Subiendo…' : 'Elegir imagen' }}
+                        </AppButton>
+                        <p v-if="!editingId && logoFile" class="text-portal-muted text-xs">
+                            Se subirá al guardar el cliente.
+                        </p>
+                        <p v-else-if="editingId" class="text-portal-muted text-xs">
+                            También puedes hacer clic en el círculo para cambiar la imagen.
+                        </p>
                     </div>
                 </div>
-                <form class="mt-4 space-y-3" @submit.prevent="save">
-                    <label class="block text-sm">
-                        Razón social
-                        <input v-model="form.legal_name" required class="field-input mt-1 w-full" />
-                    </label>
-                    <label class="block text-sm">
-                        Nombre comercial
-                        <input v-model="form.trade_name" class="field-input mt-1 w-full" />
-                    </label>
-                    <div class="grid gap-3 sm:grid-cols-2">
-                        <label class="block text-sm">
-                            Código
-                            <input v-model="form.code" class="field-input mt-1 w-full" />
-                        </label>
-                        <label class="block text-sm">
-                            RFC / ID fiscal
-                            <input v-model="form.tax_id" class="field-input mt-1 w-full" />
-                        </label>
-                    </div>
-                    <label class="block text-sm">
-                        Correo facturación
-                        <input v-model="form.billing_email" type="email" class="field-input mt-1 w-full" />
-                    </label>
-                    <label class="block text-sm">
-                        Dirección fiscal
-                        <textarea v-model="form.billing_address" rows="2" class="field-input mt-1 w-full" />
-                    </label>
-                    <label v-if="editingId" class="flex items-center gap-2 text-sm">
-                        <input v-model="form.is_active" type="checkbox" />
-                        Activo
-                    </label>
-                    <div class="flex justify-end gap-2 pt-2">
-                        <button
-                            type="button"
-                            class="rounded-xl px-4 py-2 text-sm text-slate-600 hover:bg-slate-100"
-                            @click="showForm = false"
-                        >
-                            Cancelar
-                        </button>
-                        <AppButton type="submit">Guardar</AppButton>
-                    </div>
-                </form>
-            </GlassCard>
-        </div>
+            </div>
+            <form id="client-form" class="mt-6 space-y-4" @submit.prevent="save">
+                <MaterialField v-model="form.legal_name" label="Razón social" required />
+                <MaterialField v-model="form.trade_name" label="Nombre comercial" />
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <MaterialField v-model="form.code" label="Código" />
+                    <MaterialField v-model="form.tax_id" label="RFC / ID fiscal" />
+                </div>
+                <MaterialField v-model="form.billing_email" label="Correo facturación" type="email" />
+                <MaterialField v-model="form.billing_address" label="Dirección fiscal" multiline :rows="2" />
+                <label v-if="editingId" class="text-portal-muted flex items-center gap-2 text-sm">
+                    <input v-model="form.is_active" type="checkbox" />
+                    Activo
+                </label>
+            </form>
+            <template #footer>
+                <button
+                    type="button"
+                    class="text-portal-muted rounded-xl px-4 py-2 text-sm hover:bg-white/5"
+                    @click="showForm = false"
+                >
+                    Cancelar
+                </button>
+                <AppButton type="submit" form="client-form">Guardar</AppButton>
+            </template>
+        </AppModal>
         </template>
     </div>
 </template>

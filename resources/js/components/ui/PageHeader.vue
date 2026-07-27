@@ -7,7 +7,7 @@ defineProps<{
 
 <template>
     <header class="mb-6">
-        <h1 class="text-2xl font-semibold tracking-tight text-slate-900">{{ title }}</h1>
-        <p v-if="subtitle" class="mt-1 max-w-2xl text-sm text-slate-600">{{ subtitle }}</p>
+        <h1 class="text-portal-heading text-2xl font-bold tracking-tight">{{ title }}</h1>
+        <p v-if="subtitle" class="text-portal-muted mt-2 max-w-2xl text-sm leading-relaxed">{{ subtitle }}</p>
     </header>
 </template>

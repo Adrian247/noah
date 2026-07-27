@@ -19,6 +19,7 @@
 | **Dashboard summary API** | Implementado |
 | **Usuarios empresa (lectura admin)** | Implementado |
 | **`noah:ensure-demo`** en arranque Docker | Implementado |
+| **`noah:refresh-demo`** (seed + permisos + credenciales) | Implementado — ver `docs/DEMO_ENV.md` |
 
 ## Frontend
 

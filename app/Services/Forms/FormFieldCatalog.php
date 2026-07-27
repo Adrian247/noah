@@ -39,6 +39,7 @@ class FormFieldCatalog
                         'key' => $key,
                         'label' => ($field['label'] ?? $key).' ('.$form->name.')',
                         'form_name' => $form->name,
+                        'field_type' => $field['type'] ?? 'text',
                     ];
                 }
             }

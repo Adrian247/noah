@@ -2,7 +2,12 @@
 import { computed, onMounted, ref } from 'vue';
 import { api } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { useToast } from '@/composables/useToast';
 import ReadOnlyNotice from '@/components/ui/ReadOnlyNotice.vue';
+import PageHeader from '@/components/ui/PageHeader.vue';
+import AppModal from '@/components/ui/AppModal.vue';
+import MaterialField from '@/components/ui/MaterialField.vue';
+import AppButton from '@/components/ui/AppButton.vue';
 
 type CatalogItem = {
     id: number;
@@ -12,60 +17,69 @@ type CatalogItem = {
 };
 
 const { canWriteModule } = useModuleAccess();
+const toast = useToast();
 const canWrite = computed(() => canWriteModule('catalog_items'));
 
 const items = ref<CatalogItem[]>([]);
 const loading = ref(true);
-const error = ref<string | null>(null);
 const saving = ref(false);
+const showForm = ref(false);
+const editingId = ref<number | null>(null);
 
-const form = ref({
-    code: '',
-    name: '',
-    manufacturer: '',
-});
+const form = ref({ code: '', name: '', manufacturer: '' });
+
+function resetForm() {
+    form.value = { code: '', name: '', manufacturer: '' };
+    editingId.value = null;
+}
+
+function openCreate() {
+    resetForm();
+    showForm.value = true;
+}
+
+function openEdit(item: CatalogItem) {
+    editingId.value = item.id;
+    form.value = {
+        code: item.code,
+        name: item.name,
+        manufacturer: item.manufacturer ?? '',
+    };
+    showForm.value = true;
+}
 
 async function load() {
     loading.value = true;
-    error.value = null;
     try {
         const res = await api<{ data: CatalogItem[] }>('/catalog/items');
         items.value = res.data;
     } catch (e) {
-        error.value = (e as Error).message;
+        toast.error((e as Error).message);
     } finally {
         loading.value = false;
     }
 }
 
-const editingId = ref<number | null>(null);
-const editForm = ref({ code: '', name: '', manufacturer: '' });
-
-function startEdit(item: CatalogItem) {
-    editingId.value = item.id;
-    editForm.value = {
-        code: item.code,
-        name: item.name,
-        manufacturer: item.manufacturer ?? '',
-    };
-}
-
-async function saveEdit(id: number) {
+async function save() {
     saving.value = true;
-    error.value = null;
     try {
-        await api(`/catalog/items/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify({
-                code: editForm.value.code,
-                name: editForm.value.name,
-                manufacturer: editForm.value.manufacturer || null,
-            }),
-        });
-        editingId.value = null;
+        const body = {
+            code: form.value.code,
+            name: form.value.name,
+            manufacturer: form.value.manufacturer || null,
+        };
+        if (editingId.value) {
+            await api(`/catalog/items/${editingId.value}`, { method: 'PUT', body: JSON.stringify(body) });
+        } else {
+            await api('/catalog/items', { method: 'POST', body: JSON.stringify(body) });
+        }
+        const wasEdit = Boolean(editingId.value);
+        showForm.value = false;
+        resetForm();
+        toast.success(wasEdit ? 'Equipo actualizado.' : 'Equipo creado.');
         await load();
     } catch (e) {
-        error.value = (e as Error).message;
+        toast.error((e as Error).message);
     } finally {
         saving.value = false;
     }
@@ -75,33 +89,12 @@ async function remove(id: number) {
     if (!window.confirm('¿Eliminar este ítem del catálogo?')) {
         return;
     }
-    error.value = null;
     try {
         await api(`/catalog/items/${id}`, { method: 'DELETE' });
+        toast.success('Equipo eliminado.');
         await load();
     } catch (e) {
-        error.value = (e as Error).message;
-    }
-}
-
-async function submit() {
-    saving.value = true;
-    error.value = null;
-    try {
-        await api('/catalog/items', {
-            method: 'POST',
-            body: JSON.stringify({
-                code: form.value.code,
-                name: form.value.name,
-                manufacturer: form.value.manufacturer || null,
-            }),
-        });
-        form.value = { code: '', name: '', manufacturer: '' };
-        await load();
-    } catch (e) {
-        error.value = (e as Error).message;
-    } finally {
-        saving.value = false;
+        toast.error((e as Error).message);
     }
 }
 
@@ -109,93 +102,63 @@ onMounted(load);
 </script>
 
 <template>
-    <div class="space-y-6">
-        <h2 class="text-xl font-semibold">Catálogo de equipos</h2>
-        <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
+    <div class="portal-page">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <PageHeader class="flex-1" title="Equipos" subtitle="Catálogo maestro de equipos y fabricantes." />
+            <AppButton v-if="canWrite" type="button" class="shrink-0" @click="openCreate">
+                Nuevo equipo
+            </AppButton>
+        </div>
+        <ReadOnlyNotice v-if="!canWrite" module-label="Equipos" />
 
-        <form
-            v-if="canWrite"
-            class="max-w-lg space-y-3 rounded-lg border border-slate-200 bg-white p-4"
-            @submit.prevent="submit"
-        >
-            <p class="text-sm font-medium text-slate-700">Nuevo equipo de catálogo</p>
-            <label class="block text-sm">
-                Código
-                <input
-                    v-model="form.code"
-                    required
-                    class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5"
-                />
-            </label>
-            <label class="block text-sm">
-                Nombre
-                <input
-                    v-model="form.name"
-                    required
-                    class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5"
-                />
-            </label>
-            <label class="block text-sm">
-                Fabricante
-                <input
-                    v-model="form.manufacturer"
-                    class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5"
-                />
-            </label>
-            <button
-                type="submit"
-                class="rounded-md bg-slate-900 px-3 py-2 text-sm text-white disabled:opacity-50"
-                :disabled="saving"
-            >
-                Guardar
-            </button>
-        </form>
-        <ReadOnlyNotice v-else module-label="Equipos" />
-
-        <p v-if="loading" class="text-slate-500">Cargando…</p>
-        <table v-else class="w-full text-left text-sm">
-            <thead>
-                <tr class="border-b text-slate-500">
-                    <th class="py-2">Código</th>
-                    <th>Nombre</th>
-                    <th>Fabricante</th>
-                    <th v-if="canWrite" class="w-32"></th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr
-                    v-for="item in items"
-                    :key="item.id"
-                    class="border-b border-slate-100"
-                >
-                    <template v-if="editingId === item.id">
-                        <td class="py-2">
-                            <input v-model="editForm.code" class="w-full rounded border px-1 py-0.5 text-xs" />
-                        </td>
-                        <td>
-                            <input v-model="editForm.name" class="w-full rounded border px-1 py-0.5" />
-                        </td>
-                        <td>
-                            <input v-model="editForm.manufacturer" class="w-full rounded border px-1 py-0.5" />
-                        </td>
-                        <td class="space-x-1">
-                            <button type="button" class="text-xs underline" @click="saveEdit(item.id)">
-                                OK
-                            </button>
-                            <button type="button" class="text-xs" @click="editingId = null">×</button>
-                        </td>
-                    </template>
-                    <template v-else>
-                        <td class="py-2 font-mono text-xs">{{ item.code }}</td>
-                        <td>{{ item.name }}</td>
-                        <td>{{ item.manufacturer ?? '—' }}</td>
+        <p v-if="loading" class="text-portal-muted">Cargando…</p>
+        <div v-else class="portal-table-wrap">
+            <table class="portal-data-table">
+                <thead>
+                    <tr class="border-b">
+                        <th class="py-2">Código</th>
+                        <th>Nombre</th>
+                        <th>Fabricante</th>
+                        <th v-if="canWrite" class="w-32" />
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="item in items" :key="item.id" class="border-b">
+                        <td class="text-portal-heading py-2 font-mono text-xs">{{ item.code }}</td>
+                        <td class="text-portal-heading">{{ item.name }}</td>
+                        <td class="text-portal-muted">{{ item.manufacturer ?? '—' }}</td>
                         <td v-if="canWrite" class="space-x-2 text-xs">
-                            <button type="button" class="underline" @click="startEdit(item)">Editar</button>
-                            <button type="button" class="text-red-700" @click="remove(item.id)">Borrar</button>
+                            <button type="button" class="text-portal-link underline" @click="openEdit(item)">
+                                Editar
+                            </button>
+                            <button type="button" class="text-red-400" @click="remove(item.id)">Borrar</button>
                         </td>
-                    </template>
-                </tr>
-            </tbody>
-        </table>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <AppModal
+            :open="showForm && canWrite"
+            :title="editingId ? 'Editar equipo' : 'Nuevo equipo'"
+            size="sm"
+            @close="showForm = false"
+        >
+            <form id="catalog-item-form" class="space-y-4" @submit.prevent="save">
+                <MaterialField v-model="form.code" label="Código" required />
+                <MaterialField v-model="form.name" label="Nombre" required />
+                <MaterialField v-model="form.manufacturer" label="Fabricante" />
+            </form>
+            <template #footer>
+                <button
+                    type="button"
+                    class="text-portal-muted rounded-xl px-4 py-2 text-sm hover:bg-white/5"
+                    @click="showForm = false"
+                >
+                    Cancelar
+                </button>
+                <AppButton type="submit" form="catalog-item-form" :disabled="saving">Guardar</AppButton>
+            </template>
+        </AppModal>
     </div>
 </template>

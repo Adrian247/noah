@@ -64,12 +64,25 @@ export async function api<T>(
     const data = text ? JSON.parse(text) : null;
 
     if (!res.ok) {
-        throw new ApiError(
-            data?.message ?? res.statusText,
-            res.status,
-            data,
-        );
+        const message = formatApiErrorMessage(data, res.statusText);
+        throw new ApiError(message, res.status, data);
     }
 
     return data as T;
+}
+
+function formatApiErrorMessage(data: unknown, fallback: string): string {
+    if (!data || typeof data !== 'object') {
+        return fallback;
+    }
+    const record = data as { message?: string; errors?: Record<string, string[]> };
+    const fieldErrors = record.errors ? Object.values(record.errors).flat().filter(Boolean) : [];
+    if (fieldErrors.length > 0) {
+        return fieldErrors[0] as string;
+    }
+    if (typeof record.message === 'string' && record.message.trim() !== '') {
+        return record.message;
+    }
+
+    return fallback;
 }

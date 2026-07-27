@@ -16,8 +16,8 @@ const pad = {
 
 <template>
     <div
-        class="rounded-2xl border border-slate-200/90 bg-white shadow-[var(--shadow-glass)]"
-        :class="[pad[padding], hover ? 'md-ripple-hover hover:bg-white/80' : '']"
+        class="noah-glass-card rounded-2xl"
+        :class="[pad[padding], hover ? 'noah-glass-card--hover md-ripple-hover' : '']"
     >
         <slot />
     </div>

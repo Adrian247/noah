@@ -7,6 +7,7 @@ use App\Models\Routine;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Tests\Support\VehicleDemoFormResponses;
 use Tests\TestCase;
 
 class MobileSyncApiTest extends TestCase
@@ -33,7 +34,7 @@ class MobileSyncApiTest extends TestCase
                         'routine_id' => $routine->id,
                         'technician_comments' => 'desde movil',
                         'duration_minutes' => 45,
-                        'responses' => ['horometro' => 200],
+                        'responses' => VehicleDemoFormResponses::required(),
                         'consumptions' => [],
                     ],
                 ],

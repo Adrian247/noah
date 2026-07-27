@@ -1,6 +1,9 @@
 <?php
 
 return [
+    /** Contraseña de las cuentas @noah.local en entornos demo (seeder, ensure-demo, login UI). */
+    'demo_password' => env('NOAH_DEMO_PASSWORD', 'noah_application'),
+
     'ai' => [
         'default_provider' => env('NOAH_AI_PROVIDER', 'local'),
         'openai' => [

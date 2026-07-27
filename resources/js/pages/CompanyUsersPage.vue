@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { api } from '@/api/client';
+import { useToast } from '@/composables/useToast';
 import PageHeader from '@/components/ui/PageHeader.vue';
-import GlassCard from '@/components/ui/GlassCard.vue';
+import AppModal from '@/components/ui/AppModal.vue';
 import AppButton from '@/components/ui/AppButton.vue';
+import MaterialField from '@/components/ui/MaterialField.vue';
+import MaterialSelect from '@/components/ui/MaterialSelect.vue';
 
 type ModuleAccessState = { read: boolean; write: boolean; visible: boolean };
 
@@ -26,11 +29,12 @@ type ModuleCatalogItem = {
     supports_write: boolean;
 };
 
+const toast = useToast();
 const users = ref<UserRow[]>([]);
 const roles = ref<RoleOption[]>([]);
+const roleOptions = computed(() => roles.value.map((r) => ({ value: r.name, label: r.label })));
 const modulesCatalog = ref<ModuleCatalogItem[]>([]);
 const loading = ref(true);
-const message = ref<string | null>(null);
 const search = ref('');
 
 const showPanel = ref(false);
@@ -135,7 +139,6 @@ function loadModulesIntoForm(source: Record<string, ModuleAccessState>) {
 
 async function load() {
     loading.value = true;
-    message.value = null;
     try {
         const [usersRes, rolesRes] = await Promise.all([
             api<{ data: UserRow[] }>('/company/users'),
@@ -148,7 +151,7 @@ async function load() {
         roles.value = rolesRes.data;
         modulesCatalog.value = rolesRes.modules_catalog ?? [];
     } catch (e) {
-        message.value = (e as Error).message;
+        toast.error((e as Error).message);
     } finally {
         loading.value = false;
     }
@@ -206,7 +209,6 @@ function visibleModuleCount(user: UserRow) {
 
 async function save() {
     saving.value = true;
-    message.value = null;
     try {
         const modules = { ...formModules.value };
         if (isCreate.value) {
@@ -229,10 +231,12 @@ async function save() {
                 }),
             });
         }
+        const wasCreate = isCreate.value;
         closePanel();
+        toast.success(wasCreate ? 'Usuario invitado.' : 'Usuario actualizado.');
         await load();
     } catch (e) {
-        message.value = (e as Error).message;
+        toast.error((e as Error).message);
     } finally {
         saving.value = false;
     }
@@ -242,28 +246,24 @@ onMounted(load);
 </script>
 
 <template>
-    <div class="space-y-6">
-        <PageHeader
-            title="Usuarios de la empresa"
-            subtitle="Define rol y, por módulo, acceso de lectura y escritura. Si ambos están apagados, el módulo no aparece en el menú del usuario."
-        />
-
-        <div class="flex flex-wrap items-center justify-between gap-3">
-            <input
-                v-model="search"
-                type="search"
-                placeholder="Buscar por nombre o correo…"
-                class="field-input max-w-xs"
+    <div class="portal-page">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <PageHeader
+                class="flex-1"
+                title="Usuarios de la empresa"
+                subtitle="Define rol y, por módulo, acceso de lectura y escritura. Si ambos están apagados, el módulo no aparece en el menú del usuario."
             />
-            <AppButton type="button" @click="openCreate">Agregar usuario</AppButton>
+            <AppButton type="button" class="shrink-0" @click="openCreate">Agregar usuario</AppButton>
         </div>
 
-        <p v-if="loading" class="text-slate-500">Cargando…</p>
+        <MaterialField v-model="search" label="Buscar por nombre o correo" class="max-w-md" />
 
-        <GlassCard v-else class="overflow-x-auto">
-            <table class="w-full min-w-[32rem] text-left text-sm">
+        <p v-if="loading" class="text-portal-muted">Cargando…</p>
+
+        <div v-else class="portal-table-wrap">
+            <table class="portal-data-table min-w-[32rem]">
                 <thead>
-                    <tr class="border-b border-slate-200 text-slate-500">
+                    <tr class="border-b">
                         <th class="py-2 pr-4 font-medium">Nombre</th>
                         <th class="py-2 pr-4 font-medium">Correo</th>
                         <th class="py-2 pr-4 font-medium">Rol</th>
@@ -276,20 +276,16 @@ onMounted(load);
                     <tr
                         v-for="u in filteredUsers"
                         :key="u.membership_id"
-                        class="border-b border-slate-100 last:border-0"
+                        class="border-b last:border-0"
                     >
-                        <td class="py-3 pr-4 font-medium text-slate-900">{{ u.name }}</td>
-                        <td class="py-3 pr-4 text-slate-600">{{ u.email }}</td>
-                        <td class="py-3 pr-4">{{ u.role_label }}</td>
-                        <td class="py-3 pr-4 text-slate-600">{{ visibleModuleCount(u) }}</td>
+                        <td class="text-portal-heading py-3 pr-4 font-medium">{{ u.name }}</td>
+                        <td class="text-portal-muted py-3 pr-4">{{ u.email }}</td>
+                        <td class="text-portal-heading py-3 pr-4">{{ u.role_label }}</td>
+                        <td class="text-portal-muted py-3 pr-4">{{ visibleModuleCount(u) }}</td>
                         <td class="py-3 pr-4">
                             <span
                                 class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
-                                :class="
-                                    u.is_active
-                                        ? 'bg-emerald-100 text-emerald-800'
-                                        : 'bg-slate-200 text-slate-600'
-                                "
+                                :class="u.is_active ? 'portal-status-active' : 'portal-status-inactive'"
                             >
                                 {{ u.is_active ? 'Activo' : 'Inactivo' }}
                             </span>
@@ -297,7 +293,7 @@ onMounted(load);
                         <td class="py-3 text-right">
                             <button
                                 type="button"
-                                class="text-sm font-medium text-primary-600 hover:text-primary-700"
+                                class="text-portal-link text-sm font-medium underline"
                                 @click="openEdit(u)"
                             >
                                 Editar
@@ -306,114 +302,81 @@ onMounted(load);
                     </tr>
                 </tbody>
             </table>
-        </GlassCard>
-
-        <p v-if="message" class="text-sm text-red-600">{{ message }}</p>
-
-        <div
-            v-if="showPanel"
-            class="fixed inset-0 z-30 flex items-end justify-center bg-slate-900/40 p-4 sm:items-center"
-            @click.self="closePanel"
-        >
-            <GlassCard class="max-h-[90vh] w-full max-w-2xl overflow-y-auto" padding="lg">
-                <h3 class="text-lg font-semibold text-slate-900">
-                    {{ isCreate ? 'Agregar usuario' : 'Editar usuario' }}
-                </h3>
-                <form class="mt-4 space-y-4" @submit.prevent="save">
-                    <label v-if="isCreate" class="block text-sm font-medium text-slate-700">
-                        Correo
-                        <input
-                            v-model="formEmail"
-                            type="email"
-                            required
-                            class="field-input mt-1 w-full"
-                        />
-                    </label>
-                    <label v-if="isCreate" class="block text-sm font-medium text-slate-700">
-                        Nombre
-                        <input v-model="formName" type="text" class="field-input mt-1 w-full" />
-                    </label>
-                    <p v-if="!isCreate" class="text-sm text-slate-600">{{ formEmail }}</p>
-                    <label class="block text-sm font-medium text-slate-700">
-                        Rol
-                        <select v-model="formRole" class="field-input mt-1 w-full">
-                            <option v-for="r in roles" :key="r.name" :value="r.name">
-                                {{ r.label }}
-                            </option>
-                        </select>
-                    </label>
-                    <label v-if="!isCreate" class="flex items-center gap-2 text-sm text-slate-700">
-                        <input v-model="formActive" type="checkbox" class="rounded border-slate-300" />
-                        Acceso activo a esta empresa
-                    </label>
-
-                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            Acceso por módulo
-                        </p>
-                        <p class="mt-1 text-xs text-slate-500">
-                            Lectura permite ver; escritura incluye crear y editar. Sin ninguno, el módulo se oculta del
-                            menú.
-                        </p>
-                        <table class="mt-3 w-full text-sm">
-                            <thead>
-                                <tr class="text-left text-xs text-slate-500">
-                                    <th class="pb-2 pr-2 font-medium">Módulo</th>
-                                    <th class="pb-2 pr-2 font-medium">Lectura</th>
-                                    <th class="pb-2 font-medium">Escritura</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr
-                                    v-for="mod in editableModules"
-                                    :key="mod.id"
-                                    class="border-t border-slate-200/80"
-                                >
-                                    <td class="py-2 pr-2 font-medium text-slate-800">{{ mod.label }}</td>
-                                    <td class="py-2 pr-2">
-                                        <input
-                                            type="checkbox"
-                                            :checked="formModules[mod.id]?.read"
-                                            @change="
-                                                setModuleRead(
-                                                    mod.id,
-                                                    ($event.target as HTMLInputElement).checked,
-                                                )
-                                            "
-                                        />
-                                    </td>
-                                    <td class="py-2">
-                                        <input
-                                            type="checkbox"
-                                            :disabled="!mod.supports_write"
-                                            :checked="formModules[mod.id]?.write"
-                                            @change="
-                                                setModuleWrite(
-                                                    mod.id,
-                                                    ($event.target as HTMLInputElement).checked,
-                                                )
-                                            "
-                                        />
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="flex justify-end gap-2 pt-2">
-                        <button
-                            type="button"
-                            class="rounded-xl px-4 py-2 text-sm text-slate-600 hover:bg-slate-100"
-                            @click="closePanel"
-                        >
-                            Cancelar
-                        </button>
-                        <AppButton type="submit" :disabled="saving">
-                            {{ saving ? 'Guardando…' : 'Guardar' }}
-                        </AppButton>
-                    </div>
-                </form>
-            </GlassCard>
         </div>
+
+
+        <AppModal :open="showPanel" :title="isCreate ? 'Agregar usuario' : 'Editar usuario'" @close="closePanel">
+            <form id="company-user-form" class="space-y-4" @submit.prevent="save">
+                <MaterialField
+                    v-if="isCreate"
+                    v-model="formEmail"
+                    label="Correo"
+                    type="email"
+                    required
+                />
+                <MaterialField v-if="isCreate" v-model="formName" label="Nombre" />
+                <p v-if="!isCreate" class="text-portal-muted text-sm">{{ formEmail }}</p>
+                <MaterialSelect v-model="formRole" label="Rol" :options="roleOptions" />
+                <label v-if="!isCreate" class="text-portal-muted flex items-center gap-2 text-sm">
+                    <input v-model="formActive" type="checkbox" class="rounded border-white/20" />
+                    Acceso activo a esta empresa
+                </label>
+
+                <div class="portal-form-panel">
+                    <p class="text-portal-muted text-xs font-semibold uppercase tracking-wide">
+                        Acceso por módulo
+                    </p>
+                    <p class="text-portal-muted mt-1 text-xs">
+                        Lectura permite ver; escritura incluye crear y editar. Sin ninguno, el módulo se oculta del
+                        menú.
+                    </p>
+                    <table class="portal-data-table mt-3">
+                        <thead>
+                            <tr class="text-left text-xs">
+                                <th class="pb-2 pr-2 font-medium">Módulo</th>
+                                <th class="pb-2 pr-2 font-medium">Lectura</th>
+                                <th class="pb-2 font-medium">Escritura</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="mod in editableModules" :key="mod.id" class="border-t">
+                                <td class="text-portal-heading py-2 pr-2 font-medium">{{ mod.label }}</td>
+                                <td class="py-2 pr-2">
+                                    <input
+                                        type="checkbox"
+                                        :checked="formModules[mod.id]?.read"
+                                        @change="
+                                            setModuleRead(mod.id, ($event.target as HTMLInputElement).checked)
+                                        "
+                                    />
+                                </td>
+                                <td class="py-2">
+                                    <input
+                                        type="checkbox"
+                                        :disabled="!mod.supports_write"
+                                        :checked="formModules[mod.id]?.write"
+                                        @change="
+                                            setModuleWrite(mod.id, ($event.target as HTMLInputElement).checked)
+                                        "
+                                    />
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </form>
+            <template #footer>
+                <button
+                    type="button"
+                    class="text-portal-muted rounded-xl px-4 py-2 text-sm hover:bg-white/5"
+                    @click="closePanel"
+                >
+                    Cancelar
+                </button>
+                <AppButton type="submit" form="company-user-form" :disabled="saving">
+                    {{ saving ? 'Guardando…' : 'Guardar' }}
+                </AppButton>
+            </template>
+        </AppModal>
     </div>
 </template>

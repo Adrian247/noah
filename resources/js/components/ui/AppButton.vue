@@ -9,10 +9,11 @@ withDefaults(
 );
 
 const classes = {
-    primary: 'bg-primary-600 text-white shadow-md hover:bg-primary-700',
-    secondary: 'border border-slate-300/80 bg-white/90 text-slate-800 hover:bg-white',
-    danger: 'bg-red-600 text-white hover:bg-red-700',
-    ghost: 'text-primary-700 hover:bg-primary-50',
+    primary:
+        'bg-gradient-to-br from-amber-400 to-amber-600 text-stone-950 shadow-md shadow-amber-500/25 hover:brightness-105',
+    secondary: 'app-button-secondary',
+    danger: 'bg-red-600/90 text-white hover:bg-red-600',
+    ghost: 'text-amber-400/95 hover:bg-white/5',
 };
 </script>
 

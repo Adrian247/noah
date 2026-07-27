@@ -2,10 +2,12 @@
 import { computed, onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { api } from '@/api/client';
+import { useToast } from '@/composables/useToast';
 import GlassCard from '@/components/ui/GlassCard.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import AppButton from '@/components/ui/AppButton.vue';
 import AlertBanner from '@/components/ui/AlertBanner.vue';
+import MaterialField from '@/components/ui/MaterialField.vue';
 
 type PortalPayload = {
     hero_image_url: string | null;
@@ -20,6 +22,7 @@ type PortalPayload = {
     contact_hours: string | null;
 };
 
+const toast = useToast();
 const form = ref<PortalPayload>({
     hero_image_url: '',
     hero_image_alt: '',
@@ -35,8 +38,6 @@ const form = ref<PortalPayload>({
 
 const loading = ref(true);
 const saving = ref(false);
-const message = ref<string | null>(null);
-const error = ref<string | null>(null);
 
 const highlightsText = computed({
     get: () => form.value.service_highlights.filter(Boolean).join('\n'),
@@ -50,7 +51,6 @@ const highlightsText = computed({
 
 async function load() {
     loading.value = true;
-    error.value = null;
     try {
         const res = await api<{ data: PortalPayload }>('/portal/settings');
         form.value = {
@@ -61,15 +61,13 @@ async function load() {
                     : ['', '', ''],
         };
     } catch (e) {
-        error.value = (e as Error).message;
+        toast.error((e as Error).message);
     } finally {
         loading.value = false;
     }
 }
 
 async function save() {
-    message.value = null;
-    error.value = null;
     saving.value = true;
     try {
         await api('/portal/settings', {
@@ -79,10 +77,10 @@ async function save() {
                 service_highlights: form.value.service_highlights.filter(Boolean),
             }),
         });
-        message.value = 'Contenido del portal de login actualizado.';
+        toast.success('Contenido del portal de login actualizado.');
         await load();
     } catch (e) {
-        error.value = (e as Error).message;
+        toast.error((e as Error).message);
     } finally {
         saving.value = false;
     }
@@ -93,7 +91,7 @@ onMounted(load);
 
 <template>
     <div class="max-w-3xl">
-        <RouterLink to="/app/dashboard" class="text-sm text-primary-700 underline">← Panel</RouterLink>
+        <RouterLink to="/app/dashboard" class="text-portal-link text-sm underline">← Panel</RouterLink>
         <PageHeader
             title="Portal de login"
             subtitle="Textos de ayuda, contacto, servicio e imagen del panel derecho en la pantalla de acceso (visible sin autenticación)."
@@ -102,64 +100,32 @@ onMounted(load);
             Los cambios se reflejan de inmediato en la pantalla de inicio de sesión. Usa una URL de imagen HTTPS (p. ej. almacenamiento propio o CDN).
         </AlertBanner>
         <GlassCard v-if="loading" padding="md">Cargando…</GlassCard>
-        <GlassCard v-else padding="lg" class="space-y-6">
-            <fieldset class="space-y-3">
-                <legend class="text-sm font-semibold text-slate-800">Imagen industrial (panel derecho)</legend>
-                <label class="block text-sm">
-                    URL de imagen
-                    <input v-model="form.hero_image_url" type="url" class="field-input mt-1 w-full" />
-                </label>
-                <label class="block text-sm">
-                    Texto alternativo
-                    <input v-model="form.hero_image_alt" type="text" class="field-input mt-1 w-full" />
-                </label>
+        <GlassCard v-else padding="lg" class="space-y-8">
+            <fieldset class="space-y-4">
+                <legend class="text-portal-heading text-sm font-semibold">Imagen industrial (panel derecho)</legend>
+                <MaterialField v-model="form.hero_image_url" label="URL de imagen" type="url" />
+                <MaterialField v-model="form.hero_image_alt" label="Texto alternativo" />
             </fieldset>
 
-            <fieldset class="space-y-3">
-                <legend class="text-sm font-semibold text-slate-800">Servicio</legend>
-                <label class="block text-sm">
-                    Título
-                    <input v-model="form.service_title" type="text" class="field-input mt-1 w-full" />
-                </label>
-                <label class="block text-sm">
-                    Descripción
-                    <textarea v-model="form.service_description" rows="4" class="field-input mt-1 w-full" />
-                </label>
-                <label class="block text-sm">
-                    Destacados (uno por línea)
-                    <textarea v-model="highlightsText" rows="4" class="field-input mt-1 w-full font-mono text-xs" />
-                </label>
+            <fieldset class="space-y-4">
+                <legend class="text-portal-heading text-sm font-semibold">Servicio</legend>
+                <MaterialField v-model="form.service_title" label="Título" />
+                <MaterialField v-model="form.service_description" label="Descripción" multiline :rows="4" />
+                <MaterialField v-model="highlightsText" label="Destacados (uno por línea)" multiline :rows="4" />
             </fieldset>
 
-            <fieldset class="space-y-3">
-                <legend class="text-sm font-semibold text-slate-800">Ayuda y contacto (columna login)</legend>
-                <label class="block text-sm">
-                    Título de ayuda
-                    <input v-model="form.help_title" type="text" class="field-input mt-1 w-full" />
-                </label>
-                <label class="block text-sm">
-                    Texto de ayuda
-                    <textarea v-model="form.help_text" rows="3" class="field-input mt-1 w-full" />
-                </label>
-                <label class="block text-sm">
-                    Correo
-                    <input v-model="form.contact_email" type="email" class="field-input mt-1 w-full" />
-                </label>
-                <label class="block text-sm">
-                    Teléfono
-                    <input v-model="form.contact_phone" type="text" class="field-input mt-1 w-full" />
-                </label>
-                <label class="block text-sm">
-                    Horario
-                    <input v-model="form.contact_hours" type="text" class="field-input mt-1 w-full" />
-                </label>
+            <fieldset class="space-y-4">
+                <legend class="text-portal-heading text-sm font-semibold">Ayuda y contacto (columna login)</legend>
+                <MaterialField v-model="form.help_title" label="Título de ayuda" />
+                <MaterialField v-model="form.help_text" label="Texto de ayuda" multiline :rows="3" />
+                <MaterialField v-model="form.contact_email" label="Correo" type="email" />
+                <MaterialField v-model="form.contact_phone" label="Teléfono" />
+                <MaterialField v-model="form.contact_hours" label="Horario" />
             </fieldset>
 
             <AppButton :disabled="saving" @click="save">
                 {{ saving ? 'Guardando…' : 'Guardar portal' }}
             </AppButton>
-            <p v-if="message" class="text-sm text-emerald-800">{{ message }}</p>
-            <p v-if="error" class="text-sm text-red-700">{{ error }}</p>
         </GlassCard>
     </div>
 </template>

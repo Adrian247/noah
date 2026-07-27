@@ -8,6 +8,7 @@ use App\Models\Routine;
 use App\Models\SupplyItem;
 use App\Services\AI\AiGateway;
 use App\Services\Audit\AuditLogger;
+use App\Services\Forms\FormResponseValidator;
 use App\Services\Workflow\WorkflowRuntime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +21,7 @@ class RoutineExecutionController extends Controller
         AiGateway $ai,
         WorkflowRuntime $workflow,
         AuditLogger $audit,
+        FormResponseValidator $formValidator,
     ): JsonResponse {
         $data = $request->validate([
             'responses' => ['nullable', 'array'],
@@ -30,6 +32,10 @@ class RoutineExecutionController extends Controller
             'consumptions.*.quantity' => ['required', 'numeric', 'min:0.0001'],
             'consumptions.*.unit_cost' => ['nullable', 'numeric', 'min:0'],
         ]);
+
+        $routine->load('routineType.formVersion');
+        $schema = $routine->routineType?->formVersion?->schema ?? ['sections' => []];
+        $formValidator->validate($schema, $data['responses'] ?? [], (int) $routine->company_id);
 
         $corrected = null;
         if (! empty($data['technician_comments'])) {

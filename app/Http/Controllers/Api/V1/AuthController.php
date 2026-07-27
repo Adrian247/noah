@@ -21,9 +21,12 @@ class AuthController extends Controller
             'device_name' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $user = User::query()->where('email', $credentials['email'])->first();
+        $email = strtolower(trim($credentials['email']));
+        $password = $credentials['password'];
 
-        if ($user === null || ! Hash::check($credentials['password'], $user->password)) {
+        $user = User::query()->where('email', $email)->first();
+
+        if ($user === null || ! Hash::check($password, $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['Credenciales inválidas.'],
             ]);

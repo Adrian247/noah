@@ -1,11 +1,31 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { api } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { useToast } from '@/composables/useToast';
+import PageHeader from '@/components/ui/PageHeader.vue';
+import MaterialField from '@/components/ui/MaterialField.vue';
+import MaterialSelect from '@/components/ui/MaterialSelect.vue';
+import AppButton from '@/components/ui/AppButton.vue';
 
-type Field = { key: string; type: string; label: string };
+type Field = {
+    key: string;
+    type: string;
+    label: string;
+    required?: boolean;
+    option_catalog_id?: number | null;
+    allow_multiple?: boolean;
+    max_images?: number;
+    caption_enabled?: boolean;
+    caption_required?: boolean;
+};
 type Section = { title: string; fields: Field[] };
+type OptionCatalog = {
+    id: number;
+    name: string;
+    options: { value: string; label: string; description?: string }[];
+};
 
 type FormVersion = {
     id: number;
@@ -20,15 +40,63 @@ type FormDef = {
     versions: FormVersion[];
 };
 
+const fieldTypes = [
+    { value: 'text', label: 'Texto corto' },
+    { value: 'textarea', label: 'Texto largo' },
+    { value: 'number', label: 'Número' },
+    {
+        value: 'select',
+        label: 'Lista desplegable',
+    },
+    {
+        value: 'options',
+        label: 'Opciones visibles (botones)',
+    },
+    { value: 'photo', label: 'Imagen' },
+];
+
+const fieldTypeHelp: Record<string, string> = {
+    select: 'Una sola opción del catálogo en menú desplegable.',
+    options: 'Misma validación que el desplegable; el técnico elige con botones y ve la descripción de cada opción.',
+};
+
 const route = useRoute();
+const router = useRouter();
 const { canWriteModule } = useModuleAccess();
+const toast = useToast();
 const canWrite = computed(() => canWriteModule('design_forms'));
 
 const form = ref<FormDef | null>(null);
 const sections = ref<Section[]>([]);
+const optionCatalogs = ref<OptionCatalog[]>([]);
 const loading = ref(true);
-const message = ref<string | null>(null);
 const saving = ref(false);
+const initialSnapshot = ref('');
+
+function schemaSnapshot(): string {
+    return JSON.stringify(sections.value);
+}
+
+function isDirty(): boolean {
+    return initialSnapshot.value !== '' && schemaSnapshot() !== initialSnapshot.value;
+}
+
+function confirmLeaveCatalogSettings(): boolean {
+    if (!isDirty()) {
+        return true;
+    }
+
+    return window.confirm(
+        'Tienes cambios sin guardar en este formulario. Si sales ahora se perderán. ¿Continuar?',
+    );
+}
+
+function goToCatalogSettings() {
+    if (!confirmLeaveCatalogSettings()) {
+        return;
+    }
+    void router.push('/app/design/forms/settings');
+}
 
 const draft = computed(() => form.value?.versions.find((v) => v.status === 'draft'));
 const published = computed(() =>
@@ -37,16 +105,28 @@ const published = computed(() =>
         .sort((a, b) => b.version - a.version)[0],
 );
 
+const catalogSelectOptions = computed(() =>
+    optionCatalogs.value.map((c) => ({ value: String(c.id), label: c.name })),
+);
+
 async function load() {
     loading.value = true;
-    message.value = null;
     try {
-        const res = await api<{ data: FormDef }>(`/design/forms/${route.params.id}`);
+        const res = await api<{
+            data: FormDef;
+            form_design: { option_catalogs: OptionCatalog[] };
+        }>(`/design/forms/${route.params.id}`);
         form.value = res.data;
-        const d = res.data.versions.find((v) => v.status === 'draft');
+        optionCatalogs.value = res.form_design?.option_catalogs ?? [];
+        const d =
+            res.data.versions.find((v) => v.status === 'draft') ??
+            [...res.data.versions]
+                .filter((v) => v.status === 'published')
+                .sort((a, b) => b.version - a.version)[0];
         sections.value = structuredClone(d?.schema?.sections ?? [{ title: 'Sección 1', fields: [] }]);
+        initialSnapshot.value = schemaSnapshot();
     } catch (e) {
-        message.value = (e as Error).message;
+        toast.error((e as Error).message);
     } finally {
         loading.value = false;
     }
@@ -62,7 +142,22 @@ function addField(sectionIndex: number) {
         key,
         type: 'text',
         label: 'Nuevo campo',
+        required: false,
+        option_catalog_id: null,
+        allow_multiple: false,
+        max_images: 4,
+        caption_enabled: false,
+        caption_required: false,
     });
+}
+
+function onFieldTypeChange(field: Field) {
+    if (field.type === 'photo') {
+        field.allow_multiple ??= false;
+        field.max_images ??= 4;
+        field.caption_enabled ??= false;
+        field.caption_required ??= false;
+    }
 }
 
 function removeField(sectionIndex: number, fieldIndex: number) {
@@ -71,16 +166,16 @@ function removeField(sectionIndex: number, fieldIndex: number) {
 
 async function saveDraft() {
     saving.value = true;
-    message.value = null;
     try {
         await api(`/design/forms/${route.params.id}/schema`, {
             method: 'PUT',
             body: JSON.stringify({ schema: { sections: sections.value } }),
         });
-        message.value = 'Borrador guardado.';
+        toast.success('Borrador guardado.');
+        initialSnapshot.value = schemaSnapshot();
         await load();
     } catch (e) {
-        message.value = (e as Error).message;
+        toast.error((e as Error).message);
     } finally {
         saving.value = false;
     }
@@ -88,18 +183,19 @@ async function saveDraft() {
 
 async function publish() {
     saving.value = true;
-    message.value = null;
     try {
         await saveDraft();
         await api(`/design/forms/${route.params.id}/publish`, { method: 'POST' });
         await load();
         const pub = published.value;
         const d = draft.value;
-        message.value = pub
-            ? `Versión v${pub.version} publicada.${d ? ` Nuevo borrador v${d.version} para siguientes cambios.` : ''}`
-            : 'Versión publicada.';
+        toast.success(
+            pub
+                ? `Versión v${pub.version} publicada.${d ? ` Nuevo borrador v${d.version}.` : ''}`
+                : 'Versión publicada.',
+        );
     } catch (e) {
-        message.value = (e as Error).message;
+        toast.error((e as Error).message);
     } finally {
         saving.value = false;
     }
@@ -109,66 +205,123 @@ onMounted(load);
 </script>
 
 <template>
-    <div v-if="loading" class="text-slate-500">Cargando…</div>
-    <div v-else-if="form" class="max-w-3xl space-y-4">
-        <h2 class="text-xl font-semibold">{{ form.name }}</h2>
-        <p class="text-sm text-slate-600">
-            <span v-if="published">En producción: v{{ published.version }} (publicada).</span>
-            <span v-else class="text-amber-800">Aún no hay versión publicada.</span>
-            Borrador de trabajo: v{{ draft?.version ?? '—' }}.
+    <div v-if="loading" class="text-portal-muted">Cargando…</div>
+    <div v-else-if="form" class="portal-page w-full max-w-none">
+        <PageHeader :title="form.name" subtitle="Diseño del formulario de rutina (borrador y publicación)." />
+        <p class="text-portal-muted text-sm">
+            <span v-if="published">En producción: v{{ published.version }}.</span>
+            <span v-else class="text-amber-500">Sin versión publicada.</span>
+            Borrador: v{{ draft?.version ?? '—' }}.
+            <button type="button" class="text-portal-link ml-2 underline" @click="goToCatalogSettings">
+                Configuración de campos
+            </button>
         </p>
 
-        <div v-for="(section, si) in sections" :key="si" class="rounded-lg border bg-white p-4 space-y-3">
-            <input
-                v-model="section.title"
-                class="w-full font-medium border-b border-transparent focus:border-slate-300 outline-none"
-            />
+        <div class="grid gap-4 xl:grid-cols-2">
             <div
-                v-for="(field, fi) in section.fields"
-                :key="field.key"
-                class="grid gap-2 rounded border border-slate-100 p-2 sm:grid-cols-4"
+                v-for="(section, si) in sections"
+                :key="si"
+                class="portal-form-panel"
             >
-                <input v-model="field.label" class="rounded border px-2 py-1 text-sm sm:col-span-2" />
-                <input v-model="field.key" class="rounded border px-2 py-1 text-sm font-mono text-xs" />
-                <select v-model="field.type" class="rounded border px-2 py-1 text-sm">
-                    <option value="text">text</option>
-                    <option value="textarea">textarea</option>
-                    <option value="number">number</option>
-                </select>
-                <button
-                    type="button"
-                    class="text-xs text-red-600 sm:col-span-4 text-left"
-                    @click="removeField(si, fi)"
+                <MaterialField v-model="section.title" label="Título de sección" />
+                <div
+                    v-for="(field, fi) in section.fields"
+                    :key="field.key"
+                    class="space-y-3 rounded-lg border border-white/10 p-3"
                 >
-                    Quitar campo
+                    <div class="grid gap-3 md:grid-cols-2">
+                        <MaterialField v-model="field.label" label="Etiqueta" />
+                        <MaterialField v-model="field.key" label="Clave" />
+                        <MaterialSelect
+                            v-model="field.type"
+                            label="Tipo"
+                            :options="fieldTypes"
+                            @update:model-value="() => onFieldTypeChange(field)"
+                        />
+                        <p
+                            v-if="fieldTypeHelp[field.type]"
+                            class="text-portal-muted md:col-span-2 text-xs leading-snug"
+                        >
+                            {{ fieldTypeHelp[field.type] }}
+                        </p>
+                        <label class="text-portal-muted flex items-center gap-2 text-sm md:col-span-2">
+                            <input v-model="field.required" type="checkbox" :disabled="!canWrite" />
+                            Campo obligatorio
+                        </label>
+                        <MaterialSelect
+                            v-if="field.type === 'select' || field.type === 'options'"
+                            :model-value="field.option_catalog_id ? String(field.option_catalog_id) : ''"
+                            label="Catálogo de opciones"
+                            :options="[{ value: '', label: '— Seleccionar —' }, ...catalogSelectOptions]"
+                            @update:model-value="
+                                (v) => (field.option_catalog_id = v ? Number(v) : null)
+                            "
+                        />
+                        <button
+                            v-if="field.type === 'select' || field.type === 'options'"
+                            type="button"
+                            class="text-portal-link md:col-span-2 text-left text-xs underline"
+                            @click="goToCatalogSettings"
+                        >
+                            Gestionar catálogos (nombre y descripción por opción)
+                        </button>
+                        <template v-if="field.type === 'photo'">
+                            <label class="text-portal-muted flex items-center gap-2 text-sm md:col-span-2">
+                                <input v-model="field.allow_multiple" type="checkbox" :disabled="!canWrite" />
+                                Permitir varias imágenes
+                            </label>
+                            <MaterialField
+                                v-if="field.allow_multiple"
+                                v-model="field.max_images"
+                                label="Máximo de imágenes"
+                                type="number"
+                                class="md:col-span-2"
+                            />
+                            <p class="text-portal-muted md:col-span-2 text-xs">
+                                {{
+                                    field.allow_multiple
+                                        ? `El técnico puede cargar hasta ${field.max_images ?? 4} imagen(es).`
+                                        : 'Una sola imagen por este campo.'
+                                }}
+                            </p>
+                            <label class="text-portal-muted flex items-center gap-2 text-sm md:col-span-2">
+                                <input v-model="field.caption_enabled" type="checkbox" :disabled="!canWrite" />
+                                Añadir descripción
+                            </label>
+                            <label
+                                v-if="field.caption_enabled"
+                                class="text-portal-muted flex items-center gap-2 text-sm md:col-span-2"
+                            >
+                                <input v-model="field.caption_required" type="checkbox" :disabled="!canWrite" />
+                                Descripción obligatoria
+                            </label>
+                        </template>
+                    </div>
+                    <button
+                        type="button"
+                        class="text-sm text-red-400"
+                        :disabled="!canWrite"
+                        @click="removeField(si, fi)"
+                    >
+                        Quitar campo
+                    </button>
+                </div>
+                <button type="button" class="text-portal-link text-sm underline" :disabled="!canWrite" @click="addField(si)">
+                    + Campo
                 </button>
             </div>
-            <button type="button" class="text-sm text-slate-700 underline" @click="addField(si)">
-                + Campo
-            </button>
         </div>
 
-        <button type="button" class="text-sm underline" @click="addSection">+ Sección</button>
+        <button type="button" class="text-portal-link text-sm underline" :disabled="!canWrite" @click="addSection">
+            + Sección
+        </button>
 
         <div class="flex flex-wrap gap-2">
-            <button
-                type="button"
-                class="rounded-md border px-3 py-2 text-sm"
-                :disabled="!canWrite || saving"
-                @click="saveDraft"
-            >
+            <AppButton type="button" variant="secondary" :disabled="!canWrite || saving" @click="saveDraft">
                 Guardar borrador
-            </button>
-            <button
-                type="button"
-                class="rounded-md bg-slate-900 px-3 py-2 text-sm text-white"
-                :disabled="!canWrite || saving"
-                @click="publish"
-            >
-                Publicar versión
-            </button>
+            </AppButton>
+            <AppButton type="button" :disabled="!canWrite || saving" @click="publish">Publicar versión</AppButton>
         </div>
-        <p v-if="!canWrite" class="text-sm text-slate-500">Solo lectura: no puedes editar ni publicar este formulario.</p>
-        <p v-if="message" class="text-sm text-slate-600">{{ message }}</p>
+        <p v-if="!canWrite" class="text-portal-muted text-sm">Solo lectura.</p>
     </div>
 </template>

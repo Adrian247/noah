@@ -38,28 +38,28 @@ const cards = [
         label: 'Pendientes de validación',
         value: () => summary.value?.routines_pending_validation,
         to: '/app/routines?status=pending_validation',
-        accent: 'border-amber-300/60 bg-amber-50/80',
+        accent: 'border-amber-500/25 bg-amber-500/10',
     },
     {
         key: 'assigned',
         label: 'Rutinas asignadas',
         value: () => summary.value?.routines_assigned,
         to: '/app/routines?status=assigned',
-        accent: 'border-sky-300/60 bg-sky-50/80',
+        accent: 'border-sky-500/25 bg-sky-500/10',
     },
     {
         key: 'validated',
         label: 'Validadas',
         value: () => summary.value?.routines_validated,
         to: '/app/routines?status=validated',
-        accent: 'border-emerald-300/60 bg-emerald-50/80',
+        accent: 'border-emerald-500/25 bg-emerald-500/10',
     },
     {
         key: 'invoices',
         label: 'Facturas borrador',
         value: () => summary.value?.invoices_draft,
         to: '/app/billing',
-        accent: 'border-violet-300/60 bg-violet-50/80',
+        accent: 'border-violet-500/25 bg-violet-500/10',
     },
 ];
 </script>
@@ -82,8 +82,8 @@ const cards = [
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <RouterLink v-for="c in cards" :key="c.key" :to="c.to" class="block md-ripple-hover">
                 <GlassCard hover :class="c.accent">
-                    <p class="text-sm font-medium text-slate-600">{{ c.label }}</p>
-                    <p class="mt-2 text-3xl font-semibold text-slate-900">{{ c.value() ?? '—' }}</p>
+                    <p class="text-portal-muted text-sm font-medium">{{ c.label }}</p>
+                    <p class="dashboard-stat-value mt-2 text-3xl font-semibold">{{ c.value() ?? '—' }}</p>
                 </GlassCard>
             </RouterLink>
         </div>

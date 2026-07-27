@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Routine;
 use App\Services\Workflow\WorkflowRuntime;
+use App\Services\Forms\FormDesignSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -44,7 +45,7 @@ class RoutineController extends Controller
         return response()->json(['data' => $routine->load(['asset', 'site', 'routineType', 'workflowInstance'])], 201);
     }
 
-    public function show(Routine $routine): JsonResponse
+    public function show(Routine $routine, FormDesignSettings $formDesign): JsonResponse
     {
         return response()->json([
             'data' => $routine->load([
@@ -59,6 +60,10 @@ class RoutineController extends Controller
                 'invoice.lines',
                 'workflowInstance.transitions',
             ]),
+            'form_design' => [
+                'settings' => $formDesign->forCurrentCompany(),
+                'option_catalogs' => $formDesign->optionCatalogsForCurrentCompany(),
+            ],
         ]);
     }
 }

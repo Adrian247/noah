@@ -24,7 +24,7 @@ class AuthApiTest extends TestCase
 
         $response = $this->postJson('/api/v1/auth/login', [
             'email' => 'admin@noah.local',
-            'password' => 'password',
+            'password' => config('noah.demo_password'),
         ]);
 
         $response->assertOk()
