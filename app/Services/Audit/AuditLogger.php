@@ -3,6 +3,7 @@
 namespace App\Services\Audit;
 
 use App\Models\AuditEntry;
+use App\Support\AuditCorrelation;
 use Illuminate\Http\Request;
 
 class AuditLogger
@@ -15,9 +16,11 @@ class AuditLogger
         ?int $subjectId = null,
         array $metadata = [],
         ?string $ip = null,
+        ?string $correlationId = null,
     ): AuditEntry {
         return AuditEntry::query()->create([
             'company_id' => $companyId,
+            'correlation_id' => $correlationId ?? AuditCorrelation::get(),
             'actor_user_id' => $actorUserId,
             'action' => $action,
             'subject_type' => $subjectType,
@@ -40,6 +43,7 @@ class AuditLogger
             $subjectId,
             $metadata,
             $request->ip(),
+            AuditCorrelation::get(),
         );
     }
 }

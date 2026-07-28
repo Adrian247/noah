@@ -32,7 +32,7 @@ onMounted(async () => {
 </script>
 
 <template>
-    <div class="portal-page">
+    <div class="portal-page" data-tour="page-audit">
         <PageHeader
             title="Auditoría"
             subtitle="Registro append-only de acciones recientes en la empresa activa."

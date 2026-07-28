@@ -11,12 +11,22 @@ class SupplyItem extends Model
 {
     use BelongsToCompany;
 
-    protected $fillable = ['company_id', 'supplier_id', 'sku', 'name', 'unit', 'standard_cost'];
+    protected $fillable = [
+        'company_id',
+        'supply_type_id',
+        'supplier_id',
+        'sku',
+        'name',
+        'unit',
+        'standard_cost',
+        'specifications',
+    ];
 
     protected function casts(): array
     {
         return [
             'standard_cost' => 'decimal:4',
+            'specifications' => 'array',
         ];
     }
 
@@ -28,5 +38,10 @@ class SupplyItem extends Model
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function supplyType(): BelongsTo
+    {
+        return $this->belongsTo(SupplyType::class);
     }
 }

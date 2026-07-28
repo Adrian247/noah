@@ -20,6 +20,7 @@ class CompanyRoleController extends Controller
             'data' => $authorization->rolesForCompany($company),
             'permission_labels' => $authorization->permissionLabels(),
             'all_permissions' => NoahPermission::values(),
+            'permission_groups' => $authorization->permissionGroupsForGranting(),
             'modules_catalog' => NoahModuleCatalog::forApi(),
         ]);
     }

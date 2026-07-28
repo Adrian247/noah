@@ -6,7 +6,7 @@ use App\Enums\InvoiceStatus;
 use App\Models\Client;
 use App\Models\Company;
 use App\Models\Invoice;
-use App\Models\Routine;
+use App\Services\Routines\DemoRoutineFactory;
 use App\Models\RoutineExecution;
 use App\Models\User;
 use App\Services\Billing\InvoiceDraftService;
@@ -31,10 +31,9 @@ class InvoicePrefacturaApiTest extends TestCase
     {
         $company = Company::query()->first();
         $billing = User::query()->where('email', 'facturacion@noah.local')->first();
-        $routine = Routine::query()->first();
         $technician = User::query()->where('email', 'tecnico@noah.local')->first();
-
-        $execution = $routine->executions()->create([
+        $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
+        $execution = $routine->latestExecution ?? $routine->executions()->create([
             'performed_by' => $technician->id,
             'duration_minutes' => 60,
             'status' => 'submitted',
@@ -74,10 +73,15 @@ class InvoicePrefacturaApiTest extends TestCase
     {
         $company = Company::query()->first();
         $billing = User::query()->where('email', 'facturacion@noah.local')->first();
-        $routine = Routine::query()->first();
+        $technician = User::query()->where('email', 'tecnico@noah.local')->first();
+        $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
+        app(\App\Services\Workflow\WorkflowRuntime::class)->ensureInstance($routine->load('routineType.workflowDefinition'));
+        $routine->update(['status' => \App\Enums\RoutineStatus::PendingBilling]);
+        $routine->workflowInstance?->update(['current_step_key' => 'billing_review']);
         $invoice = Invoice::query()->create([
             'company_id' => $company->id,
             'routine_id' => $routine->id,
+            'client_id' => null,
             'status' => InvoiceStatus::Draft,
             'currency' => 'MXN',
             'tax_rate_snapshot' => 0.16,

@@ -61,7 +61,7 @@ class RoutineExecutionController extends Controller
             ]);
         }
 
-        $workflow->onExecutionSubmitted($routine, $request->user());
+        $workflow->onExecutionSubmitted($routine, $request->user(), $audit);
 
         $audit->fromRequest($request, 'routine.execution_submitted', Routine::class, $routine->id, [
             'execution_id' => $execution->id,
@@ -83,7 +83,7 @@ class RoutineExecutionController extends Controller
             return response()->json(['message' => 'No execution to validate.'], 422);
         }
 
-        $workflow->onApproved($routine, $request->user());
+        $workflow->onApproved($routine, $request->user(), $audit);
 
         $audit->fromRequest($request, 'routine.validated', Routine::class, $routine->id);
 
@@ -107,7 +107,7 @@ class RoutineExecutionController extends Controller
 
         $validated = $request->validate(['reason' => ['required', 'string', 'max:1000']]);
 
-        $workflow->onRejected($routine, $request->user(), $validated['reason']);
+        $workflow->onRejected($routine, $request->user(), $validated['reason'], $audit);
 
         $execution = $routine->latestExecution;
         if ($execution !== null) {

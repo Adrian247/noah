@@ -11,11 +11,13 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Tests\Support\CreatesDemoRoutine;
 use Tests\Support\VehicleDemoFormResponses;
 use Tests\TestCase;
 
 class FormDesignApiTest extends TestCase
 {
+    use CreatesDemoRoutine;
     use RefreshDatabase;
 
     private function adminHeaders(): array
@@ -104,7 +106,7 @@ class FormDesignApiTest extends TestCase
         $this->seed();
         $technician = User::query()->where('email', 'tecnico@noah.local')->first();
         $company = Company::query()->first();
-        $routine = Routine::query()->first();
+        $routine = $this->demoRoutine();
         $token = $technician->createToken('test')->plainTextToken;
 
         $catalog = FormOptionCatalog::query()->where('company_id', $company->id)->first();
@@ -143,7 +145,7 @@ class FormDesignApiTest extends TestCase
         $technician = User::query()->where('email', 'tecnico@noah.local')->first();
         $company = Company::query()->first();
         $company->update(['form_max_image_size_kb' => 1]);
-        $routine = Routine::query()->first();
+        $routine = $this->demoRoutine();
         $token = $technician->createToken('test')->plainTextToken;
 
         $file = UploadedFile::fake()->create('large.jpg', 50, 'image/jpeg');

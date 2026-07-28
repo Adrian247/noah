@@ -50,7 +50,7 @@ class CompanyUserController extends Controller
             'role' => ['required', Rule::enum(MembershipRole::class)],
             'extra_permissions' => ['sometimes', 'array'],
             'extra_permissions.*' => ['string', 'max:64'],
-            'modules' => ['sometimes', 'array'],
+            'modules' => ['prohibited'],
         ]);
 
         $email = strtolower($validated['email']);
@@ -86,20 +86,18 @@ class CompanyUserController extends Controller
             $this->authorization->syncMembershipRole($membership);
         }
 
-        if (array_key_exists('extra_permissions', $validated)) {
-            $this->authorization->syncDirectPermissions($membership->fresh(['user']), $validated['extra_permissions']);
-        }
+        $membership = $membership->fresh(['user']);
+        $this->authorization->clearLegacyModuleAccess($membership);
 
-        if (array_key_exists('modules', $validated)) {
-            $this->authorization->syncModuleAccess($membership->fresh(), $validated['modules']);
-        }
+        $extras = $validated['extra_permissions'] ?? [];
+        $this->authorization->syncDirectPermissions($membership, $extras);
 
         $this->audit->fromRequest(
             $request,
             'membership.granted',
             CompanyMembership::class,
             $membership->id,
-            ['user_id' => $user->id, 'role' => $validated['role']],
+            ['user_id' => $user->id, 'role' => $validated['role'], 'extra_permissions' => $extras],
         );
 
         $labels = $this->authorization->roleLabels();
@@ -128,7 +126,7 @@ class CompanyUserController extends Controller
             'is_active' => ['sometimes', 'boolean'],
             'extra_permissions' => ['sometimes', 'array'],
             'extra_permissions.*' => ['string', 'max:64'],
-            'modules' => ['sometimes', 'array'],
+            'modules' => ['prohibited'],
         ]);
 
         if (array_key_exists('is_active', $validated) && $validated['is_active'] === false) {
@@ -150,6 +148,7 @@ class CompanyUserController extends Controller
             : (string) $membership->role;
 
         $membership = $this->authorization->assignMembershipRole($membership, $newRole, $isActive);
+        $this->authorization->clearLegacyModuleAccess($membership);
 
         if (array_key_exists('extra_permissions', $validated)) {
             $this->authorization->syncDirectPermissions($membership, $validated['extra_permissions']);
@@ -161,20 +160,6 @@ class CompanyUserController extends Controller
                 [
                     'user_id' => $user->id,
                     'extra_permissions' => $validated['extra_permissions'],
-                ],
-            );
-        }
-
-        if (array_key_exists('modules', $validated)) {
-            $this->authorization->syncModuleAccess($membership->fresh(), $validated['modules']);
-            $this->audit->fromRequest(
-                $request,
-                'membership.module_access_updated',
-                CompanyMembership::class,
-                $membership->id,
-                [
-                    'user_id' => $user->id,
-                    'modules' => $validated['modules'],
                 ],
             );
         }
@@ -223,7 +208,6 @@ class CompanyUserController extends Controller
             'extra_permissions' => $extraPermissions,
             'effective_permissions' => $effective,
             'modules' => $modules,
-            'module_access' => $m->module_access,
         ];
     }
 }

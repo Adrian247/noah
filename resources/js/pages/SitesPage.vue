@@ -95,7 +95,7 @@ onMounted(load);
 </script>
 
 <template>
-    <div class="portal-page">
+    <div class="portal-page" data-tour="page-sites">
         <div class="flex flex-wrap items-start justify-between gap-3">
             <PageHeader class="flex-1" title="Sitios" subtitle="Ubicaciones físicas asociadas a rutinas y activos." />
             <AppButton v-if="canWrite" type="button" class="shrink-0" @click="openCreate">

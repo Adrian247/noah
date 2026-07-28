@@ -79,7 +79,7 @@ Tras `NoahDemoSeeder`:
 | Formulario | *Revisión mayor vehículo — agencia premium* |
 | Reporte | *Informe revisión mayor vehículo* (campos alineados al formulario) |
 | Tipo de rutina | *Revisión mayor vehículo (premium)* |
-| Rutina | Activo `VEH-4582-MX` → técnico `tecnico@noah.local` |
+| Rutina | Activo `L200-2018-DEMO` → técnico `tecnico@noah.local` |
 
 Secciones del formulario: **kilometraje**, **frenos**, **filtros**, **aceite**, **batería**, **luces**, **fusibles**, fotos recomendadas y bloque **Revisiones Plus** (opcional). Flujo: **B4** → **B6–B7** (PDF).
 
@@ -87,7 +87,7 @@ Secciones del formulario: **kilometraje**, **frenos**, **filtros**, **aceite**, 
 |---|--------|--------|-------------------|
 | D1 | Diseño → **Formularios** | Editar → Guardar borrador → **Publicar versión** | Lista: “vN publicada” + borrador vN+1 |
 | D2 | Diseño → **Reportes** → pestaña **Plantillas** | Abrir *Informe revisión mayor vehículo* → revisar componentes alineados al formulario → **Publicar** si editaste | Igual que D1: versión publicada + borrador nuevo |
-| D3 | Diseño → **Workflows** | Canvas, guardar definición | Layout y transiciones persisten |
+| D3 | Diseño → **Workflows** | Crear workflow, duplicar uno existente, abrir diseñador, mover nodos, toggle PDF/factura al validar, guardar | Listado muestra uso en tipos de rutina; cambios persisten |
 | D4 | Diseño → **Tipos de rutina** | En la fila *Revisión mayor vehículo (premium)*, elegir en los desplegables la versión **publicada** de formulario y reporte; workflow si aplica | Al cambiar, mensaje “Formulario/Reporte enlazado…”; columnas muestran la v elegida |
 
 **Cómo validar D2 en concreto**

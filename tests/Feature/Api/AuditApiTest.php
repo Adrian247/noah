@@ -34,4 +34,34 @@ class AuditApiTest extends TestCase
             ->getJson('/api/v1/audit/entries')
             ->assertOk();
     }
+
+    public function test_audit_entries_can_filter_by_correlation_id(): void
+    {
+        $this->seed();
+        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $company = Company::query()->first();
+        $correlationId = '11111111-1111-4111-8111-111111111111';
+
+        \App\Models\AuditEntry::query()->create([
+            'company_id' => $company->id,
+            'action' => 'test.correlated',
+            'correlation_id' => $correlationId,
+            'occurred_at' => now(),
+        ]);
+        \App\Models\AuditEntry::query()->create([
+            'company_id' => $company->id,
+            'action' => 'test.other',
+            'correlation_id' => '22222222-2222-4222-8222-222222222222',
+            'occurred_at' => now(),
+        ]);
+
+        $token = $admin->createToken('test')->plainTextToken;
+
+        $this->withToken($token)
+            ->withHeader('X-Company-Id', (string) $company->id)
+            ->getJson('/api/v1/audit/entries?correlation_id='.$correlationId)
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.action', 'test.correlated');
+    }
 }

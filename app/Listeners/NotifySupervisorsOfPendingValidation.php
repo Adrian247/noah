@@ -7,6 +7,7 @@ use App\Events\ExecutionSubmitted;
 use App\Mail\RoutinePendingValidationMail;
 use App\Models\CompanyMembership;
 use App\Models\User;
+use App\Services\Workflow\WorkflowDefinitionFactory;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -15,6 +16,12 @@ class NotifySupervisorsOfPendingValidation
     public function handle(ExecutionSubmitted $event): void
     {
         $routine = $event->routine;
+        $routine->loadMissing('workflowInstance.definition');
+        $definition = $routine->workflowInstance?->definition?->definition;
+        if (WorkflowDefinitionFactory::hasEmailServiceStep($definition)) {
+            return;
+        }
+
         $companyId = $routine->company_id;
 
         $supervisorIds = CompanyMembership::query()

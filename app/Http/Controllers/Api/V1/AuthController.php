@@ -92,6 +92,7 @@ class AuthController extends Controller
                 'id' => $m->company->id,
                 'name' => $m->company->name,
                 'role' => $m->role->value,
+                'client_id' => $m->client_id,
                 'permissions' => $authorization->permissionsForUser($user, $m->company->id),
                 'modules' => $authorization->modulesForMembership($m),
             ]);

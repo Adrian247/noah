@@ -6,25 +6,36 @@ use App\Models\Routine;
 use App\Models\RoutineExecution;
 use App\Services\Reports\ReportHtmlBuilder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\CreatesDemoRoutine;
 use Tests\TestCase;
 
 class ReportHtmlBuilderProductionTest extends TestCase
 {
+    use CreatesDemoRoutine;
     use RefreshDatabase;
+
+    private function routineWithExecution(): Routine
+    {
+        $technician = \App\Models\User::query()->where('email', 'tecnico@noah.local')->firstOrFail();
+        $routine = $this->demoRoutine($technician)->load(['routineType.formVersion', 'company', 'asset']);
+        $execution = $routine->latestExecution ?? $routine->executions()->create([
+            'performed_by' => $technician->id,
+            'responses' => ['estado' => 'operativo', 'luces' => 'operativo'],
+            'technician_comments' => 'Ok',
+            'status' => 'submitted',
+            'submitted_at' => now(),
+        ]);
+        $routine->setRelation('latestExecution', $execution);
+
+        return $routine;
+    }
 
     public function test_production_html_puts_cover_before_main_and_omits_header_on_cover(): void
     {
         $this->seed();
 
-        $routine = Routine::query()->with(['routineType.formVersion', 'company', 'asset'])->firstOrFail();
-        $technician = \App\Models\User::query()->where('email', 'tecnico@noah.local')->firstOrFail();
-        $execution = $routine->executions()->create([
-            'performed_by' => $technician->id,
-            'responses' => ['estado' => 'operativo'],
-            'technician_comments' => 'Ok',
-            'status' => 'submitted',
-            'submitted_at' => now(),
-        ]);
+        $routine = $this->routineWithExecution();
+        $execution = $routine->latestExecution;
 
         $components = [
             ['type' => 'paragraph', 'field' => 'luces'],
@@ -60,15 +71,8 @@ class ReportHtmlBuilderProductionTest extends TestCase
     {
         $this->seed();
 
-        $routine = Routine::query()->with(['company', 'asset'])->firstOrFail();
-        $technician = \App\Models\User::query()->where('email', 'tecnico@noah.local')->firstOrFail();
-        $execution = $routine->executions()->create([
-            'performed_by' => $technician->id,
-            'responses' => [],
-            'technician_comments' => 'Ok',
-            'status' => 'submitted',
-            'submitted_at' => now(),
-        ]);
+        $routine = $this->routineWithExecution();
+        $execution = $routine->latestExecution;
 
         $html = app(ReportHtmlBuilder::class)->build(
             $routine,
@@ -94,8 +98,8 @@ class ReportHtmlBuilderProductionTest extends TestCase
     {
         $this->seed();
 
-        $routine = Routine::query()->with(['routineType.formVersion', 'company', 'asset'])->firstOrFail();
-        $technician = \App\Models\User::query()->where('email', 'tecnico@noah.local')->firstOrFail();
+        $routine = $this->routineWithExecution();
+        $execution = $routine->latestExecution;
 
         $fieldKey = 'luces';
         $this->assertNotNull(
@@ -105,13 +109,8 @@ class ReportHtmlBuilderProductionTest extends TestCase
             'Demo form should include luces field.',
         );
 
-        $execution = $routine->executions()->create([
-            'performed_by' => $technician->id,
-            'responses' => [$fieldKey => 'operativo'],
-            'technician_comments' => 'Ok',
-            'status' => 'submitted',
-            'submitted_at' => now(),
-        ]);
+        $execution->update(['responses' => [$fieldKey => 'operativo']]);
+        $execution->refresh();
 
         $html = app(ReportHtmlBuilder::class)->build(
             $routine,
@@ -129,15 +128,8 @@ class ReportHtmlBuilderProductionTest extends TestCase
     {
         $this->seed();
 
-        $routine = Routine::query()->with(['company', 'asset'])->firstOrFail();
-        $technician = \App\Models\User::query()->where('email', 'tecnico@noah.local')->firstOrFail();
-        $execution = $routine->executions()->create([
-            'performed_by' => $technician->id,
-            'responses' => [],
-            'technician_comments' => 'Ok',
-            'status' => 'submitted',
-            'submitted_at' => now(),
-        ]);
+        $routine = $this->routineWithExecution();
+        $execution = $routine->latestExecution;
 
         $html = app(ReportHtmlBuilder::class)->build(
             $routine,
@@ -168,15 +160,8 @@ class ReportHtmlBuilderProductionTest extends TestCase
     {
         $this->seed();
 
-        $routine = Routine::query()->with(['routineType.formVersion', 'company', 'asset'])->firstOrFail();
-        $technician = \App\Models\User::query()->where('email', 'tecnico@noah.local')->firstOrFail();
-        $execution = $routine->executions()->create([
-            'performed_by' => $technician->id,
-            'responses' => [],
-            'technician_comments' => 'Ok',
-            'status' => 'submitted',
-            'submitted_at' => now(),
-        ]);
+        $routine = $this->routineWithExecution();
+        $execution = $routine->latestExecution;
 
         $companyName = $routine->company->name;
         $assetTag = $routine->asset->tag;

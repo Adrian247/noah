@@ -53,6 +53,12 @@ class EnsureDemoDataCommand extends Command
 
         $this->call('noah:bootstrap-permissions');
 
+        $company = Company::query()->where('name', 'Demo Industrial')->first();
+        if ($company !== null) {
+            app(\App\Services\Workflow\WorkflowRuntime::class)->seedDefinitionForCompany($company->id);
+            $this->info('Workflow demo «routine-validation-v1» sincronizado con el diseño estándar.');
+        }
+
         return self::SUCCESS;
     }
 

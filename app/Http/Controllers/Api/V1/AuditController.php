@@ -18,6 +18,7 @@ class AuditController extends Controller
             ->with('actor:id,name,email')
             ->where('company_id', app(\App\Support\CurrentCompany::class)->id())
             ->when($request->query('action'), fn ($q, $action) => $q->where('action', $action))
+            ->when($request->query('correlation_id'), fn ($q, $id) => $q->where('correlation_id', $id))
             ->orderByDesc('occurred_at')
             ->paginate((int) $request->query('per_page', 25));
 

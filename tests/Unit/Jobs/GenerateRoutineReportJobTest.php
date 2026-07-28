@@ -9,11 +9,13 @@ use App\Models\Routine;
 use App\Support\CurrentCompany;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Tests\Support\CreatesDemoRoutine;
 use Tests\Support\VehicleDemoFormResponses;
 use Tests\TestCase;
 
 class GenerateRoutineReportJobTest extends TestCase
 {
+    use CreatesDemoRoutine;
     use RefreshDatabase;
 
     public function test_job_processes_report_even_when_stale_company_context_is_set(): void
@@ -26,9 +28,9 @@ class GenerateRoutineReportJobTest extends TestCase
         $companies = Company::query()->orderBy('id')->get();
         $this->assertGreaterThanOrEqual(1, $companies->count());
 
-        $routine = Routine::query()->firstOrFail();
         $technician = \App\Models\User::query()->where('email', 'tecnico@noah.local')->firstOrFail();
-        $execution = $routine->executions()->create([
+        $routine = $this->demoRoutine($technician);
+        $execution = $routine->latestExecution ?? $routine->executions()->create([
             'performed_by' => $technician->id,
             'responses' => VehicleDemoFormResponses::required(),
             'technician_comments' => 'Prueba job PDF',

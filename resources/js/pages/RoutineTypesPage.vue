@@ -5,11 +5,13 @@ import { useModuleAccess } from '@/composables/useModuleAccess';
 import { useToast } from '@/composables/useToast';
 import ReadOnlyNotice from '@/components/ui/ReadOnlyNotice.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
+import SectionSubnav from '@/components/ui/SectionSubnav.vue';
 import MaterialSelect from '@/components/ui/MaterialSelect.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
 import AppButton from '@/components/ui/AppButton.vue';
+import { routinesSectionNav } from '@/lib/sectionNav';
 
-type WorkflowDef = { id: number; name: string };
+type WorkflowDef = { id: number; name: string; status?: string };
 type VersionOption = { id: number; version: number };
 type FormCatalog = { id: number; name: string; published_version?: VersionOption | null };
 type ReportCatalog = { id: number; name: string; published_version?: VersionOption | null };
@@ -64,7 +66,10 @@ const reportOptions = computed(() =>
 );
 
 const workflowOptions = computed(() =>
-    workflows.value.map((w) => ({ value: String(w.id), label: w.name })),
+    workflows.value.map((w) => ({
+        value: String(w.id),
+        label: w.status && w.status !== 'published' ? `${w.name} (borrador)` : w.name,
+    })),
 );
 
 function formSelectOptions() {
@@ -89,7 +94,7 @@ async function load() {
             api<{ data: ReportCatalog[] }>('/design/reports'),
         ]);
         types.value = typesRes.data;
-        workflows.value = wfRes.data;
+        workflows.value = wfRes.data.filter((w) => w.status === 'published');
         formCatalog.value = formsRes.data;
         reportCatalog.value = reportsRes.data;
     } catch (e) {
@@ -215,7 +220,8 @@ onMounted(load);
 </script>
 
 <template>
-    <div class="portal-page">
+    <div class="portal-page" data-tour="page-routine-types">
+        <SectionSubnav :items="routinesSectionNav" />
         <PageHeader
             title="Tipos de rutina"
             subtitle="Crea tipos y define qué versión publicada de formulario y reporte usa cada uno."

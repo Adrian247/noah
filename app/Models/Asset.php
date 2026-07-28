@@ -6,6 +6,7 @@ use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Asset extends Model
 {
@@ -42,5 +43,15 @@ class Asset extends Model
     public function routines(): HasMany
     {
         return $this->hasMany(Routine::class);
+    }
+
+    public function clientAssignments(): HasMany
+    {
+        return $this->hasMany(AssetClientAssignment::class);
+    }
+
+    public function activeClientAssignment(): HasOne
+    {
+        return $this->hasOne(AssetClientAssignment::class)->whereNull('unassigned_at')->latestOfMany('assigned_at');
     }
 }

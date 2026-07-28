@@ -92,7 +92,7 @@ onMounted(load);
 </script>
 
 <template>
-    <div class="portal-page space-y-4">
+    <div class="portal-page space-y-4" data-tour="page-design-reports">
         <ReportDesignNav />
         <div class="flex flex-wrap items-start justify-between gap-3">
             <PageHeader

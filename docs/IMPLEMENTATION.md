@@ -8,7 +8,10 @@
 | Catálogo, insumos, activos, **proveedores**, **sitios CRUD** | Implementado |
 | Forms / report versions + API diseño | Implementado MVP |
 | AI Gateway + PromptTemplate + AiInvocation | Implementado (local + OpenAI opcional) |
-| Workflow runtime v1 + diseño visual (layout) | Implementado MVP |
+| Workflow runtime v1 + diseño visual (layout, **alta/duplicar**, validador v1) | Implementado MVP |
+| **Workflow v2** (facturación en grafo, `PendingBilling`, `correlation_id`) | Implementado |
+| **Workflow v3** (plantillas, configuración, borrador/publicado, transiciones editables) | Implementado |
+| **Workflow block designer** (036) | Implementado (bloques + compilador + cliente en borrador) |
 | Evento `RoutineValidated` → PDF (cola) + borrador factura | Implementado |
 | Reportes PDF (DomPDF, job `GenerateRoutineReportJob`) | Implementado v1 async |
 | Ejecución con `responses`, `consumptions`, **evidencias** | Implementado |
@@ -20,6 +23,11 @@
 | **Usuarios empresa (lectura admin)** | Implementado |
 | **`noah:ensure-demo`** en arranque Docker | Implementado |
 | **`noah:refresh-demo`** (seed + permisos + credenciales) | Implementado — ver `docs/DEMO_ENV.md` |
+| **RBAC global** (rol + `extra_permissions`; menú derivado; ADR-012) | Implementado — cambio 034 |
+| **Plantilla de roles (plataforma)** | `GET/PUT /platform/role-permissions`, UI Plataforma — cambio 035 |
+| **Portal cliente** (`/portal/*`, API `portal/*`, rol `client`) | Implementado v1 |
+| **Vinculación activo–cliente** por serie | Implementado |
+| **Rutina demo** (`POST /routines/demo`, sin rutina en seed) | Implementado |
 
 ## Frontend
 
@@ -31,7 +39,10 @@
 | Catálogo equipos, insumos, activos, **proveedores**, **sitios** | Implementado |
 | Diseño: formularios, reportes, workflows (MVP) | Implementado |
 | Tipos de rutina | Implementado |
-| Facturación, auditoría, **usuarios (admin)** | Implementado |
+| Facturación, auditoría, **usuarios (admin, rol + permisos extra)** | Implementado |
+| **Portal cliente** (facturas, rutinas, detalle) | Implementado |
+| Detalle rutina: **timeline auditoría por `correlation_id`** (roles con `audit.view`) | Implementado |
+| **Tour de inicio** (spotlight + voz MP3 precargada) | Implementado — ver [ONBOARDING_TOUR.md](ONBOARDING_TOUR.md) |
 
 ## Pruebas
 

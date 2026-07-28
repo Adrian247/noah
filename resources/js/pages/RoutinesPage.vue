@@ -6,10 +6,12 @@ import { useCompanyStore } from '@/stores/company';
 import { useModuleAccess } from '@/composables/useModuleAccess';
 import { useToast } from '@/composables/useToast';
 import PageHeader from '@/components/ui/PageHeader.vue';
+import SectionSubnav from '@/components/ui/SectionSubnav.vue';
 import AppButton from '@/components/ui/AppButton.vue';
 import AppModal from '@/components/ui/AppModal.vue';
 import MaterialSelect from '@/components/ui/MaterialSelect.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
+import { routinesSectionNav } from '@/lib/sectionNav';
 
 type Routine = {
     id: number;
@@ -45,11 +47,13 @@ const createForm = ref({
 });
 
 const canCreate = computed(() => canWriteModule('routines'));
+const isAdmin = computed(() => company.current?.role === 'administrator');
 
 const statusChips = [
     { value: '', label: 'Todas' },
     { value: 'assigned', label: 'Asignadas' },
     { value: 'pending_validation', label: 'Pendientes' },
+    { value: 'pending_billing', label: 'Facturación' },
     { value: 'validated', label: 'Validadas' },
 ];
 
@@ -147,6 +151,24 @@ async function createRoutine() {
     }
 }
 
+const creatingDemo = ref(false);
+
+async function createDemoRoutine() {
+    creatingDemo.value = true;
+    try {
+        const res = await api<{ data: { id: number } }>('/routines/demo', { method: 'POST' });
+        toast.success('Rutina demo creada con datos de prueba.');
+        await load();
+        if (res.data?.id) {
+            window.location.href = `/app/routines/${res.data.id}`;
+        }
+    } catch (e) {
+        toast.error((e as Error).message);
+    } finally {
+        creatingDemo.value = false;
+    }
+}
+
 watch(
     () => route.query.status,
     (v) => {
@@ -164,12 +186,22 @@ onMounted(async () => {
 </script>
 
 <template>
-    <div class="portal-page">
+    <div class="portal-page" data-tour="page-routines">
+        <SectionSubnav :items="routinesSectionNav" />
         <div class="flex flex-wrap items-start justify-between gap-3">
             <PageHeader class="flex-1" title="Rutinas" subtitle="Filtra por estado y crea nuevas asignaciones." />
-            <AppButton v-if="canCreate" type="button" class="shrink-0" @click="openCreate">
-                Nueva rutina
-            </AppButton>
+            <div class="flex shrink-0 flex-wrap gap-2">
+                <AppButton
+                    v-if="isAdmin"
+                    type="button"
+                    variant="secondary"
+                    :disabled="creatingDemo"
+                    @click="createDemoRoutine"
+                >
+                    Generar rutina demo
+                </AppButton>
+                <AppButton v-if="canCreate" type="button" @click="openCreate">Nueva rutina</AppButton>
+            </div>
         </div>
         <div class="flex flex-wrap gap-2">
             <button

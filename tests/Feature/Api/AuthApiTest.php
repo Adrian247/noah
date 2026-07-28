@@ -5,10 +5,12 @@ namespace Tests\Feature\Api;
 use App\Models\Company;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\CreatesDemoRoutine;
 use Tests\TestCase;
 
 class AuthApiTest extends TestCase
 {
+    use CreatesDemoRoutine;
     use RefreshDatabase;
 
     public function test_health_endpoint(): void
@@ -47,6 +49,7 @@ class AuthApiTest extends TestCase
         $this->seed();
         $user = User::query()->where('email', 'admin@noah.local')->first();
         $company = Company::query()->first();
+        $this->demoRoutine();
         $token = $user->createToken('test')->plainTextToken;
 
         $this->withToken($token)

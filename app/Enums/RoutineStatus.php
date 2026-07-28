@@ -13,4 +13,5 @@ enum RoutineStatus: string
     case Validated = 'validated';
     case Rejected = 'rejected';
     case Invoiced = 'invoiced';
+    case PendingBilling = 'pending_billing';
 }

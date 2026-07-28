@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\PlatformAdmin;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -41,6 +42,7 @@ class ProfileController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'avatar_url' => self::avatarUrl($user),
+            'is_platform_admin' => PlatformAdmin::isPlatformAdmin($user),
         ];
     }
 

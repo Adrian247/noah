@@ -6,6 +6,7 @@ import { validateRequiredFields } from '@/composables/validateFormResponses';
 import { useToast } from '@/composables/useToast';
 import { api, getToken, getCompanyId } from '@/api/client';
 import { useCompanyStore } from '@/stores/company';
+import { usePermissions } from '@/composables/usePermissions';
 
 type FormVersion = {
     id: number;
@@ -43,6 +44,12 @@ type WorkflowTransition = {
     occurred_at: string;
 };
 
+type WorkflowAction = {
+    trigger: string;
+    label: string;
+    to_step: string;
+};
+
 type Routine = {
     id: number;
     status: string;
@@ -54,14 +61,29 @@ type Routine = {
     workflow_instance?: {
         current_step_key: string;
         status: string;
+        correlation_id?: string | null;
         transitions?: WorkflowTransition[];
+        available_actions?: WorkflowAction[];
     } | null;
+};
+
+type AuditEntry = {
+    id: number;
+    action: string;
+    subject_type?: string | null;
+    subject_id?: number | null;
+    metadata?: Record<string, unknown> | null;
+    occurred_at: string;
+    actor?: { id: number; name: string; email: string } | null;
 };
 
 const route = useRoute();
 const toast = useToast();
 const companyStore = useCompanyStore();
+const { can } = usePermissions();
 const routine = ref<Routine | null>(null);
+const auditEntries = ref<AuditEntry[]>([]);
+const auditLoading = ref(false);
 const supplies = ref<SupplyItem[]>([]);
 const loading = ref(true);
 const missingFieldKeys = ref<string[]>([]);
@@ -92,6 +114,25 @@ const showRejectionNotice = computed(
         Boolean(routine.value?.latest_execution?.rejection_reason),
 );
 const reportPollTimer = ref<ReturnType<typeof setInterval> | null>(null);
+
+const workflowCorrelationId = computed(
+    () => routine.value?.workflow_instance?.correlation_id ?? null,
+);
+const showAuditTimeline = computed(
+    () => can('audit.view') && Boolean(workflowCorrelationId.value),
+);
+
+function workflowActionLabel(trigger: string, fallback: string): string {
+    const actions = routine.value?.workflow_instance?.available_actions;
+    const match = actions?.find((a) => a.trigger === trigger);
+    return match?.label?.trim() ? match.label : fallback;
+}
+
+const submitActionLabel = computed(() =>
+    workflowActionLabel('execution_submitted', 'Enviar ejecución'),
+);
+const approveActionLabel = computed(() => workflowActionLabel('approved', 'Validar'));
+const rejectActionLabel = computed(() => workflowActionLabel('rejected', 'Rechazar'));
 
 function needsReportPoll(): boolean {
     return (
@@ -145,12 +186,32 @@ async function load(options: { silent?: boolean } = {}) {
         } else {
             stopReportPoll();
         }
+        await loadAuditTimeline();
     } catch (e) {
         toast.error((e as Error).message);
     } finally {
         if (!options.silent) {
             loading.value = false;
         }
+    }
+}
+
+async function loadAuditTimeline() {
+    auditEntries.value = [];
+    const correlationId = routine.value?.workflow_instance?.correlation_id;
+    if (!correlationId || !can('audit.view')) {
+        return;
+    }
+    auditLoading.value = true;
+    try {
+        const res = await api<{ data: AuditEntry[] }>(
+            `/audit/entries?correlation_id=${encodeURIComponent(correlationId)}&per_page=50`,
+        );
+        auditEntries.value = res.data ?? [];
+    } catch {
+        auditEntries.value = [];
+    } finally {
+        auditLoading.value = false;
     }
 }
 
@@ -200,7 +261,7 @@ async function downloadReport(reportId: number) {
 async function validateRoutine() {
     try {
         await api(`/routines/${route.params.id}/validate`, { method: 'POST' });
-        toast.success('Rutina validada; generando reporte y borrador de factura.');
+        toast.success(`${approveActionLabel.value} registrada; generando reporte y borrador de factura.`);
         await load();
     } catch (e) {
         toast.error((e as Error).message);
@@ -220,7 +281,7 @@ async function rejectRoutine() {
         });
         showRejectPanel.value = false;
         rejectReason.value = '';
-        toast.success('Rutina devuelta al técnico para corrección.');
+        toast.success(`Rutina devuelta al técnico (${rejectActionLabel.value}).`);
         await load();
     } catch (e) {
         toast.error((e as Error).message);
@@ -348,6 +409,36 @@ onUnmounted(() => {
             </li>
         </ul>
 
+        <section
+            v-if="showAuditTimeline"
+            class="portal-form-panel space-y-3 p-4 text-sm"
+        >
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 class="font-medium text-slate-800">Trazabilidad (auditoría)</h3>
+                <span class="font-mono text-xs text-slate-500">{{ workflowCorrelationId }}</span>
+            </div>
+            <p v-if="auditLoading" class="text-xs text-slate-500">Cargando eventos…</p>
+            <p v-else-if="!auditEntries.length" class="text-xs text-slate-500">
+                Sin eventos de auditoría para este ciclo.
+            </p>
+            <ul v-else class="divide-y text-xs">
+                <li
+                    v-for="entry in auditEntries"
+                    :key="entry.id"
+                    class="flex flex-wrap gap-x-3 gap-y-1 py-2 first:pt-0"
+                >
+                    <span class="whitespace-nowrap text-slate-500">
+                        {{ new Date(entry.occurred_at).toLocaleString() }}
+                    </span>
+                    <span class="font-mono text-slate-800">{{ entry.action }}</span>
+                    <span class="text-slate-600">{{ entry.actor?.name ?? '—' }}</span>
+                    <span v-if="entry.subject_type" class="text-slate-500">
+                        {{ entry.subject_type }} #{{ entry.subject_id }}
+                    </span>
+                </li>
+            </ul>
+        </section>
+
         <div
             v-if="showRejectionNotice"
             class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-950"
@@ -445,7 +536,7 @@ onUnmounted(() => {
                 :disabled="submitting"
                 @click="submitExecution"
             >
-                Enviar ejecución
+                {{ submitting ? 'Enviando…' : submitActionLabel }}
             </button>
         </div>
 
@@ -495,7 +586,7 @@ onUnmounted(() => {
             v-if="isPendingValidation && canValidateReject && showRejectPanel"
             class="portal-form-panel border-red-500/30 text-sm space-y-3"
         >
-            <p class="font-medium text-red-900">Rechazar rutina</p>
+            <p class="font-medium text-red-900">{{ rejectActionLabel }}</p>
             <label class="block">
                 Motivo (visible para el técnico)
                 <textarea
@@ -512,7 +603,7 @@ onUnmounted(() => {
                     :disabled="rejecting"
                     @click="rejectRoutine"
                 >
-                    Confirmar rechazo
+                    Confirmar {{ rejectActionLabel.toLowerCase() }}
                 </button>
                 <button type="button" class="rounded-md border px-3 py-2 text-sm" @click="cancelReject">
                     Cancelar
@@ -527,7 +618,7 @@ onUnmounted(() => {
                 class="rounded-md bg-emerald-700 px-3 py-2 text-sm text-white"
                 @click="validateRoutine"
             >
-                Validar
+                {{ approveActionLabel }}
             </button>
             <button
                 v-if="isPendingValidation && canValidateReject && !showRejectPanel"
@@ -535,7 +626,7 @@ onUnmounted(() => {
                 class="rounded-md border border-red-300 px-3 py-2 text-sm text-red-800"
                 @click="openRejectPanel"
             >
-                Rechazar
+                {{ rejectActionLabel }}
             </button>
             <button
                 v-for="r in routine.generated_reports?.filter((x) => x.status === 'ready')"

@@ -35,6 +35,9 @@ class InvoiceDraftEditor
 
         $validated = validator($payload, [
             'client_id' => ['nullable', 'integer', Rule::exists('clients', 'id')->where('company_id', $companyId)],
+            'notify_client_on_issue' => ['sometimes', 'boolean'],
+            'client_portal_visible' => ['sometimes', 'boolean'],
+            'delivery_deferred' => ['sometimes', 'boolean'],
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.line_type' => ['required', Rule::enum(InvoiceLineType::class)],
             'lines.*.description' => ['required', 'string', 'max:500'],
@@ -79,7 +82,12 @@ class InvoiceDraftEditor
                 ]);
             }
 
-            $invoice->update(['client_id' => $validated['client_id'] ?? null]);
+            $invoice->update([
+                'client_id' => $validated['client_id'] ?? null,
+                'notify_client_on_issue' => $validated['notify_client_on_issue'] ?? $invoice->notify_client_on_issue,
+                'client_portal_visible' => $validated['client_portal_visible'] ?? $invoice->client_portal_visible,
+                'delivery_deferred' => $validated['delivery_deferred'] ?? $invoice->delivery_deferred,
+            ]);
 
             $invoice = $this->totals->applyTaxRate($invoice->fresh(), $taxRate);
 

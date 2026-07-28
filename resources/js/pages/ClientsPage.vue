@@ -214,7 +214,7 @@ onMounted(load);
 </script>
 
 <template>
-    <div class="portal-page">
+    <div class="portal-page" data-tour="page-clients">
         <div v-if="!canView">
             <PageHeader
                 title="Clientes"

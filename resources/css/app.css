@@ -20,12 +20,20 @@
         --portal-heading: #f8fafc;
         --portal-muted: #94a3b8;
         --portal-link: #fbbf24;
+        --portal-edge-label-bg: rgb(15 23 42 / 0.94);
+        --portal-edge-label-border: rgb(255 255 255 / 0.14);
+        --portal-edge-label-text: #cbd5e1;
+        --portal-canvas-bg: rgb(15 23 42 / 0.35);
     }
 
     [data-theme='light'] {
         --portal-heading: #0f172a;
         --portal-muted: #475569;
         --portal-link: #b45309;
+        --portal-edge-label-bg: #ffffff;
+        --portal-edge-label-border: #cbd5e1;
+        --portal-edge-label-text: #334155;
+        --portal-canvas-bg: #f1f5f9;
     }
 
     [data-theme='dark'] body {
@@ -143,7 +151,7 @@
     }
 
     .nav-item-active {
-        @apply border border-amber-500/30 bg-amber-500/15 text-amber-100 shadow-none hover:bg-amber-500/20 hover:text-amber-50;
+        @apply border-2 border-amber-400/55 bg-amber-500/22 text-amber-50 shadow-[0_0_0_1px_rgba(251,191,36,0.2),inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-amber-500/28 hover:text-white;
     }
 
     .nav-section-label {
@@ -508,8 +516,31 @@
         @apply space-y-6;
     }
 
+    .workflow-canvas {
+        @apply relative w-full min-h-[22rem] overflow-visible rounded-xl border sm:min-h-[26rem];
+        border-color: var(--portal-edge-label-border);
+        background: var(--portal-canvas-bg);
+    }
+
+    .workflow-canvas .workflow-edge-label-bg {
+        fill: var(--portal-edge-label-bg);
+        stroke: var(--portal-edge-label-border);
+        stroke-width: 1;
+    }
+
+    .workflow-canvas .workflow-edge-label-text {
+        fill: var(--portal-edge-label-text);
+        font-size: 11px;
+        font-weight: 600;
+        font-family: var(--font-sans);
+    }
+
     .portal-status-active {
         @apply bg-emerald-500/20 text-emerald-200;
+    }
+
+    .portal-status-draft {
+        @apply bg-amber-500/25 text-amber-100 ring-1 ring-amber-400/40;
     }
 
     .portal-status-inactive {
@@ -740,11 +771,15 @@
     @apply border-slate-300 bg-white text-slate-900;
 }
 
-[data-theme='light'] .app-portal-shell main .portal-status-active {
+[data-theme='light'] .portal-status-active {
     @apply bg-emerald-100 text-emerald-900;
 }
 
-[data-theme='light'] .app-portal-shell main .portal-status-inactive {
+[data-theme='light'] .portal-status-draft {
+    @apply bg-amber-100 text-amber-950 ring-amber-400/55;
+}
+
+[data-theme='light'] .portal-status-inactive {
     @apply bg-slate-200 text-slate-600;
 }
 
@@ -768,7 +803,31 @@
 
 /* Sidebar sigue oscuro en tema claro: texto claro en ítem activo */
 [data-theme='light'] .glass-sidebar .nav-item-active {
-    @apply border-amber-400/50 bg-amber-500/25 text-amber-50 hover:bg-amber-500/30 hover:text-white;
+    @apply border-2 border-amber-400/60 bg-amber-500/30 text-amber-50 hover:bg-amber-500/35 hover:text-white;
+}
+
+/* Product tour: ítem de menú bajo spotlight */
+.product-tour-nav-pin {
+    position: relative;
+    z-index: 10060 !important;
+    border-color: rgb(251 191 36 / 0.95) !important;
+    background: rgb(251 191 36 / 0.32) !important;
+    color: #fff !important;
+    box-shadow:
+        0 0 0 2px rgb(251 191 36 / 0.45),
+        0 0 22px rgb(251 191 36 / 0.5);
+}
+
+.product-tour-nav-pin .nav-item-icon {
+    opacity: 1;
+}
+
+.glass-sidebar.product-tour-sidebar-lit {
+    position: relative;
+    z-index: 10055;
+    box-shadow:
+        inset 0 0 0 2px rgb(251 191 36 / 0.65),
+        0 0 48px rgb(251 191 36 / 0.22);
 }
 
 [data-theme='light'] .portal-topbar .portal-topbar__name {

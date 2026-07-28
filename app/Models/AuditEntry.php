@@ -9,6 +9,7 @@ class AuditEntry extends Model
 {
     protected $fillable = [
         'company_id',
+        'correlation_id',
         'actor_user_id',
         'action',
         'subject_type',

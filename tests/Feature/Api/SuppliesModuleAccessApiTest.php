@@ -5,7 +5,6 @@ namespace Tests\Feature\Api;
 use App\Models\Company;
 use App\Models\User;
 use App\Services\Identity\CompanyAuthorizationService;
-use App\Support\NoahModuleCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -28,13 +27,10 @@ class SuppliesModuleAccessApiTest extends TestCase
         $technician = User::query()->where('email', 'tecnico@noah.local')->first();
         Sanctum::actingAs($admin);
 
-        $modules = $this->allModulesOff();
-        $modules['routines'] = ['read' => true, 'write' => true];
-        $modules['assets'] = ['read' => true, 'write' => false];
-        $modules['sites'] = ['read' => true, 'write' => false];
-
         $this->withHeader('X-Company-Id', (string) $company->id)
-            ->putJson('/api/v1/company/users/'.$technician->id, ['modules' => $modules])
+            ->putJson('/api/v1/company/users/'.$technician->id, [
+                'extra_permissions' => ['assets.view'],
+            ])
             ->assertOk();
 
         Sanctum::actingAs($technician);
@@ -58,12 +54,10 @@ class SuppliesModuleAccessApiTest extends TestCase
         $technician = User::query()->where('email', 'tecnico@noah.local')->first();
         Sanctum::actingAs($admin);
 
-        $modules = $this->allModulesOff();
-        $modules['routines'] = ['read' => true, 'write' => true];
-        $modules['catalog_items'] = ['read' => true, 'write' => false];
-
         $this->withHeader('X-Company-Id', (string) $company->id)
-            ->putJson('/api/v1/company/users/'.$technician->id, ['modules' => $modules])
+            ->putJson('/api/v1/company/users/'.$technician->id, [
+                'extra_permissions' => ['catalog.view'],
+            ])
             ->assertOk();
 
         Sanctum::actingAs($technician);
@@ -87,12 +81,10 @@ class SuppliesModuleAccessApiTest extends TestCase
         $technician = User::query()->where('email', 'tecnico@noah.local')->first();
         Sanctum::actingAs($admin);
 
-        $modules = $this->allModulesOff();
-        $modules['routines'] = ['read' => true, 'write' => true];
-        $modules['catalog_supplies'] = ['read' => true, 'write' => false];
-
         $this->withHeader('X-Company-Id', (string) $company->id)
-            ->putJson('/api/v1/company/users/'.$technician->id, ['modules' => $modules])
+            ->putJson('/api/v1/company/users/'.$technician->id, [
+                'extra_permissions' => ['catalog.view'],
+            ])
             ->assertOk();
 
         Sanctum::actingAs($technician);
@@ -107,21 +99,5 @@ class SuppliesModuleAccessApiTest extends TestCase
                 'name' => 'Filtro demo',
             ])
             ->assertForbidden();
-    }
-
-    /**
-     * @return array<string, array{read: bool, write: bool}>
-     */
-    private function allModulesOff(): array
-    {
-        $modules = [];
-        foreach (NoahModuleCatalog::definitions() as $definition) {
-            if (! empty($definition['always_visible'])) {
-                continue;
-            }
-            $modules[$definition['id']] = ['read' => false, 'write' => false];
-        }
-
-        return $modules;
     }
 }

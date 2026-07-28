@@ -9,10 +9,13 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
+use Tests\Support\CreatesDemoRoutine;
+use Tests\Support\VehicleDemoFormResponses;
 use Tests\TestCase;
 
 class AsyncReportQueueTest extends TestCase
 {
+    use CreatesDemoRoutine;
     use RefreshDatabase;
 
     protected function tearDown(): void
@@ -29,13 +32,14 @@ class AsyncReportQueueTest extends TestCase
         $technician = User::query()->where('email', 'tecnico@noah.local')->first();
         $supervisor = User::query()->where('email', 'supervisor@noah.local')->first();
         $company = Company::query()->first();
-        $routine = Routine::query()->first();
+        $routine = $this->demoRoutine($technician);
 
         $this->withToken($technician->createToken('t')->plainTextToken)
             ->withHeader('X-Company-Id', (string) $company->id)
             ->postJson("/api/v1/routines/{$routine->id}/executions", [
                 'technician_comments' => 'test async',
                 'duration_minutes' => 30,
+                'responses' => $this->premiumFormResponses(),
             ])
             ->assertCreated();
 

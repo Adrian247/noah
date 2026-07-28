@@ -9,4 +9,5 @@ enum MembershipRole: string
     case Technician = 'technician';
     case Billing = 'billing';
     case Auditor = 'auditor';
+    case Client = 'client';
 }

@@ -7,10 +7,12 @@ use App\Models\Company;
 use App\Models\Routine;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\CreatesDemoRoutine;
 use Tests\TestCase;
 
 class RoutineFlowApiTest extends TestCase
 {
+    use CreatesDemoRoutine;
     use RefreshDatabase;
 
     public function test_submit_execution_moves_to_pending_validation(): void
@@ -18,7 +20,7 @@ class RoutineFlowApiTest extends TestCase
         $this->seed();
         $user = User::query()->where('email', 'tecnico@noah.local')->first();
         $company = Company::query()->first();
-        $routine = Routine::query()->first();
+        $routine = $this->demoRoutine($user);
         $token = $user->createToken('test')->plainTextToken;
 
         $this->withToken($token)
@@ -26,6 +28,7 @@ class RoutineFlowApiTest extends TestCase
             ->postJson("/api/v1/routines/{$routine->id}/executions", [
                 'technician_comments' => 'se cambio filtro y limpieza general',
                 'duration_minutes' => 90,
+                'responses' => $this->premiumFormResponses(),
             ])
             ->assertCreated();
 
@@ -39,7 +42,7 @@ class RoutineFlowApiTest extends TestCase
         $this->seed();
         $user = User::query()->where('email', 'tecnico@noah.local')->first();
         $company = Company::query()->first();
-        $routine = Routine::query()->first();
+        $routine = $this->demoRoutine($user);
         $token = $user->createToken('test')->plainTextToken;
 
         $this->withToken($token)
@@ -47,6 +50,7 @@ class RoutineFlowApiTest extends TestCase
             ->postJson("/api/v1/routines/{$routine->id}/executions", [
                 'technician_comments' => 'prueba',
                 'duration_minutes' => 10,
+                'responses' => $this->premiumFormResponses(),
             ])
             ->assertCreated();
 

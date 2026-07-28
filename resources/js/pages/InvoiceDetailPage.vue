@@ -34,6 +34,9 @@ type Invoice = {
     tax_rate_snapshot?: string | null;
     routine_id?: number;
     client_id?: number | null;
+    notify_client_on_issue?: boolean;
+    client_portal_visible?: boolean;
+    delivery_deferred?: boolean;
     client?: { id: number; legal_name: string } | null;
     lines: {
         line_type: LineType;
@@ -61,6 +64,10 @@ const editLines = ref<DraftLine[]>([]);
 const loading = ref(true);
 const saving = ref(false);
 const issuing = ref(false);
+const notifyClient = ref(false);
+const portalVisible = ref(false);
+const deliveryDeferred = ref(false);
+const issueActionLabel = ref('Emitir factura');
 
 const isDraft = computed(() => invoice.value?.status === 'draft');
 
@@ -93,12 +100,18 @@ async function load() {
     loading.value = true;
     try {
         const [invRes, clientsRes] = await Promise.all([
-            api<{ data: Invoice }>(`/billing/invoices/${route.params.id}`),
+            api<{ data: Invoice; workflow_action_labels?: { invoice_issued?: string } }>(
+                `/billing/invoices/${route.params.id}`,
+            ),
             api<{ data: ClientOption[] }>('/clients').catch(() => ({ data: [] as ClientOption[] })),
         ]);
         invoice.value = invRes.data;
+        issueActionLabel.value = invRes.workflow_action_labels?.invoice_issued?.trim() || 'Emitir factura';
         clients.value = clientsRes.data.filter((c) => c.is_active);
         clientId.value = invRes.data.client_id ?? invRes.data.client?.id ?? null;
+        notifyClient.value = Boolean(invRes.data.notify_client_on_issue);
+        portalVisible.value = Boolean(invRes.data.client_portal_visible);
+        deliveryDeferred.value = Boolean(invRes.data.delivery_deferred);
         editLines.value = invRes.data.lines.map(lineImport);
     } catch (e) {
         toast.error((e as Error).message);
@@ -148,6 +161,9 @@ async function saveDraft() {
             method: 'PUT',
             body: JSON.stringify({
                 client_id: clientId.value,
+                notify_client_on_issue: notifyClient.value,
+                client_portal_visible: portalVisible.value,
+                delivery_deferred: deliveryDeferred.value,
                 lines: editLines.value,
             }),
         });
@@ -170,6 +186,11 @@ async function issueInvoice() {
         await saveDraft();
         const res = await api<{ data: Invoice }>(`/billing/invoices/${invoice.value!.id}/issue`, {
             method: 'POST',
+            body: JSON.stringify({
+                notify_client_on_issue: notifyClient.value,
+                client_portal_visible: portalVisible.value,
+                delivery_deferred: deliveryDeferred.value,
+            }),
         });
         invoice.value = res.data;
         toast.success('Factura emitida.');
@@ -312,6 +333,21 @@ onMounted(load);
                             + Concepto
                         </button>
                     </div>
+                    <div v-if="isDraft && canEdit" class="portal-form-panel space-y-3 p-4 text-sm">
+                        <p class="text-portal-heading font-medium">Entrega al cliente</p>
+                        <label class="flex items-start gap-2">
+                            <input v-model="notifyClient" type="checkbox" class="mt-1" />
+                            <span>Notificar por email al emitir</span>
+                        </label>
+                        <label class="flex items-start gap-2">
+                            <input v-model="portalVisible" type="checkbox" class="mt-1" />
+                            <span>Visible en portal del cliente (descarga)</span>
+                        </label>
+                        <label class="flex items-start gap-2">
+                            <input v-model="deliveryDeferred" type="checkbox" class="mt-1" />
+                            <span>Diferir envío (guardar intención para después)</span>
+                        </label>
+                    </div>
                     <div class="flex flex-wrap gap-2 pt-2">
                         <AppButton type="button" :disabled="saving" @click="saveDraft">
                             {{ saving ? 'Guardando…' : 'Guardar prefactura' }}
@@ -323,7 +359,7 @@ onMounted(load);
                             :disabled="issuing || !clientId"
                             @click="issueInvoice"
                         >
-                            {{ issuing ? 'Emitiendo…' : 'Emitir factura' }}
+                            {{ issuing ? 'Emitiendo…' : issueActionLabel }}
                         </AppButton>
                     </div>
                 </div>

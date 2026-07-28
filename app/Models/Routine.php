@@ -19,8 +19,10 @@ class Routine extends Model
         'asset_id',
         'routine_type_id',
         'assigned_to',
+        'created_by',
         'status',
         'scheduled_at',
+        'is_demo',
     ];
 
     protected function casts(): array
@@ -64,6 +66,11 @@ class Routine extends Model
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function workflowInstance(): HasOne

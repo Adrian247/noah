@@ -81,7 +81,7 @@ class NoahModuleCatalog
             [
                 'id' => 'design_routine_types',
                 'label' => 'Tipos de rutina',
-                'nav_routes' => ['/app/design/routine-types'],
+                'nav_routes' => ['/app/routines/types'],
                 'read' => ['design.forms.view', 'design.forms'],
                 'write' => ['design.forms'],
             ],

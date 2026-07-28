@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AssetClientAssignmentController;
 use App\Http\Controllers\Api\V1\AssetController;
 use App\Http\Controllers\Api\V1\AuditController;
 use App\Http\Controllers\Api\V1\AuthController;
@@ -7,11 +8,13 @@ use App\Http\Controllers\Api\V1\PortalController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\BillingSettingsController;
 use App\Http\Controllers\Api\V1\ClientController;
+use App\Http\Controllers\Api\V1\ClientPortalController;
 use App\Http\Controllers\Api\V1\CompanyRoleController;
 use App\Http\Controllers\Api\V1\CompanyUserController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\ExecutionEvidenceController;
 use App\Http\Controllers\Api\V1\CatalogItemController;
+use App\Http\Controllers\Api\V1\EquipmentTypeController;
 use App\Http\Controllers\Api\V1\FormDefinitionController;
 use App\Http\Controllers\Api\V1\FormDesignSettingsController;
 use App\Http\Controllers\Api\V1\FormOptionCatalogController;
@@ -27,6 +30,7 @@ use App\Http\Controllers\Api\V1\SiteController;
 use App\Http\Controllers\Api\V1\SupplierController;
 use App\Http\Controllers\Api\V1\SyncController;
 use App\Http\Controllers\Api\V1\SupplyItemController;
+use App\Http\Controllers\Api\V1\SupplyTypeController;
 use App\Http\Controllers\Api\V1\WorkflowDefinitionController;
 use App\Support\DemoEnvironmentBootstrap;
 use Illuminate\Support\Facades\Route;
@@ -59,6 +63,11 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::post('/auth/avatar', [ProfileController::class, 'updateAvatar']);
+
+        Route::middleware('platform.admin')->prefix('platform')->group(function (): void {
+            Route::get('/role-permissions', [\App\Http\Controllers\Api\V1\PlatformRolePermissionController::class, 'show']);
+            Route::put('/role-permissions', [\App\Http\Controllers\Api\V1\PlatformRolePermissionController::class, 'update']);
+        });
 
         Route::middleware('company')->group(function (): void {
             Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
@@ -105,6 +114,24 @@ Route::prefix('v1')->group(function (): void {
 
             Route::post('/sync', [SyncController::class, 'sync']);
 
+            Route::get('/catalog/equipment-types', [EquipmentTypeController::class, 'index'])
+                ->middleware('company.module:catalog_items,read');
+            Route::post('/catalog/equipment-types', [EquipmentTypeController::class, 'store'])
+                ->middleware('company.module:catalog_items,write');
+            Route::put('/catalog/equipment-types/{equipmentType}', [EquipmentTypeController::class, 'update'])
+                ->middleware('company.module:catalog_items,write');
+            Route::delete('/catalog/equipment-types/{equipmentType}', [EquipmentTypeController::class, 'destroy'])
+                ->middleware('company.module:catalog_items,write');
+
+            Route::get('/catalog/supply-types', [SupplyTypeController::class, 'index'])
+                ->middleware('company.module:catalog_supplies,read');
+            Route::post('/catalog/supply-types', [SupplyTypeController::class, 'store'])
+                ->middleware('company.module:catalog_supplies,write');
+            Route::put('/catalog/supply-types/{supplyType}', [SupplyTypeController::class, 'update'])
+                ->middleware('company.module:catalog_supplies,write');
+            Route::delete('/catalog/supply-types/{supplyType}', [SupplyTypeController::class, 'destroy'])
+                ->middleware('company.module:catalog_supplies,write');
+
             Route::get('/catalog/items', [CatalogItemController::class, 'index'])
                 ->middleware('company.module:catalog_items,read');
             Route::post('/catalog/items', [CatalogItemController::class, 'store'])
@@ -131,6 +158,19 @@ Route::prefix('v1')->group(function (): void {
                 ->middleware('company.module:assets,write');
             Route::delete('/assets/{asset}', [AssetController::class, 'destroy'])
                 ->middleware('company.module:assets,write');
+            Route::get('/assets/{asset}/client-assignments', [AssetClientAssignmentController::class, 'index'])
+                ->middleware('company.module:assets,read');
+            Route::post('/assets/{asset}/client-assignments', [AssetClientAssignmentController::class, 'store'])
+                ->middleware('company.module:assets,write');
+
+            Route::middleware('company.client_portal')->prefix('portal')->group(function (): void {
+                Route::get('/invoices', [ClientPortalController::class, 'invoices']);
+                Route::get('/invoices/{invoice}', [ClientPortalController::class, 'showInvoice']);
+                Route::get('/invoices/{invoice}/download', [ClientPortalController::class, 'downloadInvoice']);
+                Route::get('/assets', [ClientPortalController::class, 'assets']);
+                Route::get('/routines', [ClientPortalController::class, 'routines']);
+                Route::get('/routines/{routine}', [ClientPortalController::class, 'showRoutine']);
+            });
 
             Route::get('/design/forms/settings', [FormDesignSettingsController::class, 'show'])
                 ->middleware('company.module:design_forms,read');
@@ -187,9 +227,23 @@ Route::prefix('v1')->group(function (): void {
 
             Route::get('/design/workflows', [WorkflowDefinitionController::class, 'index'])
                 ->middleware('company.module:design_workflows,read');
+            Route::get('/design/workflows/templates', [WorkflowDefinitionController::class, 'templates'])
+                ->middleware('company.module:design_workflows,read');
+            Route::post('/design/workflows', [WorkflowDefinitionController::class, 'store'])
+                ->middleware('company.module:design_workflows,write');
             Route::get('/design/workflows/{workflowDefinition}', [WorkflowDefinitionController::class, 'show'])
                 ->middleware('company.module:design_workflows,read');
+            Route::patch('/design/workflows/{workflowDefinition}', [WorkflowDefinitionController::class, 'update'])
+                ->middleware('company.module:design_workflows,write');
+            Route::put('/design/workflows/{workflowDefinition}/configure', [WorkflowDefinitionController::class, 'configure'])
+                ->middleware('company.module:design_workflows,write');
+            Route::post('/design/workflows/{workflowDefinition}/publish', [WorkflowDefinitionController::class, 'publish'])
+                ->middleware('company.module:design_workflows,write');
+            Route::post('/design/workflows/{workflowDefinition}/duplicate', [WorkflowDefinitionController::class, 'duplicate'])
+                ->middleware('company.module:design_workflows,write');
             Route::put('/design/workflows/{workflowDefinition}/definition', [WorkflowDefinitionController::class, 'updateDefinition'])
+                ->middleware('company.module:design_workflows,write');
+            Route::delete('/design/workflows/{workflowDefinition}', [WorkflowDefinitionController::class, 'destroy'])
                 ->middleware('company.module:design_workflows,write');
 
             Route::put('/routine-types/{routineType}/workflow', [WorkflowDefinitionController::class, 'updateRoutineTypeWorkflow'])
@@ -209,6 +263,8 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/routines', [RoutineController::class, 'index'])
                 ->middleware('company.module:routines,read');
             Route::post('/routines', [RoutineController::class, 'store'])
+                ->middleware('company.module:routines,write');
+            Route::post('/routines/demo', [RoutineController::class, 'storeDemo'])
                 ->middleware('company.module:routines,write');
             Route::get('/routines/{routine}', [RoutineController::class, 'show'])
                 ->middleware('company.module:routines,read');

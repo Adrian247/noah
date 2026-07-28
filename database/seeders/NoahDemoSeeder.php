@@ -9,6 +9,7 @@ use App\Models\CatalogItem;
 use App\Models\Client;
 use App\Models\Company;
 use App\Models\CompanyMembership;
+use App\Models\EquipmentType;
 use App\Models\FormDefinition;
 use App\Models\FormOptionCatalog;
 use App\Models\FormVersion;
@@ -21,11 +22,13 @@ use App\Models\RoutineType;
 use App\Models\Site;
 use App\Models\Supplier;
 use App\Models\SupplyItem;
+use App\Models\SupplyType;
 use App\Models\User;
 use App\Services\Workflow\WorkflowRuntime;
 use App\Services\Identity\CompanyAuthorizationService;
 use Database\Seeders\Support\DemoClientLogoGenerator;
 use Database\Seeders\Support\DemoDesignDraftVersions;
+use Database\Seeders\Support\NormalizedVehicleFormSchema;
 use Illuminate\Database\Seeder;
 
 class NoahDemoSeeder extends Seeder
@@ -158,17 +161,83 @@ class NoahDemoSeeder extends Seeder
             ['name' => 'Facturación Demo', 'password' => $password]
         );
 
+        $clientUser = User::query()->updateOrCreate(
+            ['email' => 'cliente@noah.local'],
+            ['name' => 'Cliente Portal Demo', 'password' => $password]
+        );
+
         foreach ([
-            [$admin, MembershipRole::Administrator],
-            [$technician, MembershipRole::Technician],
-            [$supervisor, MembershipRole::Supervisor],
-            [$billing, MembershipRole::Billing],
-        ] as [$user, $role]) {
+            [$admin, MembershipRole::Administrator, null],
+            [$technician, MembershipRole::Technician, null],
+            [$supervisor, MembershipRole::Supervisor, null],
+            [$billing, MembershipRole::Billing, null],
+            [$clientUser, MembershipRole::Client, $demoClient->id],
+        ] as [$user, $role, $clientId]) {
             CompanyMembership::query()->updateOrCreate(
                 ['company_id' => $company->id, 'user_id' => $user->id],
-                ['role' => $role, 'is_active' => true]
+                ['role' => $role, 'is_active' => true, 'client_id' => $clientId]
             );
         }
+
+        $normalizedFormDef = FormDefinition::query()->updateOrCreate(
+            ['company_id' => $company->id, 'slug' => 'inspeccion-vehiculo-v1'],
+            ['name' => 'Inspección vehículo (normalizada)']
+        );
+
+        $normalizedFormVersion = FormVersion::query()->updateOrCreate(
+            ['form_definition_id' => $normalizedFormDef->id, 'version' => 1],
+            [
+                'status' => 'published',
+                'published_at' => now(),
+                'created_by' => $admin->id,
+                'schema' => [
+                    'sections' => NormalizedVehicleFormSchema::sections(
+                        $estadoCatalog->id,
+                        $combustibleCatalog->id,
+                        $siNoCatalog->id,
+                    ),
+                ],
+            ]
+        );
+
+        DemoDesignDraftVersions::ensureFormDraft($normalizedFormDef, $normalizedFormVersion, $admin);
+
+        $typeVehiculo = EquipmentType::query()->updateOrCreate(
+            ['company_id' => $company->id, 'code' => 'vehiculo'],
+            [
+                'name' => 'Vehículo',
+                'description' => 'Automóviles y camionetas',
+                'sort_order' => 1,
+                'default_form_definition_id' => $normalizedFormDef->id,
+            ]
+        );
+
+        EquipmentType::query()->updateOrCreate(
+            ['company_id' => $company->id, 'code' => 'motor'],
+            ['name' => 'Motores', 'sort_order' => 2]
+        );
+
+        EquipmentType::query()->updateOrCreate(
+            ['company_id' => $company->id, 'code' => 'bomba'],
+            ['name' => 'Bombas', 'sort_order' => 3]
+        );
+
+        $supplyTypeFiltros = SupplyType::query()->updateOrCreate(
+            ['company_id' => $company->id, 'code' => 'filtros'],
+            ['name' => 'Filtros', 'sort_order' => 1]
+        );
+        $supplyTypeFrenos = SupplyType::query()->updateOrCreate(
+            ['company_id' => $company->id, 'code' => 'frenos'],
+            ['name' => 'Frenos y balatas', 'sort_order' => 2]
+        );
+        $supplyTypeSuspension = SupplyType::query()->updateOrCreate(
+            ['company_id' => $company->id, 'code' => 'suspension'],
+            ['name' => 'Suspensión', 'sort_order' => 3]
+        );
+        SupplyType::query()->updateOrCreate(
+            ['company_id' => $company->id, 'code' => 'fluidos'],
+            ['name' => 'Fluidos y lubricantes', 'sort_order' => 4]
+        );
 
         PromptTemplate::query()->updateOrCreate(
             ['company_id' => null, 'slug' => 'grammar_correction_v1', 'version' => 1],
@@ -181,16 +250,42 @@ class NoahDemoSeeder extends Seeder
         );
 
         $catalog = CatalogItem::query()->updateOrCreate(
-            ['company_id' => $company->id, 'code' => 'VEH-SUV-PREM'],
-            ['name' => 'SUV premium AWD 3.0T', 'manufacturer' => 'Línea executive']
+            ['company_id' => $company->id, 'code' => 'VEH-L200-2018'],
+            [
+                'equipment_type_id' => $typeVehiculo->id,
+                'name' => 'Mitsubishi L200 2018',
+                'manufacturer' => 'Mitsubishi',
+                'specifications' => [
+                    'modelo' => 'L200',
+                    'anio' => 2018,
+                    'mercado' => 'MX',
+                    'chasis' => 'Rise Body',
+                    'variante_demo' => '2.5L DI-D 4x4',
+                    'motor' => '2.5L Turbo Diésel Common Rail',
+                    'potencia_hp' => 134,
+                    'torque_lb_pie' => 232,
+                    'transmision' => 'Manual 5 vel. + reductora',
+                    'traccion' => '4x4 Easy Select',
+                    'frenos_delanteros' => 'Discos ventilados',
+                    'frenos_traseros' => 'Tambor',
+                    'tanque_litros' => 75,
+                    'capacidad_carga_kg' => 1050,
+                    'dimensiones_mm' => [
+                        'largo' => 5205,
+                        'ancho' => 1785,
+                        'alto' => 1775,
+                        'batalla' => 3000,
+                    ],
+                ],
+            ]
         );
 
         $asset = Asset::query()->updateOrCreate(
-            ['company_id' => $company->id, 'tag' => 'VEH-4582-MX'],
+            ['company_id' => $company->id, 'tag' => 'L200-2018-DEMO'],
             [
                 'site_id' => $site->id,
                 'catalog_item_id' => $catalog->id,
-                'serial_number' => 'WBA8E9G50JNU45821',
+                'serial_number' => 'MMBJNKB40JH000001',
                 'location_label' => 'Bahía 3 — recepción',
             ]
         );
@@ -203,15 +298,69 @@ class NoahDemoSeeder extends Seeder
             ]
         );
 
-        SupplyItem::query()->updateOrCreate(
-            ['company_id' => $company->id, 'sku' => 'FIL-ACE-PREM'],
+        SupplyItem::query()
+            ->where('company_id', $company->id)
+            ->where('sku', 'FIL-ACE-PREM')
+            ->delete();
+
+        foreach ([
             [
-                'name' => 'Filtro de aceite OEM premium',
+                'sku' => 'FIL-1230A153-OEM',
+                'supply_type_id' => $supplyTypeFiltros->id,
+                'name' => 'Filtro de aceite Mitsubishi OEM',
                 'unit' => 'pza',
-                'standard_cost' => 890.00,
-                'supplier_id' => $supplier->id,
-            ]
-        );
+                'standard_cost' => 550.00,
+                'specifications' => [
+                    'marca' => 'Mitsubishi',
+                    'referencia_oem' => '1230A153',
+                ],
+            ],
+            [
+                'sku' => 'FIL-AIR-2030515-SAK',
+                'supply_type_id' => $supplyTypeFiltros->id,
+                'name' => 'Filtro de aire Sakura 2030515',
+                'unit' => 'pza',
+                'standard_cost' => 341.00,
+                'specifications' => [
+                    'marca' => 'Sakura',
+                    'referencia_oem' => '2030515',
+                ],
+            ],
+            [
+                'sku' => 'FRE-P54038-BRM',
+                'supply_type_id' => $supplyTypeFrenos->id,
+                'name' => 'Balatas delanteras Brembo P54038 (juego)',
+                'unit' => 'jgo',
+                'standard_cost' => 1268.00,
+                'specifications' => [
+                    'marca' => 'Brembo',
+                    'referencia_oem' => 'P54038',
+                ],
+            ],
+            [
+                'sku' => 'SUS-AMORT-GROB-PAR',
+                'supply_type_id' => $supplyTypeSuspension->id,
+                'name' => 'Amortiguadores delanteros GROB (par)',
+                'unit' => 'par',
+                'standard_cost' => 1698.00,
+                'specifications' => [
+                    'marca' => 'GROB',
+                    'referencia_oem' => 'AMORT-DEL-PAR',
+                ],
+            ],
+        ] as $supplySeed) {
+            SupplyItem::query()->updateOrCreate(
+                ['company_id' => $company->id, 'sku' => $supplySeed['sku']],
+                [
+                    'supply_type_id' => $supplySeed['supply_type_id'],
+                    'name' => $supplySeed['name'],
+                    'unit' => $supplySeed['unit'],
+                    'standard_cost' => $supplySeed['standard_cost'],
+                    'specifications' => $supplySeed['specifications'],
+                    'supplier_id' => $supplier->id,
+                ]
+            );
+        }
 
         $formDef = FormDefinition::query()->updateOrCreate(
             ['company_id' => $company->id, 'slug' => 'revision-mayor-vehiculo-premium'],
@@ -298,8 +447,8 @@ class NoahDemoSeeder extends Seeder
                                 $componentField('aceite', 'Aceite motor, nivel y fugas'),
                                 [
                                     'key' => 'aceite_viscosidad',
-                                    'type' => 'text',
-                                    'label' => 'Viscosidad / especificación aplicada (ej. 0W-20 OEM)',
+                                    'type' => 'number',
+                                    'label' => 'Grado SAE numérico (ej. 20 para 0W-20)',
                                     'required' => false,
                                 ],
                                 $recommendedPhoto('foto_varilla_aceite', 'Varilla o etiqueta de servicio'),
@@ -415,50 +564,32 @@ class NoahDemoSeeder extends Seeder
                 'published_at' => now(),
                 'created_by' => $admin->id,
                 'components' => [
-                    ['type' => 'title', 'text' => 'Informe de revisión mayor premium', 'align' => 'center'],
+                    ['type' => 'title', 'text' => 'Informe de inspección vehicular', 'align' => 'center'],
                     ['type' => 'subtitle', 'text' => '{{company}} · {{asset_tag}}', 'align' => 'center'],
-                    ['type' => 'subtitle', 'text' => 'Kilometraje y recepción', 'align' => 'left'],
+                    ['type' => 'subtitle', 'text' => 'Recepción', 'align' => 'left'],
                     ['type' => 'paragraph', 'field' => 'kilometraje', 'align' => 'left'],
                     ['type' => 'paragraph', 'field' => 'nivel_combustible', 'align' => 'left'],
                     ['type' => 'paragraph', 'field' => 'observaciones_recepcion', 'align' => 'left'],
-                    ['type' => 'image', 'field' => 'foto_tablero', 'align' => 'center'],
                     ['type' => 'divider', 'style' => 'solid', 'margin_pt' => 10],
+                    ['type' => 'subtitle', 'text' => 'Motor y fluidos', 'align' => 'left'],
+                    ['type' => 'paragraph', 'field' => 'motor_estado', 'align' => 'left'],
+                    ['type' => 'paragraph', 'field' => 'aceite_motor', 'align' => 'left'],
+                    ['type' => 'paragraph', 'field' => 'filtro_aceite_reemplazado', 'align' => 'left'],
                     ['type' => 'subtitle', 'text' => 'Frenos', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'frenos', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'frenos_espesor_pastillas_mm', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'frenos_notas', 'align' => 'left'],
-                    ['type' => 'image', 'field' => 'foto_frenos', 'align' => 'center'],
+                    ['type' => 'paragraph', 'field' => 'frenos_delanteros', 'align' => 'left'],
+                    ['type' => 'paragraph', 'field' => 'frenos_traseros', 'align' => 'left'],
+                    ['type' => 'paragraph', 'field' => 'liquido_frenos', 'align' => 'left'],
                     ['type' => 'subtitle', 'text' => 'Filtros', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'filtros', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'filtros_cambio_aceite', 'align' => 'left'],
-                    ['type' => 'image', 'field' => 'foto_filtro_aceite', 'align' => 'center'],
-                    ['type' => 'subtitle', 'text' => 'Aceite y fluidos', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'aceite', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'aceite_viscosidad', 'align' => 'left'],
-                    ['type' => 'image', 'field' => 'foto_varilla_aceite', 'align' => 'center'],
-                    ['type' => 'subtitle', 'text' => 'Batería', 'align' => 'left'],
+                    ['type' => 'paragraph', 'field' => 'filtro_aire', 'align' => 'left'],
+                    ['type' => 'paragraph', 'field' => 'filtro_habitaculo', 'align' => 'left'],
+                    ['type' => 'subtitle', 'text' => 'Suspensión y eléctrico', 'align' => 'left'],
+                    ['type' => 'paragraph', 'field' => 'suspension', 'align' => 'left'],
+                    ['type' => 'paragraph', 'field' => 'direccion', 'align' => 'left'],
                     ['type' => 'paragraph', 'field' => 'bateria', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'bateria_cca', 'align' => 'left'],
-                    ['type' => 'image', 'field' => 'foto_bateria', 'align' => 'center'],
-                    ['type' => 'subtitle', 'text' => 'Luces', 'align' => 'left'],
                     ['type' => 'paragraph', 'field' => 'luces', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'luces_alineacion', 'align' => 'left'],
-                    ['type' => 'image', 'field' => 'foto_luces', 'align' => 'center'],
-                    ['type' => 'subtitle', 'text' => 'Fusibles y electricidad', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'fusibles', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'fusibles_notas', 'align' => 'left'],
-                    ['type' => 'image', 'field' => 'foto_caja_fusibles', 'align' => 'center'],
-                    ['type' => 'subtitle', 'text' => 'Revisiones Plus (opcional)', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'plus_suspension', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'plus_transmision', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'plus_neumaticos', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'plus_aire_acondicionado', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'plus_diagnostico_obd', 'align' => 'left'],
-                    ['type' => 'image', 'field' => 'foto_neumaticos', 'align' => 'center'],
-                    ['type' => 'divider', 'style' => 'solid', 'margin_pt' => 10],
-                    ['type' => 'subtitle', 'text' => 'Dictamen y entrega', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'observaciones_taller', 'align' => 'left'],
-                    ['type' => 'image', 'field' => 'foto_exterior', 'align' => 'center'],
+                    ['type' => 'subtitle', 'text' => 'Cierre', 'align' => 'left'],
+                    ['type' => 'paragraph', 'field' => 'comentarios_cierre', 'align' => 'left'],
+                    ['type' => 'image', 'field' => 'foto_evidencia', 'align' => 'center'],
                     ['type' => 'divider', 'style' => 'solid', 'margin_pt' => 12],
                     ['type' => 'subtitle', 'text' => 'Anexos', 'align' => 'left'],
                     ['type' => 'section_template', 'section_template_id' => $sectionAlcance->id, 'align' => 'left'],
@@ -480,7 +611,7 @@ class NoahDemoSeeder extends Seeder
                         'enabled' => true,
                         'title' => 'Revisión mayor premium',
                         'subtitle' => '{{company}} · {{asset_tag}}',
-                        'body' => 'Inspección mayor: frenos, filtros, aceite, batería, luces, fusibles y kilometraje. Evidencias y Plus opcional.',
+                        'body' => 'Inspección vehicular normalizada: motor, frenos, filtros, suspensión y eléctrico básico.',
                         'show_date' => true,
                         'omit_header_footer' => true,
                         'use_client_logo' => true,
@@ -497,7 +628,7 @@ class NoahDemoSeeder extends Seeder
             ['company_id' => $company->id, 'slug' => 'revision-mayor-vehiculo-premium'],
             [
                 'name' => 'Revisión mayor vehículo (premium)',
-                'form_version_id' => $formVersion->id,
+                'form_version_id' => $normalizedFormVersion->id,
                 'report_template_version_id' => $reportVersion->id,
                 'is_active' => true,
             ]
@@ -506,23 +637,19 @@ class NoahDemoSeeder extends Seeder
         $workflowDef = app(WorkflowRuntime::class)->seedDefinitionForCompany($company->id);
         $routineType->update(['workflow_definition_id' => $workflowDef->id]);
 
-        if (! Routine::query()->where('company_id', $company->id)->exists()) {
-            Routine::query()->create([
+        \App\Models\AssetClientAssignment::query()->updateOrCreate(
+            [
                 'company_id' => $company->id,
-                'site_id' => $site->id,
                 'asset_id' => $asset->id,
-                'routine_type_id' => $routineType->id,
-                'assigned_to' => $technician->id,
-                'status' => RoutineStatus::Assigned,
-                'scheduled_at' => now()->addDay(),
-            ]);
-        }
-
-        $workflow = app(WorkflowRuntime::class);
-        Routine::query()
-            ->where('company_id', $company->id)
-            ->whereDoesntHave('workflowInstance')
-            ->each(fn (Routine $routine) => $workflow->ensureInstance($routine->load('routineType.workflowDefinition')));
+                'client_id' => $demoClient->id,
+                'unassigned_at' => null,
+            ],
+            [
+                'serial_number' => $asset->serial_number ?? 'MMBJNKB40JH000001',
+                'assigned_by_user_id' => $admin->id,
+                'assigned_at' => now(),
+            ]
+        );
 
         app(CompanyAuthorizationService::class)->bootstrapAllCompanies();
 

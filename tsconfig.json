@@ -16,5 +16,5 @@
       "@/*": ["./resources/js/*"]
     }
   },
-  "include": ["resources/js/**/*.ts", "resources/js/**/*.vue", "resources/js/env.d.ts"]
+  "include": ["resources/js/**/*.ts", "resources/js/**/*.vue", "resources/js/env.d.ts", "resources/onboarding/**/*.json"]
 }

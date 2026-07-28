@@ -66,7 +66,7 @@ onMounted(load);
 </script>
 
 <template>
-    <div class="portal-page">
+    <div class="portal-page" data-tour="page-billing">
         <PageHeader
             title="Facturación"
             subtitle="Borradores generados al validar rutinas. Revisa el desglose antes de emitir."

@@ -8,6 +8,9 @@
 | `tecnico@noah.local` | igual |
 | `supervisor@noah.local` | igual |
 | `facturacion@noah.local` | igual |
+| `cliente@noah.local` | igual (portal cliente: facturas y rutinas de equipos vinculados por serie) |
+
+El seed **no** crea una rutina por defecto. Un administrador puede generar una rutina de prueba desde **Rutinas → Generar rutina demo**.
 
 ## Ritual obligatorio para asistentes y desarrolladores
 

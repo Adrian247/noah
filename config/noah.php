@@ -4,6 +4,17 @@ return [
     /** Contraseña de las cuentas @noah.local en entornos demo (seeder, ensure-demo, login UI). */
     'demo_password' => env('NOAH_DEMO_PASSWORD', 'noah_application'),
 
+    /**
+     * Correos con acceso a configuración de plataforma (plantilla global de roles).
+     * Lista separada por comas en NOAH_PLATFORM_ADMIN_EMAILS.
+     *
+     * @var list<string>
+     */
+    'platform_admin_emails' => array_values(array_filter(array_map(
+        static fn (string $e): string => strtolower(trim($e)),
+        explode(',', (string) env('NOAH_PLATFORM_ADMIN_EMAILS', 'admin@noah.local')),
+    ))),
+
     'ai' => [
         'default_provider' => env('NOAH_AI_PROVIDER', 'local'),
         'openai' => [

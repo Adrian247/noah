@@ -8,11 +8,13 @@ use App\Models\Routine;
 use App\Models\SupplyItem;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\CreatesDemoRoutine;
 use Tests\Support\VehicleDemoFormResponses;
 use Tests\TestCase;
 
 class RoutineExecutionConsumptionsTest extends TestCase
 {
+    use CreatesDemoRoutine;
     use RefreshDatabase;
 
     public function test_execution_persists_consumptions(): void
@@ -20,7 +22,7 @@ class RoutineExecutionConsumptionsTest extends TestCase
         $this->seed();
         $user = User::query()->where('email', 'tecnico@noah.local')->first();
         $company = Company::query()->first();
-        $routine = Routine::query()->first();
+        $routine = $this->demoRoutine($user);
         $supply = SupplyItem::query()->first();
         $token = $user->createToken('test')->plainTextToken;
 

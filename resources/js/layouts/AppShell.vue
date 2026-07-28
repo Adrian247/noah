@@ -3,7 +3,6 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { RouterLink, RouterView, useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useCompanyStore } from '@/stores/company';
-import { getToken } from '@/api/client';
 import { useSidebarCollapsed } from '@/composables/useSidebarCollapsed';
 import { usePermissions } from '@/composables/usePermissions';
 import { useModuleAccess } from '@/composables/useModuleAccess';
@@ -13,6 +12,7 @@ import NoahBrand from '@/components/ui/NoahBrand.vue';
 import BacteriumNetwork from '@/components/BacteriumNetwork.vue';
 import AppAtmosphere from '@/components/AppAtmosphere.vue';
 import AppToastHost from '@/components/ui/AppToastHost.vue';
+import ProductTour from '@/components/onboarding/ProductTour.vue';
 import { useTheme } from '@/composables/useTheme';
 
 type NavItem = {
@@ -21,6 +21,7 @@ type NavItem = {
     icon: NavIconName;
     match?: 'exact' | 'prefix';
     moduleId?: string;
+    tourAnchor?: string;
 };
 
 const { can } = usePermissions();
@@ -54,32 +55,26 @@ const navGroups = computed(() => {
             label: 'Operación',
             items: filterNavItems([
                 { to: '/app/dashboard', label: 'Inicio', icon: 'home', moduleId: 'dashboard' },
-                { to: '/app/routines', label: 'Rutinas', icon: 'clipboard-list', moduleId: 'routines' },
-                { to: '/app/assets', label: 'Activos', icon: 'cube', moduleId: 'assets' },
+                { to: '/app/routines', label: 'Rutinas', icon: 'clipboard-list', moduleId: 'routines', tourAnchor: 'nav-routines' },
+                { to: '/app/assets', label: 'Activos', icon: 'cube', moduleId: 'assets', tourAnchor: 'nav-assets' },
             ]),
         },
         {
             label: 'Catálogos',
             items: filterNavItems([
-                { to: '/app/catalog/items', label: 'Equipos', icon: 'package', moduleId: 'catalog_items' },
-                { to: '/app/catalog/supplies', label: 'Insumos', icon: 'layers', moduleId: 'catalog_supplies' },
-                { to: '/app/catalog/suppliers', label: 'Proveedores', icon: 'truck', moduleId: 'catalog_suppliers' },
-                { to: '/app/catalog/clients', label: 'Clientes', icon: 'building', moduleId: 'clients' },
-                { to: '/app/sites', label: 'Sitios', icon: 'map-pin', moduleId: 'sites' },
+                { to: '/app/catalog/items', label: 'Equipos', icon: 'package', moduleId: 'catalog_items', tourAnchor: 'nav-catalog-items' },
+                { to: '/app/catalog/supplies', label: 'Insumos', icon: 'layers', moduleId: 'catalog_supplies', tourAnchor: 'nav-catalog-supplies' },
+                { to: '/app/catalog/suppliers', label: 'Proveedores', icon: 'truck', moduleId: 'catalog_suppliers', tourAnchor: 'nav-catalog-suppliers' },
+                { to: '/app/catalog/clients', label: 'Clientes', icon: 'building', moduleId: 'clients', tourAnchor: 'nav-clients' },
+                { to: '/app/sites', label: 'Sitios', icon: 'map-pin', moduleId: 'sites', tourAnchor: 'nav-sites' },
             ]),
         },
         {
             label: 'Diseño',
             items: filterNavItems([
-                {
-                    to: '/app/design/routine-types',
-                    label: 'Tipos de rutina',
-                    icon: 'tags',
-                    moduleId: 'design_routine_types',
-                },
-                { to: '/app/design/forms', label: 'Formularios', icon: 'document', moduleId: 'design_forms' },
-                { to: '/app/design/reports', label: 'Reportes', icon: 'chart-bar', moduleId: 'design_reports' },
-                { to: '/app/design/workflows', label: 'Workflows', icon: 'workflow', moduleId: 'design_workflows' },
+                { to: '/app/design/forms', label: 'Formularios', icon: 'document', moduleId: 'design_forms', tourAnchor: 'nav-design-forms' },
+                { to: '/app/design/reports', label: 'Reportes', icon: 'chart-bar', moduleId: 'design_reports', tourAnchor: 'nav-design-reports' },
+                { to: '/app/design/workflows', label: 'Workflows', icon: 'workflow', moduleId: 'design_workflows', tourAnchor: 'nav-design-workflows' },
             ]),
         },
         {
@@ -91,6 +86,7 @@ const navGroups = computed(() => {
                     icon: 'receipt',
                     match: 'exact',
                     moduleId: 'billing',
+                    tourAnchor: 'nav-billing',
                 },
             ]),
         },
@@ -98,16 +94,31 @@ const navGroups = computed(() => {
             label: 'Administración',
             items: filterNavItems([
                 { to: '/app/settings', label: 'Configuración', icon: 'cog' },
-                { to: '/app/audit', label: 'Auditoría', icon: 'shield', moduleId: 'audit' },
+                { to: '/app/audit', label: 'Auditoría', icon: 'shield', moduleId: 'audit', tourAnchor: 'nav-audit' },
                 {
                     to: '/app/admin/users',
                     label: 'Usuarios',
                     icon: 'users',
                     moduleId: 'company_users',
+                    tourAnchor: 'nav-company-users',
                 },
             ]),
         },
     ];
+
+    if (auth.user?.is_platform_admin) {
+        groups.push({
+            label: 'Plataforma',
+            items: [
+                {
+                    to: '/app/platform/role-permissions',
+                    label: 'Roles y permisos',
+                    icon: 'shield',
+                    tourAnchor: 'nav-platform-roles',
+                },
+            ],
+        });
+    }
 
     return groups.filter((group) => group.items.length > 0);
 });
@@ -123,6 +134,11 @@ const navItemIndex = computed(() => {
     }
     return map;
 });
+
+/** Activo el ítem del menú al estar en subrutas del mismo módulo (p. ej. tipos). */
+function navItemActive(item: NavItem): boolean {
+    return isActive(item.to, item.match ?? 'prefix');
+}
 
 function navDelay(to: string): string {
     const idx = navItemIndex.value.get(to) ?? 0;
@@ -148,11 +164,9 @@ function isActive(path: string, match: 'exact' | 'prefix' = 'prefix') {
 
 onMounted(async () => {
     document.addEventListener('click', onDocumentClick);
-    if (!getToken()) {
+    const ok = await auth.ensureSession();
+    if (!ok) {
         return;
-    }
-    if (!auth.user) {
-        await auth.fetchMe();
     }
     company.hydrate(auth.companies);
 });
@@ -204,11 +218,13 @@ async function onAvatarSelected(event: Event) {
 <template>
     <div class="app-portal-shell flex min-h-dvh overflow-hidden">
         <AppToastHost />
+        <ProductTour />
         <BacteriumNetwork v-if="isDark" subdued warm />
         <AppAtmosphere v-if="isDark" />
 
         <aside
             class="glass-sidebar noah-sidebar-enter"
+            data-tour="app-sidebar"
             :class="collapsed ? 'glass-sidebar-collapsed' : 'glass-sidebar-expanded'"
         >
             <div
@@ -237,11 +253,12 @@ async function onAvatarSelected(event: Event) {
                             :to="item.to"
                             class="nav-item noah-nav-enter"
                             :class="[
-                                { 'nav-item-active': isActive(item.to, item.match ?? 'prefix') },
+                                { 'nav-item-active': navItemActive(item) },
                                 collapsed ? 'justify-center px-2.5' : '',
                             ]"
                             :style="{ animationDelay: navDelay(item.to) }"
                             :title="collapsed ? item.label : undefined"
+                            :data-tour="item.tourAnchor"
                         >
                             <NavIcon :name="item.icon" class="nav-item-icon" />
                             <span class="nav-item-label">{{ item.label }}</span>

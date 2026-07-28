@@ -19,6 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'company.role' => \App\Http\Middleware\RequireCompanyRole::class,
             'company.permission' => \App\Http\Middleware\RequireCompanyPermission::class,
             'company.module' => \App\Http\Middleware\RequireCompanyModuleAccess::class,
+            'company.client_portal' => \App\Http\Middleware\RequireClientPortal::class,
+            'platform.admin' => \App\Http\Middleware\EnsurePlatformAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

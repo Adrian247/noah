@@ -14,8 +14,8 @@ class Invoice extends Model
 
     protected $fillable = [
         'company_id',
-        'routine_id',
         'client_id',
+        'routine_id',
         'number',
         'status',
         'currency',
@@ -24,6 +24,10 @@ class Invoice extends Model
         'tax_total',
         'total',
         'issued_at',
+        'notify_client_on_issue',
+        'client_portal_visible',
+        'delivery_deferred',
+        'delivered_to_client_at',
     ];
 
     protected function casts(): array
@@ -35,6 +39,10 @@ class Invoice extends Model
             'tax_total' => 'decimal:2',
             'total' => 'decimal:2',
             'issued_at' => 'datetime',
+            'notify_client_on_issue' => 'boolean',
+            'client_portal_visible' => 'boolean',
+            'delivery_deferred' => 'boolean',
+            'delivered_to_client_at' => 'datetime',
         ];
     }
 

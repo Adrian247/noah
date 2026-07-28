@@ -2,7 +2,7 @@
 
 namespace Tests\Support;
 
-/** Respuestas mínimas válidas para el formulario demo revisión mayor vehículo (NoahDemoSeeder). */
+/** Respuestas mínimas válidas para el formulario normalizado `inspeccion-vehiculo-v1` (NoahDemoSeeder). */
 final class VehicleDemoFormResponses
 {
     /**
@@ -12,12 +12,19 @@ final class VehicleDemoFormResponses
     {
         return [
             'kilometraje' => 45820,
-            'frenos' => 'operativo',
-            'filtros' => 'operativo',
-            'aceite' => 'operativo',
+            'nivel_combustible' => 'medio',
+            'motor_estado' => 'operativo',
+            'aceite_motor' => 'operativo',
+            'filtro_aceite_reemplazado' => 'si',
+            'frenos_delanteros' => 'operativo',
+            'frenos_traseros' => 'operativo',
+            'liquido_frenos' => 'operativo',
+            'filtro_aire' => 'operativo',
+            'filtro_habitaculo' => 'operativo',
+            'suspension' => 'operativo',
+            'direccion' => 'operativo',
             'bateria' => 'operativo',
             'luces' => 'operativo',
-            'fusibles' => 'operativo',
         ];
     }
 }

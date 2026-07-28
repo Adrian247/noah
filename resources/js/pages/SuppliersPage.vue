@@ -87,7 +87,7 @@ onMounted(load);
 </script>
 
 <template>
-    <div class="portal-page">
+    <div class="portal-page" data-tour="page-catalog-suppliers">
         <div class="flex flex-wrap items-start justify-between gap-3">
             <PageHeader class="flex-1" title="Proveedores" subtitle="Contactos de abastecimiento." />
             <AppButton v-if="canWrite" type="button" class="shrink-0" @click="openCreate">

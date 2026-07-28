@@ -18,6 +18,7 @@ class CompanyAuthorizationService
 {
     public function __construct(
         private readonly PermissionRegistrar $registrar,
+        private readonly RolePermissionTemplateService $roleTemplates,
     ) {}
 
     /**
@@ -25,31 +26,7 @@ class CompanyAuthorizationService
      */
     public function rolePermissionMap(): array
     {
-        $all = NoahPermission::values();
-
-        return [
-            MembershipRole::Administrator->value => $all,
-            MembershipRole::Supervisor->value => [
-                NoahPermission::RoutinesAssign->value,
-                NoahPermission::RoutinesValidate->value,
-                NoahPermission::CostsView->value,
-                NoahPermission::CatalogSuppliersManage->value,
-            ],
-            MembershipRole::Technician->value => [
-                NoahPermission::RoutinesExecute->value,
-            ],
-            MembershipRole::Billing->value => [
-                NoahPermission::BillingDraft->value,
-                NoahPermission::BillingDraftEdit->value,
-                NoahPermission::BillingIssue->value,
-                NoahPermission::BillingSettings->value,
-                NoahPermission::CostsView->value,
-                NoahPermission::ClientsView->value,
-            ],
-            MembershipRole::Auditor->value => [
-                NoahPermission::AuditView->value,
-            ],
-        ];
+        return $this->roleTemplates->map();
     }
 
     public function syncPermissionCatalog(): void
@@ -160,13 +137,7 @@ class CompanyAuthorizationService
             return [];
         }
 
-        $this->registrar->setPermissionsTeamId($companyId);
-        $user->unsetRelation('roles');
-        $user->unsetRelation('permissions');
-
-        $base = $user->getAllPermissions()->pluck('name')->values()->all();
-
-        return $this->applyModuleAccessOverrides($membership, $base);
+        return $this->baseSpatiePermissions($user, $companyId);
     }
 
     /**
@@ -181,8 +152,7 @@ class CompanyAuthorizationService
         }
 
         $base = $this->baseSpatiePermissions($user, $membership->company_id);
-        $effective = $this->applyModuleAccessOverrides($membership, $base);
-        $overrides = $this->normalizedModuleAccess($membership->module_access);
+        $effective = $base;
 
         $result = [];
         foreach (NoahModuleCatalog::definitions() as $module) {
@@ -190,18 +160,6 @@ class CompanyAuthorizationService
 
             if (! empty($module['always_visible'])) {
                 $result[$id] = ['read' => true, 'write' => true, 'visible' => true];
-
-                continue;
-            }
-
-            if ($overrides !== null && array_key_exists($id, $overrides)) {
-                $read = $overrides[$id]['read'];
-                $write = $overrides[$id]['write'];
-                $result[$id] = [
-                    'read' => $read,
-                    'write' => $write,
-                    'visible' => $read || $write,
-                ];
 
                 continue;
             }
@@ -228,48 +186,6 @@ class CompanyAuthorizationService
     }
 
     /**
-     * @param  array<string, array{read?: bool, write?: bool}>  $modules
-     */
-    public function syncModuleAccess(CompanyMembership $membership, array $modules): void
-    {
-        $normalized = [];
-        foreach (NoahModuleCatalog::definitions() as $definition) {
-            $id = $definition['id'];
-            if (! empty($definition['always_visible'])) {
-                continue;
-            }
-            if (! array_key_exists($id, $modules)) {
-                throw ValidationException::withMessages([
-                    'modules' => ["Falta el módulo: {$id}"],
-                ]);
-            }
-            $read = (bool) ($modules[$id]['read'] ?? false);
-            $write = (bool) ($modules[$id]['write'] ?? false);
-
-            if ($id === 'company_users' && ($read || $write)) {
-                $roleValue = $membership->role instanceof MembershipRole
-                    ? $membership->role->value
-                    : (string) $membership->role;
-                if ($roleValue !== MembershipRole::Administrator->value) {
-                    throw ValidationException::withMessages([
-                        'modules' => ['El módulo Usuarios solo aplica al rol Administrador.'],
-                    ]);
-                }
-            }
-
-            if ($write && empty($definition['write'])) {
-                throw ValidationException::withMessages([
-                    'modules' => ["El módulo {$id} no admite escritura."],
-                ]);
-            }
-
-            $normalized[$id] = ['read' => $read, 'write' => $write];
-        }
-
-        $membership->update(['module_access' => $normalized]);
-    }
-
-    /**
      * @return list<string>
      */
     private function baseSpatiePermissions(User $user, int $companyId): array
@@ -281,70 +197,55 @@ class CompanyAuthorizationService
         return $user->getAllPermissions()->pluck('name')->values()->all();
     }
 
-    /**
-     * @param  list<string>  $permissions
-     * @return list<string>
-     */
-    private function applyModuleAccessOverrides(CompanyMembership $membership, array $permissions): array
+    public function clearLegacyModuleAccess(CompanyMembership $membership): void
     {
-        $overrides = $this->normalizedModuleAccess($membership->module_access);
-        if ($overrides === null) {
-            return array_values(array_unique($permissions));
+        if ($membership->module_access !== null && $membership->module_access !== []) {
+            $membership->update(['module_access' => null]);
         }
-
-        $set = array_fill_keys($permissions, true);
-
-        foreach (NoahModuleCatalog::definitions() as $module) {
-            $id = $module['id'];
-            if (! array_key_exists($id, $overrides) || ! empty($module['always_visible'])) {
-                continue;
-            }
-
-            foreach (NoahModuleCatalog::allPermissionSlugsForModule($module) as $slug) {
-                unset($set[$slug]);
-            }
-
-            $entry = $overrides[$id];
-            if (! $entry['read'] && ! $entry['write']) {
-                continue;
-            }
-
-            if ($entry['read'] || $entry['write']) {
-                foreach ($module['read'] ?? [] as $slug) {
-                    $set[$slug] = true;
-                }
-            }
-            if ($entry['write']) {
-                foreach ($module['write'] ?? [] as $slug) {
-                    $set[$slug] = true;
-                }
-            }
-        }
-
-        return array_keys($set);
     }
 
     /**
-     * @return array<string, array{read: bool, write: bool}>|null
+     * Grupos de permisos para la UI de concesiones (admin de empresa).
+     *
+     * @return list<array{
+     *     module_id: string,
+     *     module_label: string,
+     *     permissions: list<array{slug: string, label: string}>
+     * }>
      */
-    private function normalizedModuleAccess(mixed $raw): ?array
+    public function permissionGroupsForGranting(): array
     {
-        if (! is_array($raw) || $raw === []) {
-            return null;
-        }
+        $labels = $this->permissionLabels();
+        $groups = [];
 
-        $out = [];
-        foreach ($raw as $id => $entry) {
-            if (! is_array($entry)) {
+        foreach (NoahModuleCatalog::definitions() as $module) {
+            if (! empty($module['always_visible'])) {
                 continue;
             }
-            $out[(string) $id] = [
-                'read' => (bool) ($entry['read'] ?? false),
-                'write' => (bool) ($entry['write'] ?? false),
+
+            $slugs = NoahModuleCatalog::allPermissionSlugsForModule($module);
+            if ($slugs === []) {
+                continue;
+            }
+
+            $permissions = [];
+            foreach ($slugs as $slug) {
+                $permissions[] = [
+                    'slug' => $slug,
+                    'label' => $labels[$slug] ?? $slug,
+                ];
+            }
+
+            usort($permissions, fn (array $a, array $b) => strcmp($a['label'], $b['label']));
+
+            $groups[] = [
+                'module_id' => $module['id'],
+                'module_label' => $module['label'],
+                'permissions' => $permissions,
             ];
         }
 
-        return $out === [] ? null : $out;
+        return $groups;
     }
 
     /**
@@ -487,6 +388,9 @@ class CompanyAuthorizationService
             'clients.manage' => 'Administrar clientes',
             'clients.view' => 'Ver clientes',
             'billing.draft.edit' => 'Editar prefacturas',
+            'portal.invoices.view' => 'Portal: ver facturas',
+            'portal.invoices.download' => 'Portal: descargar facturas',
+            'portal.routines.view' => 'Portal: ver rutinas',
         ];
     }
 
@@ -527,6 +431,7 @@ class CompanyAuthorizationService
             MembershipRole::Technician->value => 'Técnico',
             MembershipRole::Billing->value => 'Facturación',
             MembershipRole::Auditor->value => 'Auditor',
+            MembershipRole::Client->value => 'Cliente (portal)',
         ];
     }
 }

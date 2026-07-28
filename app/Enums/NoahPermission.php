@@ -30,6 +30,9 @@ enum NoahPermission: string
     case ClientsManage = 'clients.manage';
     case ClientsView = 'clients.view';
     case BillingDraftEdit = 'billing.draft.edit';
+    case PortalInvoicesView = 'portal.invoices.view';
+    case PortalInvoicesDownload = 'portal.invoices.download';
+    case PortalRoutinesView = 'portal.routines.view';
 
     /**
      * @return list<string>

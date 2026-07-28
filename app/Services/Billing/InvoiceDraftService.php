@@ -31,6 +31,7 @@ class InvoiceDraftService
         $invoice = Invoice::query()->create([
             'company_id' => $routine->company_id,
             'routine_id' => $routine->id,
+            'client_id' => app(RoutineInvoiceClientResolver::class)->resolveForRoutine($routine),
             'status' => InvoiceStatus::Draft,
             'currency' => $currency,
             'tax_rate_snapshot' => $taxRate,

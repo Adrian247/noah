@@ -18,22 +18,27 @@ type UserRow = {
     role: string;
     role_label: string;
     is_active: boolean;
+    role_permissions: string[];
+    extra_permissions: string[];
+    effective_permissions: string[];
     modules: Record<string, ModuleAccessState>;
 };
 
 type RoleOption = { name: string; label: string; permissions: string[] };
 
-type ModuleCatalogItem = {
-    id: string;
-    label: string;
-    supports_write: boolean;
+type PermissionEntry = { slug: string; label: string };
+
+type PermissionGroup = {
+    module_id: string;
+    module_label: string;
+    permissions: PermissionEntry[];
 };
 
 const toast = useToast();
 const users = ref<UserRow[]>([]);
 const roles = ref<RoleOption[]>([]);
+const permissionGroups = ref<PermissionGroup[]>([]);
 const roleOptions = computed(() => roles.value.map((r) => ({ value: r.name, label: r.label })));
-const modulesCatalog = ref<ModuleCatalogItem[]>([]);
 const loading = ref(true);
 const search = ref('');
 
@@ -43,12 +48,23 @@ const formEmail = ref('');
 const formName = ref('');
 const formRole = ref('technician');
 const formActive = ref(true);
-const formModules = ref<Record<string, { read: boolean; write: boolean }>>({});
+const formExtraPermissions = ref<string[]>([]);
 const saving = ref(false);
 const isCreate = ref(false);
 
-const editableModules = computed(() =>
-    modulesCatalog.value.filter((m) => m.id !== 'dashboard'),
+const rolePermissionSet = computed(() => {
+    const role = roles.value.find((r) => r.name === formRole.value);
+
+    return new Set(role?.permissions ?? []);
+});
+
+const grantableGroups = computed(() =>
+    permissionGroups.value
+        .map((group) => ({
+            ...group,
+            permissions: group.permissions.filter((p) => !rolePermissionSet.value.has(p.slug)),
+        }))
+        .filter((g) => g.permissions.length > 0),
 );
 
 const filteredUsers = computed(() => {
@@ -64,77 +80,25 @@ const filteredUsers = computed(() => {
     );
 });
 
-function defaultModulesFromRole(roleName: string): Record<string, { read: boolean; write: boolean }> {
-    const role = roles.value.find((r) => r.name === roleName);
-    const perms = new Set(role?.permissions ?? []);
-    const out: Record<string, { read: boolean; write: boolean }> = {};
-    for (const mod of editableModules.value) {
-        const read = moduleHasReadFromPerms(mod.id, perms);
-        const write = moduleHasWriteFromPerms(mod.id, perms);
-        out[mod.id] = { read: read || write, write };
-    }
-    return out;
-}
-
-function moduleHasReadFromPerms(moduleId: string, perms: Set<string>): boolean {
-    const map: Record<string, string[]> = {
-        routines: ['routines.execute', 'routines.assign', 'routines.validate', 'costs.view'],
-        assets: ['assets.view', 'assets.manage'],
-        catalog_items: ['catalog.view', 'catalog.manage'],
-        catalog_supplies: ['catalog.view', 'catalog.manage'],
-        catalog_suppliers: ['catalog.suppliers.view', 'catalog.suppliers.manage'],
-        clients: ['clients.view', 'clients.manage'],
-        sites: ['sites.view', 'sites.manage'],
-        design_routine_types: ['design.forms.view', 'design.forms'],
-        design_forms: ['design.forms.view', 'design.forms'],
-        design_reports: ['design.reports.view', 'design.reports'],
-        design_workflows: ['design.workflows.view', 'design.workflows'],
-        billing: ['billing.draft', 'billing.draft.edit', 'billing.issue', 'billing.settings', 'costs.view'],
-        audit: ['audit.view'],
-        company_users: ['company.users.manage'],
-    };
-    const slugs = map[moduleId] ?? [];
-    return slugs.some((p) => perms.has(p));
-}
-
-function moduleHasWriteFromPerms(moduleId: string, perms: Set<string>): boolean {
-    const map: Record<string, string[]> = {
-        routines: ['routines.assign', 'routines.validate'],
-        assets: ['assets.manage'],
-        catalog_items: ['catalog.manage'],
-        catalog_supplies: ['catalog.manage'],
-        catalog_suppliers: ['catalog.suppliers.manage'],
-        clients: ['clients.manage'],
-        sites: ['sites.manage'],
-        design_routine_types: ['design.forms'],
-        design_forms: ['design.forms'],
-        design_reports: ['design.reports'],
-        design_workflows: ['design.workflows'],
-        billing: ['billing.draft.edit', 'billing.issue', 'billing.settings'],
-        audit: [],
-        company_users: ['company.users.manage'],
-    };
-    const slugs = map[moduleId] ?? [];
-    return slugs.some((p) => perms.has(p));
-}
-
-watch(formRole, (role) => {
-    if (!showPanel.value || !isCreate.value) {
+watch(formRole, () => {
+    if (!showPanel.value) {
         return;
     }
-    formModules.value = defaultModulesFromRole(role);
+    formExtraPermissions.value = formExtraPermissions.value.filter((slug) => !rolePermissionSet.value.has(slug));
 });
 
-function loadModulesIntoForm(source: Record<string, ModuleAccessState>) {
-    const out: Record<string, { read: boolean; write: boolean }> = {};
-    for (const mod of editableModules.value) {
-        const entry = source[mod.id];
-        out[mod.id] = {
-            read: entry?.read ?? false,
-            write: entry?.write ?? false,
-        };
+function toggleExtra(slug: string, checked: boolean) {
+    const set = new Set(formExtraPermissions.value);
+    if (checked) {
+        set.add(slug);
+    } else {
+        set.delete(slug);
     }
-    formModules.value = out;
+    formExtraPermissions.value = [...set];
+}
+
+function isExtraChecked(slug: string): boolean {
+    return formExtraPermissions.value.includes(slug);
 }
 
 async function load() {
@@ -144,12 +108,12 @@ async function load() {
             api<{ data: UserRow[] }>('/company/users'),
             api<{
                 data: RoleOption[];
-                modules_catalog: ModuleCatalogItem[];
+                permission_groups: PermissionGroup[];
             }>('/company/roles'),
         ]);
         users.value = usersRes.data;
         roles.value = rolesRes.data;
-        modulesCatalog.value = rolesRes.modules_catalog ?? [];
+        permissionGroups.value = rolesRes.permission_groups ?? [];
     } catch (e) {
         toast.error((e as Error).message);
     } finally {
@@ -164,7 +128,7 @@ function openCreate() {
     formName.value = '';
     formRole.value = 'technician';
     formActive.value = true;
-    formModules.value = defaultModulesFromRole(formRole.value);
+    formExtraPermissions.value = [];
     showPanel.value = true;
 }
 
@@ -175,7 +139,7 @@ function openEdit(user: UserRow) {
     formName.value = user.name;
     formRole.value = user.role;
     formActive.value = user.is_active;
-    loadModulesIntoForm(user.modules);
+    formExtraPermissions.value = [...user.extra_permissions];
     showPanel.value = true;
 }
 
@@ -183,52 +147,36 @@ function closePanel() {
     showPanel.value = false;
 }
 
-function setModuleRead(moduleId: string, read: boolean) {
-    const current = formModules.value[moduleId] ?? { read: false, write: false };
-    let write = current.write;
-    if (!read) {
-        write = false;
-    }
-    formModules.value = {
-        ...formModules.value,
-        [moduleId]: { read, write },
-    };
-}
-
-function setModuleWrite(moduleId: string, write: boolean) {
-    const current = formModules.value[moduleId] ?? { read: false, write: false };
-    formModules.value = {
-        ...formModules.value,
-        [moduleId]: { read: write ? true : current.read, write },
-    };
-}
-
 function visibleModuleCount(user: UserRow) {
     return Object.values(user.modules).filter((m) => m.visible).length;
+}
+
+function extraCount(user: UserRow) {
+    return user.extra_permissions.length;
 }
 
 async function save() {
     saving.value = true;
     try {
-        const modules = { ...formModules.value };
+        const payload = {
+            role: formRole.value,
+            extra_permissions: formExtraPermissions.value,
+            ...(isCreate.value
+                ? {
+                      email: formEmail.value,
+                      name: formName.value || undefined,
+                  }
+                : { is_active: formActive.value }),
+        };
         if (isCreate.value) {
             await api('/company/users', {
                 method: 'POST',
-                body: JSON.stringify({
-                    email: formEmail.value,
-                    name: formName.value || undefined,
-                    role: formRole.value,
-                    modules,
-                }),
+                body: JSON.stringify(payload),
             });
         } else if (panelUser.value) {
             await api(`/company/users/${panelUser.value.id}`, {
                 method: 'PUT',
-                body: JSON.stringify({
-                    role: formRole.value,
-                    is_active: formActive.value,
-                    modules,
-                }),
+                body: JSON.stringify(payload),
             });
         }
         const wasCreate = isCreate.value;
@@ -246,12 +194,12 @@ onMounted(load);
 </script>
 
 <template>
-    <div class="portal-page">
+    <div class="portal-page" data-tour="page-company-users">
         <div class="flex flex-wrap items-start justify-between gap-3">
             <PageHeader
                 class="flex-1"
                 title="Usuarios de la empresa"
-                subtitle="Define rol y, por módulo, acceso de lectura y escritura. Si ambos están apagados, el módulo no aparece en el menú del usuario."
+                subtitle="Asigna un rol (plantilla global de plataforma) y permisos adicionales solo para esta persona. Los permisos del rol se definen en Plataforma → Roles y permisos."
             />
             <AppButton type="button" class="shrink-0" @click="openCreate">Agregar usuario</AppButton>
         </div>
@@ -267,6 +215,7 @@ onMounted(load);
                         <th class="py-2 pr-4 font-medium">Nombre</th>
                         <th class="py-2 pr-4 font-medium">Correo</th>
                         <th class="py-2 pr-4 font-medium">Rol</th>
+                        <th class="py-2 pr-4 font-medium">Extras</th>
                         <th class="py-2 pr-4 font-medium">Módulos visibles</th>
                         <th class="py-2 pr-4 font-medium">Estado</th>
                         <th class="py-2 font-medium" />
@@ -281,6 +230,7 @@ onMounted(load);
                         <td class="text-portal-heading py-3 pr-4 font-medium">{{ u.name }}</td>
                         <td class="text-portal-muted py-3 pr-4">{{ u.email }}</td>
                         <td class="text-portal-heading py-3 pr-4">{{ u.role_label }}</td>
+                        <td class="text-portal-muted py-3 pr-4">{{ extraCount(u) }}</td>
                         <td class="text-portal-muted py-3 pr-4">{{ visibleModuleCount(u) }}</td>
                         <td class="py-3 pr-4">
                             <span
@@ -304,7 +254,6 @@ onMounted(load);
             </table>
         </div>
 
-
         <AppModal :open="showPanel" :title="isCreate ? 'Agregar usuario' : 'Editar usuario'" @close="closePanel">
             <form id="company-user-form" class="space-y-4" @submit.prevent="save">
                 <MaterialField
@@ -324,45 +273,53 @@ onMounted(load);
 
                 <div class="portal-form-panel">
                     <p class="text-portal-muted text-xs font-semibold uppercase tracking-wide">
-                        Acceso por módulo
+                        Permisos del rol (solo lectura)
+                    </p>
+                    <p v-if="rolePermissionSet.size === 0" class="text-portal-muted mt-2 text-xs">Sin permisos base.</p>
+                    <ul v-else class="text-portal-muted mt-2 flex flex-wrap gap-1 text-xs">
+                        <li
+                            v-for="slug in [...rolePermissionSet].sort()"
+                            :key="slug"
+                            class="rounded bg-white/5 px-2 py-0.5 font-mono"
+                        >
+                            {{ slug }}
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="portal-form-panel max-h-80 overflow-y-auto">
+                    <p class="text-portal-muted text-xs font-semibold uppercase tracking-wide">
+                        Permisos adicionales
                     </p>
                     <p class="text-portal-muted mt-1 text-xs">
-                        Lectura permite ver; escritura incluye crear y editar. Sin ninguno, el módulo se oculta del
-                        menú.
+                        Solo aparecen permisos que el rol seleccionado no incluye ya. Se suman al rol para el menú y la API.
                     </p>
-                    <table class="portal-data-table mt-3">
-                        <thead>
-                            <tr class="text-left text-xs">
-                                <th class="pb-2 pr-2 font-medium">Módulo</th>
-                                <th class="pb-2 pr-2 font-medium">Lectura</th>
-                                <th class="pb-2 font-medium">Escritura</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="mod in editableModules" :key="mod.id" class="border-t">
-                                <td class="text-portal-heading py-2 pr-2 font-medium">{{ mod.label }}</td>
-                                <td class="py-2 pr-2">
-                                    <input
-                                        type="checkbox"
-                                        :checked="formModules[mod.id]?.read"
-                                        @change="
-                                            setModuleRead(mod.id, ($event.target as HTMLInputElement).checked)
-                                        "
-                                    />
-                                </td>
-                                <td class="py-2">
-                                    <input
-                                        type="checkbox"
-                                        :disabled="!mod.supports_write"
-                                        :checked="formModules[mod.id]?.write"
-                                        @change="
-                                            setModuleWrite(mod.id, ($event.target as HTMLInputElement).checked)
-                                        "
-                                    />
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <p v-if="grantableGroups.length === 0" class="text-portal-muted mt-3 text-sm">
+                        Este rol ya incluye todos los permisos de la plataforma.
+                    </p>
+                    <div v-for="group in grantableGroups" :key="group.module_id" class="mt-4">
+                        <p class="text-portal-heading text-sm font-medium">{{ group.module_label }}</p>
+                        <ul class="mt-2 space-y-2">
+                            <li
+                                v-for="perm in group.permissions"
+                                :key="perm.slug"
+                                class="text-portal-muted flex items-start gap-2 text-sm"
+                            >
+                                <input
+                                    type="checkbox"
+                                    class="mt-1 rounded border-portal-border"
+                                    :checked="isExtraChecked(perm.slug)"
+                                    @change="
+                                        toggleExtra(perm.slug, ($event.target as HTMLInputElement).checked)
+                                    "
+                                />
+                                <span>
+                                    <span class="text-portal-heading">{{ perm.label }}</span>
+                                    <span class="ml-1 font-mono text-xs opacity-70">{{ perm.slug }}</span>
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </form>
             <template #footer>

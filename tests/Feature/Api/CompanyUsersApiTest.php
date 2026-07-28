@@ -34,22 +34,10 @@ class CompanyUsersApiTest extends TestCase
             ->assertJsonStructure(['data' => [['id', 'email', 'role', 'is_active']]]);
     }
 
-    public function test_admin_can_hide_clients_module_for_technician(): void
+    public function test_technician_without_clients_permission_cannot_list_clients(): void
     {
         $company = Company::query()->first();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
         $technician = User::query()->where('email', 'tecnico@noah.local')->first();
-        Sanctum::actingAs($admin);
-
-        $modules = $this->allModulesOffExcept(['routines']);
-        $modules['routines'] = ['read' => true, 'write' => true];
-
-        $this->withHeader('X-Company-Id', (string) $company->id)
-            ->putJson('/api/v1/company/users/'.$technician->id, [
-                'modules' => $modules,
-            ])
-            ->assertOk();
-
         Sanctum::actingAs($technician);
 
         $me = $this->withHeader('X-Company-Id', (string) $company->id)
@@ -58,32 +46,25 @@ class CompanyUsersApiTest extends TestCase
             ->json('companies.0.modules');
 
         $this->assertFalse($me['clients']['visible']);
-        $this->assertTrue($me['routines']['visible']);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
             ->getJson('/api/v1/clients')
             ->assertForbidden();
     }
 
-    /**
-     * @param  list<string>  $except
-     * @return array<string, array{read: bool, write: bool}>
-     */
-    private function allModulesOffExcept(array $except): array
+    public function test_modules_payload_is_rejected(): void
     {
-        $modules = [];
-        foreach (\App\Support\NoahModuleCatalog::definitions() as $definition) {
-            if (! empty($definition['always_visible'])) {
-                continue;
-            }
-            $id = $definition['id'];
-            if (in_array($id, $except, true)) {
-                continue;
-            }
-            $modules[$id] = ['read' => false, 'write' => false];
-        }
+        $company = Company::query()->first();
+        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $technician = User::query()->where('email', 'tecnico@noah.local')->first();
+        Sanctum::actingAs($admin);
 
-        return $modules;
+        $this->withHeader('X-Company-Id', (string) $company->id)
+            ->putJson('/api/v1/company/users/'.$technician->id, [
+                'modules' => ['clients' => ['read' => true, 'write' => false]],
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['modules']);
     }
 
     public function test_supervisor_cannot_manage_users(): void

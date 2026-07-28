@@ -52,6 +52,55 @@ const catalogOptions = computed(() => [
     })),
 ]);
 
+type Client = { id: number; legal_name: string };
+
+const clients = ref<Client[]>([]);
+const linkAsset = ref<Asset | null>(null);
+const linkClientId = ref('');
+const linkSerial = ref('');
+const linking = ref(false);
+
+const clientOptions = computed(() =>
+    clients.value.map((c) => ({ value: String(c.id), label: c.legal_name })),
+);
+
+async function openLinkClient(asset: Asset) {
+    linkAsset.value = asset;
+    linkClientId.value = '';
+    linkSerial.value = asset.serial_number ?? '';
+    if (clients.value.length === 0) {
+        try {
+            const res = await api<{ data: Client[] }>('/clients');
+            clients.value = res.data;
+        } catch (e) {
+            toast.error((e as Error).message);
+        }
+    }
+}
+
+async function submitClientLink() {
+    if (!linkAsset.value || !linkClientId.value) {
+        toast.warning('Selecciona un cliente.');
+        return;
+    }
+    linking.value = true;
+    try {
+        await api(`/assets/${linkAsset.value.id}/client-assignments`, {
+            method: 'POST',
+            body: JSON.stringify({
+                client_id: Number(linkClientId.value),
+                serial_number: linkSerial.value,
+            }),
+        });
+        toast.success('Cliente vinculado al activo.');
+        linkAsset.value = null;
+    } catch (e) {
+        toast.error((e as Error).message);
+    } finally {
+        linking.value = false;
+    }
+}
+
 function resetForm() {
     form.value = {
         site_id: sites.value[0] ? String(sites.value[0].id) : '',
@@ -152,7 +201,7 @@ onMounted(load);
 </script>
 
 <template>
-    <div class="portal-page">
+    <div class="portal-page" data-tour="page-assets">
         <div class="flex flex-wrap items-start justify-between gap-3">
             <PageHeader class="flex-1" title="Activos" subtitle="Instancias físicas en sitio vinculadas al catálogo." />
             <AppButton v-if="canWrite" type="button" class="shrink-0" @click="openCreate">
@@ -180,6 +229,9 @@ onMounted(load);
                         <td class="text-portal-muted">{{ asset.catalog_item?.code ?? '—' }}</td>
                         <td class="text-portal-muted">{{ asset.location_label ?? '—' }}</td>
                         <td v-if="canWrite" class="space-x-2 text-xs">
+                            <button type="button" class="text-portal-link underline" @click="openLinkClient(asset)">
+                                Cliente
+                            </button>
                             <button type="button" class="text-portal-link underline" @click="openEdit(asset)">
                                 Editar
                             </button>
@@ -224,6 +276,26 @@ onMounted(load);
                 <AppButton type="submit" form="asset-form" :disabled="saving || (!editingId && sites.length === 0)">
                     Guardar
                 </AppButton>
+            </template>
+        </AppModal>
+
+        <AppModal
+            :open="linkAsset !== null && canWrite"
+            title="Vincular cliente por serie"
+            size="sm"
+            @close="linkAsset = null"
+        >
+            <form id="link-client-form" class="space-y-4" @submit.prevent="submitClientLink">
+                <p class="text-portal-muted text-sm">
+                    Activo <strong class="text-portal-heading">{{ linkAsset?.tag }}</strong> — el número de serie debe
+                    coincidir con el registrado en el activo.
+                </p>
+                <MaterialSelect v-model="linkClientId" label="Cliente" :options="clientOptions" required />
+                <MaterialField v-model="linkSerial" label="Confirmar número de serie" required />
+            </form>
+            <template #footer>
+                <button type="button" class="text-portal-muted text-sm" @click="linkAsset = null">Cancelar</button>
+                <AppButton type="submit" form="link-client-form" :disabled="linking">Vincular</AppButton>
             </template>
         </AppModal>
     </div>

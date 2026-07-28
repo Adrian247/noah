@@ -66,7 +66,7 @@ onMounted(load);
 </script>
 
 <template>
-    <div class="portal-page">
+    <div class="portal-page" data-tour="page-design-forms">
         <div class="flex flex-wrap items-start justify-between gap-3">
             <PageHeader
                 class="flex-1"

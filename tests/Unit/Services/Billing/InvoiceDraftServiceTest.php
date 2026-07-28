@@ -8,10 +8,12 @@ use App\Models\User;
 use App\Services\Billing\InvoiceDraftService;
 use App\Support\CurrentCompany;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\CreatesDemoRoutine;
 use Tests\TestCase;
 
 class InvoiceDraftServiceTest extends TestCase
 {
+    use CreatesDemoRoutine;
     use RefreshDatabase;
 
     public function test_draft_total_matches_consumptions_plus_tax_when_labor_disabled(): void
@@ -19,10 +21,9 @@ class InvoiceDraftServiceTest extends TestCase
         config(['noah.billing.labor_rate_per_hour' => 0, 'noah.billing.tax_rate' => 0.16]);
         $this->seed();
 
-        $routine = Routine::query()->first();
-        $technician = User::query()->where('email', 'tecnico@noah.local')->first();
-
-        $execution = $routine->executions()->create([
+        $technician = User::query()->where('email', 'tecnico@noah.local')->firstOrFail();
+        $routine = $this->demoRoutine($technician);
+        $execution = $routine->latestExecution ?? $routine->executions()->create([
             'performed_by' => $technician->id,
             'duration_minutes' => 120,
             'status' => 'submitted',

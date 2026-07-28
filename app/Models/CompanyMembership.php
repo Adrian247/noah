@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CompanyMembership extends Model
 {
-    protected $fillable = ['company_id', 'user_id', 'role', 'is_active', 'module_access'];
+    protected $fillable = ['company_id', 'user_id', 'client_id', 'role', 'is_active', 'module_access'];
 
     protected function casts(): array
     {
@@ -27,5 +27,10 @@ class CompanyMembership extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
     }
 }

@@ -18,6 +18,29 @@ const router = createRouter({
             redirect: '/app/dashboard',
         },
         {
+            path: '/portal',
+            component: () => import('@/layouts/ClientPortalShell.vue'),
+            meta: { requiresAuth: true, clientPortal: true },
+            children: [
+                { path: '', redirect: '/portal/invoices' },
+                {
+                    path: 'invoices',
+                    name: 'portal-invoices',
+                    component: () => import('@/pages/portal/PortalInvoicesPage.vue'),
+                },
+                {
+                    path: 'routines',
+                    name: 'portal-routines',
+                    component: () => import('@/pages/portal/PortalRoutinesPage.vue'),
+                },
+                {
+                    path: 'routines/:id',
+                    name: 'portal-routine-detail',
+                    component: () => import('@/pages/portal/PortalRoutineDetailPage.vue'),
+                },
+            ],
+        },
+        {
             path: '/app',
             component: AppShell,
             meta: { requiresAuth: true },
@@ -33,6 +56,12 @@ const router = createRouter({
                     name: 'routines',
                     component: () => import('@/pages/RoutinesPage.vue'),
                     meta: { title: 'Rutinas', moduleId: 'routines' },
+                },
+                {
+                    path: 'routines/types',
+                    name: 'routine-types',
+                    component: () => import('@/pages/RoutineTypesPage.vue'),
+                    meta: { title: 'Tipos de rutina', moduleId: 'design_routine_types' },
                 },
                 {
                     path: 'routines/:id',
@@ -63,10 +92,30 @@ const router = createRouter({
                     meta: { title: 'Catálogo de equipos', moduleId: 'catalog_items' },
                 },
                 {
+                    path: 'catalog/items/types',
+                    name: 'catalog-equipment-types',
+                    component: () => import('@/pages/EquipmentTypesPage.vue'),
+                    meta: { title: 'Tipos de equipo', moduleId: 'catalog_items' },
+                },
+                {
+                    path: 'catalog/equipment-types',
+                    redirect: { name: 'catalog-equipment-types' },
+                },
+                {
                     path: 'catalog/supplies',
                     name: 'catalog-supplies',
                     component: () => import('@/pages/SuppliesPage.vue'),
                     meta: { title: 'Insumos', moduleId: 'catalog_supplies' },
+                },
+                {
+                    path: 'catalog/supplies/types',
+                    name: 'catalog-supply-types',
+                    component: () => import('@/pages/SupplyTypesPage.vue'),
+                    meta: { title: 'Tipos de insumo', moduleId: 'catalog_supplies' },
+                },
+                {
+                    path: 'catalog/supply-types',
+                    redirect: { name: 'catalog-supply-types' },
                 },
                 {
                     path: 'catalog/suppliers',
@@ -94,9 +143,7 @@ const router = createRouter({
                 },
                 {
                     path: 'design/routine-types',
-                    name: 'routine-types',
-                    component: () => import('@/pages/RoutineTypesPage.vue'),
-                    meta: { title: 'Tipos de rutina', moduleId: 'design_routine_types' },
+                    redirect: { name: 'routine-types' },
                 },
                 {
                     path: 'design/forms',
@@ -159,6 +206,12 @@ const router = createRouter({
                     meta: { title: 'Usuarios', requiresRole: 'administrator' },
                 },
                 {
+                    path: 'platform/role-permissions',
+                    name: 'platform-role-permissions',
+                    component: () => import('@/pages/PlatformRolePermissionsPage.vue'),
+                    meta: { title: 'Roles de plataforma', requiresPlatformAdmin: true },
+                },
+                {
                     path: 'admin/portal',
                     name: 'portal-settings',
                     component: () => import('@/pages/PortalSettingsPage.vue'),
@@ -182,26 +235,44 @@ router.beforeEach(async (to) => {
         applyStoredThemeForApp();
     }
 
-    const authed = Boolean(getToken());
-    if (to.meta.requiresAuth && !authed) {
-        return { name: 'login' };
+    const auth = useAuthStore();
+    const needsAuth = to.matched.some((record) => record.meta.requiresAuth);
+
+    if (to.meta.guest) {
+        if (getToken()) {
+            const ok = await auth.ensureSession();
+            if (ok) {
+                const company = auth.companies[0];
+                if (company?.role === 'client') {
+                    return { name: 'portal-invoices' };
+                }
+                return { name: 'dashboard' };
+            }
+        }
+        return;
     }
-    if (to.meta.guest && authed) {
-        return { name: 'dashboard' };
+
+    if (needsAuth) {
+        const ok = await auth.ensureSession();
+        if (!ok) {
+            return { name: 'login' };
+        }
+    }
+
+    if (to.path.startsWith('/app')) {
+        const companyId = getCompanyId();
+        const company =
+            auth.companies.find((c) => String(c.id) === companyId) ?? auth.companies[0];
+        if (company?.role === 'client') {
+            return { name: 'portal-invoices' };
+        }
     }
 
     const requiredModule = to.meta.moduleId as string | undefined;
-    if (requiredModule && authed) {
-        const auth = useAuthStore();
-        if (!auth.user) {
-            try {
-                await auth.fetchMe();
-            } catch {
-                return { name: 'login' };
-            }
-        }
+    if (requiredModule) {
         const companyId = getCompanyId();
-        const company = auth.companies.find((c) => String(c.id) === companyId) ?? auth.companies[0];
+        const company =
+            auth.companies.find((c) => String(c.id) === companyId) ?? auth.companies[0];
         const modules = company?.modules ?? {};
         const access = modules[requiredModule];
         if (!access?.visible) {
@@ -210,34 +281,24 @@ router.beforeEach(async (to) => {
     }
 
     const requiredRole = to.meta.requiresRole as string | undefined;
-    if (requiredRole && authed) {
-        const auth = useAuthStore();
-        if (!auth.user) {
-            try {
-                await auth.fetchMe();
-            } catch {
-                return { name: 'login' };
-            }
-        }
+    if (requiredRole) {
         const companyId = getCompanyId();
-        const company = auth.companies.find((c) => String(c.id) === companyId) ?? auth.companies[0];
+        const company =
+            auth.companies.find((c) => String(c.id) === companyId) ?? auth.companies[0];
         if (company?.role !== requiredRole) {
             return { name: 'dashboard' };
         }
     }
 
+    if (to.meta.requiresPlatformAdmin && !auth.user?.is_platform_admin) {
+        return { name: 'dashboard' };
+    }
+
     const requiredPermission = to.meta.requiresPermission as string | undefined;
-    if (requiredPermission && authed) {
-        const auth = useAuthStore();
-        if (!auth.user) {
-            try {
-                await auth.fetchMe();
-            } catch {
-                return { name: 'login' };
-            }
-        }
+    if (requiredPermission) {
         const companyId = getCompanyId();
-        const company = auth.companies.find((c) => String(c.id) === companyId) ?? auth.companies[0];
+        const company =
+            auth.companies.find((c) => String(c.id) === companyId) ?? auth.companies[0];
         const permissions = company?.permissions ?? [];
         const elevated =
             requiredPermission === 'clients.view' && permissions.includes('clients.manage');
