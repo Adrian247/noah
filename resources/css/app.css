@@ -167,6 +167,30 @@
         @apply rounded-xl border border-white/12 bg-white/5 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500;
     }
 
+    /* Listas nativas de <select>: evitar texto claro sobre fondo claro del SO */
+    [data-theme='dark'] select {
+        color-scheme: dark;
+    }
+
+    [data-theme='light'] select {
+        color-scheme: light;
+    }
+
+    [data-theme='dark'] select option {
+        background-color: #0f172a;
+        color: #f1f5f9;
+    }
+
+    [data-theme='dark'] select option:checked,
+    [data-theme='dark'] select option:hover {
+        background-color: #1e293b;
+        color: #fef3c7;
+    }
+
+    [data-theme='dark'] .material-field__select {
+        background-color: rgb(15 23 42 / 0.55);
+    }
+
     /* Compatibilidad oscuro: paneles legacy en páginas internas */
     [data-theme='dark'] .app-portal-shell main .text-slate-900 {
         @apply text-slate-50;

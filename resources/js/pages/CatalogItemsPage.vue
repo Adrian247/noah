@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { api } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
 import { useToast } from '@/composables/useToast';
+import { useCatalogTypeFormCapture } from '@/composables/useCatalogTypeFormCapture';
 import ReadOnlyNotice from '@/components/ui/ReadOnlyNotice.vue';
 import SectionSubnav from '@/components/ui/SectionSubnav.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
@@ -10,6 +11,7 @@ import AppModal from '@/components/ui/AppModal.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
 import MaterialSelect from '@/components/ui/MaterialSelect.vue';
 import AppButton from '@/components/ui/AppButton.vue';
+import DynamicFormRenderer from '@/components/domain/DynamicFormRenderer.vue';
 import { catalogEquipmentSectionNav } from '@/lib/sectionNav';
 
 type EquipmentTypeRef = { id: number; code: string; name: string };
@@ -21,11 +23,16 @@ type CatalogItem = {
     manufacturer?: string | null;
     equipment_type_id?: number | null;
     equipment_type?: EquipmentTypeRef | null;
+    specifications?: Record<string, unknown> | null;
 };
 
 const { canWriteModule } = useModuleAccess();
 const toast = useToast();
 const canWrite = computed(() => canWriteModule('catalog_items'));
+
+const { capture, loadForType, reset: resetCapture } = useCatalogTypeFormCapture(
+    (typeId) => `/catalog/equipment-types/${typeId}/form-capture`,
+);
 
 const items = ref<CatalogItem[]>([]);
 const equipmentTypes = ref<EquipmentTypeRef[]>([]);
@@ -34,6 +41,7 @@ const loading = ref(true);
 const saving = ref(false);
 const showForm = ref(false);
 const editingId = ref<number | null>(null);
+const formResponses = ref<Record<string, unknown>>({});
 
 const form = ref({ equipment_type_id: '', code: '', name: '', manufacturer: '' });
 
@@ -54,6 +62,10 @@ const typeFormOptions = computed(() =>
     equipmentTypes.value.map((t) => ({ value: String(t.id), label: `${t.name} (${t.code})` })),
 );
 
+function resetFormResponses() {
+    formResponses.value = {};
+}
+
 function resetForm() {
     form.value = {
         equipment_type_id: equipmentTypes.value[0] ? String(equipmentTypes.value[0].id) : '',
@@ -62,14 +74,19 @@ function resetForm() {
         manufacturer: '',
     };
     editingId.value = null;
+    resetFormResponses();
+    resetCapture();
 }
 
-function openCreate() {
+async function openCreate() {
     resetForm();
     showForm.value = true;
+    if (form.value.equipment_type_id) {
+        await loadForType(form.value.equipment_type_id, resetFormResponses);
+    }
 }
 
-function openEdit(item: CatalogItem) {
+async function openEdit(item: CatalogItem) {
     editingId.value = item.id;
     form.value = {
         equipment_type_id: item.equipment_type_id ? String(item.equipment_type_id) : '',
@@ -77,8 +94,22 @@ function openEdit(item: CatalogItem) {
         name: item.name,
         manufacturer: item.manufacturer ?? '',
     };
+    formResponses.value = { ...(item.specifications ?? {}) };
     showForm.value = true;
+    if (form.value.equipment_type_id) {
+        await loadForType(form.value.equipment_type_id);
+    }
 }
+
+watch(
+    () => form.value.equipment_type_id,
+    async (typeId, prev) => {
+        if (!showForm.value || typeId === prev) {
+            return;
+        }
+        await loadForType(typeId, resetFormResponses);
+    },
+);
 
 async function load() {
     loading.value = true;
@@ -103,12 +134,18 @@ async function save() {
     }
     saving.value = true;
     try {
-        const body = {
+        const body: Record<string, unknown> = {
             equipment_type_id: Number(form.value.equipment_type_id),
             code: form.value.code,
             name: form.value.name,
             manufacturer: form.value.manufacturer || null,
         };
+        if (capture.value.configured) {
+            body.specifications = formResponses.value;
+        } else if (editingId.value) {
+            body.specifications = formResponses.value;
+        }
+
         if (editingId.value) {
             await api(`/catalog/items/${editingId.value}`, { method: 'PUT', body: JSON.stringify(body) });
         } else {
@@ -189,7 +226,7 @@ onMounted(load);
         <AppModal
             :open="showForm && canWrite"
             :title="editingId ? 'Editar equipo' : 'Nuevo equipo'"
-            size="sm"
+            size="lg"
             @close="showForm = false"
         >
             <form id="catalog-item-form" class="space-y-4" @submit.prevent="save">
@@ -202,6 +239,27 @@ onMounted(load);
                 <MaterialField v-model="form.code" label="Código" required />
                 <MaterialField v-model="form.name" label="Nombre" required />
                 <MaterialField v-model="form.manufacturer" label="Fabricante" />
+
+                <p v-if="capture.loading" class="text-portal-muted text-sm">Cargando formulario del tipo…</p>
+                <div
+                    v-else-if="!capture.configured"
+                    class="rounded-xl border border-amber-500/35 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-100"
+                    role="alert"
+                >
+                    {{ capture.message || 'Este tipo no tiene formulario asignado o publicado.' }}
+                </div>
+                <div v-else class="space-y-3 border-t border-white/10 pt-4">
+                    <p class="text-portal-heading text-sm font-medium">
+                        Ficha: {{ capture.formName }}
+                    </p>
+                    <DynamicFormRenderer
+                        v-model="formResponses"
+                        :schema="capture.schema"
+                        :form-settings="capture.formSettings"
+                        :option-catalogs="capture.optionCatalogs"
+                        :disabled="!canWrite"
+                    />
+                </div>
             </form>
             <template #footer>
                 <button
@@ -211,7 +269,9 @@ onMounted(load);
                 >
                     Cancelar
                 </button>
-                <AppButton type="submit" form="catalog-item-form" :disabled="saving">Guardar</AppButton>
+                <AppButton type="submit" form="catalog-item-form" :disabled="saving || capture.loading">
+                    Guardar
+                </AppButton>
             </template>
         </AppModal>
     </div>

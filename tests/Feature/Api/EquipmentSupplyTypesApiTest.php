@@ -58,6 +58,20 @@ class EquipmentSupplyTypesApiTest extends TestCase
             ->putJson('/api/v1/catalog/equipment-types/'.$type->id, ['name' => 'Compresores industriales'])
             ->assertOk()
             ->assertJsonPath('data.name', 'Compresores industriales');
+
+        $this->withToken($token)
+            ->withHeaders($headers)
+            ->getJson('/api/v1/catalog/equipment-types/form-options')
+            ->assertOk()
+            ->assertJsonFragment(['slug' => 'inspeccion-vehiculo-v1']);
+
+        $vehiculo = EquipmentType::query()->where('code', 'vehiculo')->firstOrFail();
+        $this->withToken($token)
+            ->withHeaders($headers)
+            ->getJson('/api/v1/catalog/equipment-types/'.$vehiculo->id.'/form-capture')
+            ->assertOk()
+            ->assertJsonPath('data.configured', true)
+            ->assertJsonPath('data.form.name', 'Inspección vehículo (normalizada)');
     }
 
     public function test_supply_type_crud(): void

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\FormUsage;
 use App\Enums\MembershipRole;
 use App\Enums\RoutineStatus;
 use App\Models\Asset;
@@ -181,7 +182,7 @@ class NoahDemoSeeder extends Seeder
 
         $normalizedFormDef = FormDefinition::query()->updateOrCreate(
             ['company_id' => $company->id, 'slug' => 'inspeccion-vehiculo-v1'],
-            ['name' => 'Inspección vehículo (normalizada)']
+            ['name' => 'Inspección vehículo (normalizada)', 'usage' => FormUsage::Equipment]
         );
 
         $normalizedFormVersion = FormVersion::query()->updateOrCreate(
@@ -364,7 +365,7 @@ class NoahDemoSeeder extends Seeder
 
         $formDef = FormDefinition::query()->updateOrCreate(
             ['company_id' => $company->id, 'slug' => 'revision-mayor-vehiculo-premium'],
-            ['name' => 'Revisión mayor vehículo — agencia premium']
+            ['name' => 'Revisión mayor vehículo — agencia premium', 'usage' => FormUsage::Routine]
         );
 
         $formVersion = FormVersion::query()->updateOrCreate(
@@ -628,7 +629,7 @@ class NoahDemoSeeder extends Seeder
             ['company_id' => $company->id, 'slug' => 'revision-mayor-vehiculo-premium'],
             [
                 'name' => 'Revisión mayor vehículo (premium)',
-                'form_version_id' => $normalizedFormVersion->id,
+                'form_version_id' => $formVersion->id,
                 'report_template_version_id' => $reportVersion->id,
                 'is_active' => true,
             ]

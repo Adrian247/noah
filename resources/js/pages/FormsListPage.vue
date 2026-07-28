@@ -7,12 +7,17 @@ import { useToast } from '@/composables/useToast';
 import ReadOnlyNotice from '@/components/ui/ReadOnlyNotice.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
+import MaterialSelect from '@/components/ui/MaterialSelect.vue';
 import AppButton from '@/components/ui/AppButton.vue';
+import AppModal from '@/components/ui/AppModal.vue';
+import { FORM_USAGE_OPTIONS, formUsageLabel } from '@/lib/formUsage';
 
 type FormRow = {
     id: number;
     name: string;
     slug: string;
+    usage: string;
+    usage_label?: string;
     published_version?: { version: number; status: string } | null;
     draft_version?: { version: number; status: string } | null;
 };
@@ -24,7 +29,9 @@ const canWrite = computed(() => canWriteModule('design_forms'));
 const forms = ref<FormRow[]>([]);
 const loading = ref(true);
 const name = ref('');
+const usage = ref('routine');
 const showCreate = ref(false);
+const creating = ref(false);
 
 async function load() {
     loading.value = true;
@@ -38,28 +45,44 @@ async function load() {
     }
 }
 
+function openCreate() {
+    name.value = '';
+    usage.value = 'routine';
+    showCreate.value = true;
+}
+
 async function createForm() {
     if (!name.value.trim()) {
         toast.warning('Indica el nombre del formulario.');
         return;
     }
+    creating.value = true;
     try {
         await api('/design/forms', {
             method: 'POST',
-            body: JSON.stringify({ name: name.value.trim() }),
+            body: JSON.stringify({ name: name.value.trim(), usage: usage.value }),
         });
-        name.value = '';
         showCreate.value = false;
         toast.success('Formulario creado.');
         await load();
     } catch (e) {
         toast.error((e as Error).message);
+    } finally {
+        creating.value = false;
     }
 }
 
-function openCreate() {
-    name.value = '';
-    showCreate.value = !showCreate.value;
+async function removeForm(row: FormRow) {
+    if (!window.confirm(`¿Eliminar el formulario «${row.name}»? Esta acción no se puede deshacer.`)) {
+        return;
+    }
+    try {
+        await api(`/design/forms/${row.id}`, { method: 'DELETE' });
+        toast.success('Formulario eliminado.');
+        await load();
+    } catch (e) {
+        toast.error((e as Error).message);
+    }
 }
 
 onMounted(load);
@@ -82,28 +105,55 @@ onMounted(load);
                 </RouterLink>
             </div>
         </div>
-        <form
-            v-if="showCreate && canWrite"
-            class="portal-form-panel flex max-w-xl flex-wrap items-end gap-4"
-            @submit.prevent="createForm"
+
+        <AppModal
+            :open="showCreate && canWrite"
+            title="Nuevo formulario"
+            size="sm"
+            @close="showCreate = false"
         >
-            <MaterialField v-model="name" label="Nombre del formulario" class="min-w-[14rem] flex-1" required />
-            <AppButton type="submit">Crear</AppButton>
-            <button type="button" class="text-portal-muted text-sm underline" @click="showCreate = false">
-                Cancelar
-            </button>
-        </form>
+            <form id="create-form-def" class="space-y-4" @submit.prevent="createForm">
+                <MaterialField v-model="name" label="Nombre" required />
+                <MaterialSelect
+                    v-model="usage"
+                    label="Uso del formulario"
+                    :options="[...FORM_USAGE_OPTIONS]"
+                    required
+                />
+                <p class="text-portal-muted text-xs">
+                    El uso no se puede cambiar después. Rutina: tipos de rutina; Equipo/Insumo: fichas en catálogo.
+                </p>
+            </form>
+            <template #footer>
+                <button
+                    type="button"
+                    class="text-portal-muted rounded-xl px-4 py-2 text-sm hover:bg-white/5"
+                    @click="showCreate = false"
+                >
+                    Cancelar
+                </button>
+                <AppButton type="submit" form="create-form-def" :disabled="creating">
+                    {{ creating ? 'Creando…' : 'Crear' }}
+                </AppButton>
+            </template>
+        </AppModal>
+
         <ReadOnlyNotice v-if="!canWrite" module-label="Formularios" />
         <p v-if="loading" class="text-portal-muted">Cargando…</p>
         <ul v-else class="portal-list-panel divide-y">
-            <li v-for="f in forms" :key="f.id" class="flex items-center justify-between px-4 py-3 text-sm">
-                <div>
+            <li v-for="f in forms" :key="f.id" class="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+                <div class="min-w-0 flex-1">
                     <RouterLink class="text-portal-link font-medium underline" :to="`/app/design/forms/${f.id}`">
                         {{ f.name }}
                     </RouterLink>
                     <p class="text-portal-muted text-xs">{{ f.slug }}</p>
+                    <span
+                        class="mt-1 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-200/90"
+                    >
+                        {{ f.usage_label ?? formUsageLabel(f.usage) }}
+                    </span>
                 </div>
-                <div class="text-portal-muted text-right text-xs">
+                <div class="text-portal-muted shrink-0 text-right text-xs">
                     <p v-if="f.published_version">
                         En uso:
                         <span class="text-portal-heading font-medium"
@@ -112,6 +162,14 @@ onMounted(load);
                     </p>
                     <p v-else class="text-amber-500">Sin versión publicada</p>
                     <p v-if="f.draft_version">Borrador: v{{ f.draft_version.version }}</p>
+                    <button
+                        v-if="canWrite"
+                        type="button"
+                        class="mt-2 text-xs text-red-400 hover:text-red-300"
+                        @click="removeForm(f)"
+                    >
+                        Eliminar
+                    </button>
                 </div>
             </li>
         </ul>

@@ -90,7 +90,7 @@ async function load() {
         const [typesRes, wfRes, formsRes, reportsRes] = await Promise.all([
             api<{ data: RoutineType[] }>('/routine-types?all=1'),
             api<{ data: WorkflowDef[] }>('/design/workflows'),
-            api<{ data: FormCatalog[] }>('/design/forms'),
+            api<{ data: FormCatalog[] }>('/design/forms?usage=routine'),
             api<{ data: ReportCatalog[] }>('/design/reports'),
         ]);
         types.value = typesRes.data;

@@ -2,8 +2,13 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\FormUsage;
 use App\Http\Controllers\Controller;
 use App\Models\EquipmentType;
+use App\Models\FormDefinition;
+use App\Services\Forms\CatalogTypeFormCapture;
+use App\Services\Forms\FormDesignSettings;
+use App\Services\Forms\FormDefinitionGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -11,6 +16,10 @@ use Illuminate\Validation\ValidationException;
 
 class EquipmentTypeController extends Controller
 {
+    public function __construct(
+        private readonly FormDefinitionGuard $formGuard,
+    ) {}
+
     public function index(): JsonResponse
     {
         $items = EquipmentType::query()
@@ -20,6 +29,26 @@ class EquipmentTypeController extends Controller
             ->get();
 
         return response()->json(['data' => $items]);
+    }
+
+    public function formOptions(): JsonResponse
+    {
+        $forms = FormDefinition::query()
+            ->where('usage', FormUsage::Equipment)
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug']);
+
+        return response()->json(['data' => $forms]);
+    }
+
+    public function formCapture(
+        EquipmentType $equipmentType,
+        CatalogTypeFormCapture $capture,
+        FormDesignSettings $designSettings,
+    ): JsonResponse {
+        return response()->json([
+            'data' => $capture->forEquipmentType($equipmentType, $designSettings),
+        ]);
     }
 
     public function store(Request $request): JsonResponse
@@ -33,6 +62,12 @@ class EquipmentTypeController extends Controller
             'default_form_definition_id' => ['nullable', 'exists:form_definitions,id'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
         ]);
+
+        $this->formGuard->assertUsageForCompany(
+            $data['default_form_definition_id'] ?? null,
+            FormUsage::Equipment,
+            $companyId,
+        );
 
         $item = EquipmentType::query()->create($data);
 
@@ -50,6 +85,14 @@ class EquipmentTypeController extends Controller
             'default_form_definition_id' => ['nullable', 'exists:form_definitions,id'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
         ]);
+
+        if (array_key_exists('default_form_definition_id', $data)) {
+            $this->formGuard->assertUsageForCompany(
+                $data['default_form_definition_id'],
+                FormUsage::Equipment,
+                $companyId,
+            );
+        }
 
         $equipmentType->update($data);
 

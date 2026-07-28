@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { api } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
 import { useToast } from '@/composables/useToast';
+import { useCatalogTypeFormCapture } from '@/composables/useCatalogTypeFormCapture';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionSubnav from '@/components/ui/SectionSubnav.vue';
 import AppModal from '@/components/ui/AppModal.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
 import MaterialSelect from '@/components/ui/MaterialSelect.vue';
 import AppButton from '@/components/ui/AppButton.vue';
+import DynamicFormRenderer from '@/components/domain/DynamicFormRenderer.vue';
 import { catalogSuppliesSectionNav } from '@/lib/sectionNav';
 
 type SupplyTypeRef = { id: number; code: string; name: string };
@@ -21,12 +23,16 @@ type SupplyItem = {
     standard_cost?: string | number | null;
     supply_type_id?: number | null;
     supply_type?: SupplyTypeRef | null;
-    specifications?: { marca?: string; referencia_oem?: string } | null;
+    specifications?: Record<string, unknown> | null;
 };
 
 const { canWriteModule } = useModuleAccess();
 const toast = useToast();
 const canWrite = computed(() => canWriteModule('catalog_supplies'));
+
+const { capture, loadForType, reset: resetCapture } = useCatalogTypeFormCapture(
+    (typeId) => `/catalog/supply-types/${typeId}/form-capture`,
+);
 
 const items = ref<SupplyItem[]>([]);
 const supplyTypes = ref<SupplyTypeRef[]>([]);
@@ -35,6 +41,7 @@ const loading = ref(true);
 const saving = ref(false);
 const showForm = ref(false);
 const editingId = ref<number | null>(null);
+const formResponses = ref<Record<string, unknown>>({});
 
 const form = ref({
     supply_type_id: '',
@@ -42,8 +49,6 @@ const form = ref({
     name: '',
     unit: 'pza',
     standard_cost: '',
-    marca: '',
-    referencia_oem: '',
 });
 
 const filteredItems = computed(() => {
@@ -63,6 +68,10 @@ const typeFormOptions = computed(() =>
     supplyTypes.value.map((t) => ({ value: String(t.id), label: `${t.name} (${t.code})` })),
 );
 
+function resetFormResponses() {
+    formResponses.value = {};
+}
+
 function resetForm() {
     form.value = {
         supply_type_id: supplyTypes.value[0] ? String(supplyTypes.value[0].id) : '',
@@ -70,18 +79,21 @@ function resetForm() {
         name: '',
         unit: 'pza',
         standard_cost: '',
-        marca: '',
-        referencia_oem: '',
     };
     editingId.value = null;
+    resetFormResponses();
+    resetCapture();
 }
 
-function openCreate() {
+async function openCreate() {
     resetForm();
     showForm.value = true;
+    if (form.value.supply_type_id) {
+        await loadForType(form.value.supply_type_id, resetFormResponses);
+    }
 }
 
-function openEdit(item: SupplyItem) {
+async function openEdit(item: SupplyItem) {
     editingId.value = item.id;
     form.value = {
         supply_type_id: item.supply_type_id ? String(item.supply_type_id) : '',
@@ -89,11 +101,23 @@ function openEdit(item: SupplyItem) {
         name: item.name,
         unit: item.unit ?? '',
         standard_cost: item.standard_cost != null ? String(item.standard_cost) : '',
-        marca: item.specifications?.marca ?? '',
-        referencia_oem: item.specifications?.referencia_oem ?? '',
     };
+    formResponses.value = { ...(item.specifications ?? {}) };
     showForm.value = true;
+    if (form.value.supply_type_id) {
+        await loadForType(form.value.supply_type_id);
+    }
 }
+
+watch(
+    () => form.value.supply_type_id,
+    async (typeId, prev) => {
+        if (!showForm.value || typeId === prev) {
+            return;
+        }
+        await loadForType(typeId, resetFormResponses);
+    },
+);
 
 async function load() {
     loading.value = true;
@@ -117,21 +141,16 @@ async function save() {
         return;
     }
     saving.value = true;
-    const specifications =
-        form.value.marca || form.value.referencia_oem
-            ? {
-                  ...(form.value.marca ? { marca: form.value.marca } : {}),
-                  ...(form.value.referencia_oem ? { referencia_oem: form.value.referencia_oem } : {}),
-              }
-            : null;
-    const body = {
+    const body: Record<string, unknown> = {
         supply_type_id: Number(form.value.supply_type_id),
         sku: form.value.sku,
         name: form.value.name,
         unit: form.value.unit || null,
         standard_cost: form.value.standard_cost ? Number(form.value.standard_cost) : null,
-        specifications,
     };
+    if (capture.value.configured || editingId.value) {
+        body.specifications = formResponses.value;
+    }
     try {
         if (editingId.value) {
             await api(`/inventory/supplies/${editingId.value}`, { method: 'PUT', body: JSON.stringify(body) });
@@ -211,7 +230,7 @@ onMounted(load);
         <AppModal
             :open="showForm && canWrite"
             :title="editingId ? 'Editar insumo' : 'Nuevo insumo'"
-            size="sm"
+            size="lg"
             @close="showForm = false"
         >
             <form id="supply-form" class="space-y-4" @submit.prevent="save">
@@ -225,8 +244,27 @@ onMounted(load);
                 <MaterialField v-model="form.name" label="Nombre" required />
                 <MaterialField v-model="form.unit" label="Unidad" />
                 <MaterialField v-model="form.standard_cost" label="Costo estándar" type="number" />
-                <MaterialField v-model="form.marca" label="Marca (spec.)" />
-                <MaterialField v-model="form.referencia_oem" label="Referencia OEM (spec.)" />
+
+                <p v-if="capture.loading" class="text-portal-muted text-sm">Cargando formulario del tipo…</p>
+                <div
+                    v-else-if="!capture.configured"
+                    class="rounded-xl border border-amber-500/35 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-100"
+                    role="alert"
+                >
+                    {{ capture.message || 'Este tipo no tiene formulario asignado o publicado.' }}
+                </div>
+                <div v-else class="space-y-3 border-t border-white/10 pt-4">
+                    <p class="text-portal-heading text-sm font-medium">
+                        Ficha: {{ capture.formName }}
+                    </p>
+                    <DynamicFormRenderer
+                        v-model="formResponses"
+                        :schema="capture.schema"
+                        :form-settings="capture.formSettings"
+                        :option-catalogs="capture.optionCatalogs"
+                        :disabled="!canWrite"
+                    />
+                </div>
             </form>
             <template #footer>
                 <button
@@ -236,7 +274,7 @@ onMounted(load);
                 >
                     Cancelar
                 </button>
-                <AppButton type="submit" form="supply-form" :disabled="saving">Guardar</AppButton>
+                <AppButton type="submit" form="supply-form" :disabled="saving || capture.loading">Guardar</AppButton>
             </template>
         </AppModal>
     </div>

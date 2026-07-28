@@ -4,6 +4,11 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\CatalogItem;
+use App\Models\EquipmentType;
+use App\Services\Forms\CatalogTypeFormCapture;
+use App\Services\Forms\FormDesignSettings;
+use App\Services\Forms\FormResponseValidator;
+use App\Support\CurrentCompany;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -30,6 +35,11 @@ class CatalogItemController extends Controller
             'specifications' => ['nullable', 'array'],
         ]);
 
+        $this->validateSpecificationsForType(
+            (int) $data['equipment_type_id'],
+            $data['specifications'] ?? [],
+        );
+
         $item = CatalogItem::query()->create($data);
 
         return response()->json(['data' => $item->load('equipmentType')], 201);
@@ -45,6 +55,12 @@ class CatalogItemController extends Controller
             'specifications' => ['nullable', 'array'],
         ]);
 
+        $typeId = (int) ($data['equipment_type_id'] ?? $catalogItem->equipment_type_id);
+        $this->validateSpecificationsForType(
+            $typeId,
+            $data['specifications'] ?? $catalogItem->specifications ?? [],
+        );
+
         $catalogItem->update($data);
 
         return response()->json(['data' => $catalogItem->fresh()->load('equipmentType')]);
@@ -59,5 +75,31 @@ class CatalogItemController extends Controller
         $catalogItem->delete();
 
         return response()->json(['message' => 'Deleted']);
+    }
+
+    /**
+     * @param  array<string, mixed>  $specifications
+     */
+    private function validateSpecificationsForType(int $equipmentTypeId, array $specifications, Request $request): void
+    {
+        $type = EquipmentType::query()->findOrFail($equipmentTypeId);
+        $capture = app(CatalogTypeFormCapture::class);
+        $design = app(FormDesignSettings::class);
+        $payload = $capture->forEquipmentType($type, $design);
+
+        if (! ($payload['configured'] ?? false)) {
+            return;
+        }
+
+        $schema = $payload['schema'] ?? null;
+        if (! is_array($schema)) {
+            return;
+        }
+
+        app(FormResponseValidator::class)->validate(
+            $schema,
+            $specifications,
+            app(CurrentCompany::class)->id(),
+        );
     }
 }

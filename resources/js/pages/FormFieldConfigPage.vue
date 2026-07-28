@@ -6,6 +6,7 @@ import { useToast } from '@/composables/useToast';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
 import AppButton from '@/components/ui/AppButton.vue';
+import AppModal from '@/components/ui/AppModal.vue';
 import { RouterLink } from 'vue-router';
 
 type OptionRow = { value: string; label: string; description?: string };
@@ -20,6 +21,8 @@ const catalogs = ref<Catalog[]>([]);
 const settings = ref<FormSettings>({ max_image_size_kb: 2048, allowed_image_mimes: ['image/jpeg', 'image/png', 'image/webp'] });
 const loading = ref(true);
 const savingCatalogId = ref<number | null>(null);
+const expandedCatalogId = ref<number | null>(null);
+const showCreateModal = ref(false);
 
 const newCatalogName = ref('');
 const newCatalogRows = ref<OptionRow[]>([
@@ -27,7 +30,6 @@ const newCatalogRows = ref<OptionRow[]>([
     { value: '', label: '', description: '' },
 ]);
 
-const editingId = ref<number | null>(null);
 const editName = ref('');
 const editRows = ref<OptionRow[]>([]);
 
@@ -87,8 +89,7 @@ async function saveSettings() {
     }
 }
 
-function startEdit(catalog: Catalog) {
-    editingId.value = catalog.id;
+function loadEditState(catalog: Catalog) {
     editName.value = catalog.name;
     editRows.value = catalog.options.map((o) => ({
         value: o.value,
@@ -100,29 +101,39 @@ function startEdit(catalog: Catalog) {
     }
 }
 
-function cancelEdit() {
-    editingId.value = null;
-    editName.value = '';
-    editRows.value = [];
-}
-
-async function saveCatalogEdit() {
-    if (editingId.value === null) {
+function toggleCatalog(catalog: Catalog) {
+    if (expandedCatalogId.value === catalog.id) {
+        expandedCatalogId.value = null;
         return;
     }
+    expandedCatalogId.value = catalog.id;
+    loadEditState(catalog);
+}
+
+function openCreate() {
+    newCatalogName.value = '';
+    newCatalogRows.value = [emptyRow(), emptyRow()];
+    showCreateModal.value = true;
+}
+
+async function saveCatalogEdit(catalogId: number) {
     const options = normalizeRows(editRows.value);
     if (!editName.value.trim() || options.length === 0) {
         toast.warning('Indica nombre del catálogo y al menos una opción con valor y nombre.');
         return;
     }
-    savingCatalogId.value = editingId.value;
+    savingCatalogId.value = catalogId;
     try {
-        await api(`/design/forms/option-catalogs/${editingId.value}`, {
+        await api(`/design/forms/option-catalogs/${catalogId}`, {
             method: 'PUT',
             body: JSON.stringify({ name: editName.value.trim(), options }),
         });
         await load();
-        cancelEdit();
+        expandedCatalogId.value = catalogId;
+        const updated = catalogs.value.find((c) => c.id === catalogId);
+        if (updated) {
+            loadEditState(updated);
+        }
         toast.success('Catálogo actualizado.');
     } catch (e) {
         toast.error((e as Error).message);
@@ -142,8 +153,7 @@ async function createCatalog() {
             method: 'POST',
             body: JSON.stringify({ name: newCatalogName.value.trim(), options }),
         });
-        newCatalogName.value = '';
-        newCatalogRows.value = [emptyRow(), emptyRow()];
+        showCreateModal.value = false;
         await load();
         toast.success('Catálogo creado.');
     } catch (e) {
@@ -156,8 +166,8 @@ async function removeCatalog(id: number) {
         return;
     }
     await api(`/design/forms/option-catalogs/${id}`, { method: 'DELETE' });
-    if (editingId.value === id) {
-        cancelEdit();
+    if (expandedCatalogId.value === id) {
+        expandedCatalogId.value = null;
     }
     await load();
 }
@@ -166,10 +176,10 @@ onMounted(load);
 </script>
 
 <template>
-    <div class="portal-page space-y-6">
+    <div class="portal-page space-y-8">
         <PageHeader
             title="Configuración de campos"
-            subtitle="Catálogos reutilizables (nombre y descripción por opción) y reglas de imágenes en rutinas."
+            subtitle="Reglas transversales de captura: imágenes y catálogos reutilizables en listas desplegables."
         />
         <RouterLink to="/app/design/forms">
             <AppButton type="button" variant="secondary">← Volver a formularios</AppButton>
@@ -178,181 +188,193 @@ onMounted(load);
         <p v-if="loading" class="text-portal-muted">Cargando…</p>
 
         <template v-else>
-            <section class="portal-form-panel max-w-2xl space-y-4">
-                <h3 class="text-portal-heading font-medium">Imágenes en formularios</h3>
-                <MaterialField
-                    v-model="settings.max_image_size_kb"
-                    label="Tamaño máximo (KB)"
-                    type="number"
-                    :disabled="!canWrite"
-                />
-                <p class="text-portal-muted text-xs">Tipos permitidos:</p>
-                <div class="flex flex-wrap gap-2">
-                    <label
-                        v-for="m in mimeOptions"
-                        :key="m.value"
-                        class="text-portal-muted flex items-center gap-1 text-sm"
-                    >
-                        <input v-model="selectedMimes" type="checkbox" :value="m.value" :disabled="!canWrite" />
-                        {{ m.label }}
-                    </label>
+            <section class="space-y-4">
+                <h2 class="text-portal-heading text-lg font-semibold">Imágenes</h2>
+                <div class="portal-form-panel max-w-2xl space-y-4">
+                    <MaterialField
+                        v-model="settings.max_image_size_kb"
+                        label="Tamaño máximo (KB)"
+                        type="number"
+                        :disabled="!canWrite"
+                    />
+                    <p class="text-portal-muted text-xs">Tipos permitidos:</p>
+                    <div class="flex flex-wrap gap-2">
+                        <label
+                            v-for="m in mimeOptions"
+                            :key="m.value"
+                            class="text-portal-muted flex items-center gap-1 text-sm"
+                        >
+                            <input v-model="selectedMimes" type="checkbox" :value="m.value" :disabled="!canWrite" />
+                            {{ m.label }}
+                        </label>
+                    </div>
+                    <AppButton v-if="canWrite" type="button" @click="saveSettings">Guardar reglas de imagen</AppButton>
                 </div>
-                <AppButton v-if="canWrite" type="button" @click="saveSettings">Guardar reglas de imagen</AppButton>
             </section>
 
             <section class="space-y-4">
-                <h3 class="text-portal-heading font-medium">Catálogos de opciones</h3>
-                <p class="text-portal-muted max-w-3xl text-sm">
-                    Cada opción tiene <strong class="text-portal-heading">valor</strong> (interno),
-                    <strong class="text-portal-heading">nombre</strong> (visible) y
-                    <strong class="text-portal-heading">descripción</strong> (ayuda al técnico en campo).
-                </p>
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="flex-1">
+                        <h2 class="text-portal-heading text-lg font-semibold">Catálogo de opciones</h2>
+                        <p class="text-portal-muted mt-1 max-w-3xl text-sm">
+                            Cada opción tiene valor (interno), nombre (visible) y descripción (ayuda en campo).
+                        </p>
+                    </div>
+                    <AppButton v-if="canWrite" type="button" class="shrink-0" @click="openCreate">
+                        Nuevo catálogo
+                    </AppButton>
+                </div>
 
-                <div v-for="c in catalogs" :key="c.id" class="portal-form-panel space-y-3">
-                    <div class="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                            <p class="text-portal-heading font-medium">{{ c.name }}</p>
-                            <p class="text-portal-muted font-mono text-xs">{{ c.slug }}</p>
-                        </div>
-                        <div class="flex flex-wrap gap-2">
-                            <AppButton
-                                v-if="canWrite && editingId !== c.id"
-                                type="button"
-                                variant="secondary"
-                                @click="startEdit(c)"
+                <p v-if="catalogs.length === 0" class="text-portal-muted text-sm">Aún no hay catálogos.</p>
+
+                <div v-else class="space-y-2">
+                    <div
+                        v-for="c in catalogs"
+                        :key="c.id"
+                        class="portal-form-panel overflow-hidden p-0"
+                    >
+                        <button
+                            type="button"
+                            class="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/5"
+                            @click="toggleCatalog(c)"
+                        >
+                            <span
+                                class="text-portal-muted shrink-0 text-xs transition-transform"
+                                :class="expandedCatalogId === c.id ? 'rotate-90' : ''"
+                                aria-hidden="true"
                             >
-                                Editar
-                            </AppButton>
+                                ▶
+                            </span>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-portal-heading font-medium">{{ c.name }}</p>
+                                <p class="text-portal-muted font-mono text-xs">{{ c.slug }}</p>
+                            </div>
+                            <span class="text-portal-muted shrink-0 text-xs">
+                                {{ c.options.length }} opción{{ c.options.length === 1 ? '' : 'es' }}
+                            </span>
                             <button
                                 v-if="canWrite"
                                 type="button"
-                                class="text-sm text-red-400"
-                                @click="removeCatalog(c.id)"
+                                class="shrink-0 text-xs text-red-400 hover:text-red-300"
+                                @click.stop="removeCatalog(c.id)"
                             >
                                 Eliminar
                             </button>
-                        </div>
-                    </div>
+                        </button>
 
-                    <div v-if="editingId === c.id" class="space-y-3 border-t border-white/10 pt-3">
-                        <MaterialField v-model="editName" label="Nombre del catálogo" :disabled="!canWrite" />
-                        <div class="overflow-x-auto">
-                            <table class="portal-data-table w-full min-w-[36rem] text-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Valor</th>
-                                        <th>Nombre</th>
-                                        <th>Descripción</th>
-                                        <th />
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="(row, idx) in editRows" :key="idx">
-                                        <td>
-                                            <input v-model="row.value" class="field-input w-full font-mono text-xs" />
-                                        </td>
-                                        <td>
-                                            <input v-model="row.label" class="field-input w-full" />
-                                        </td>
-                                        <td>
-                                            <input v-model="row.description" class="field-input w-full" />
-                                        </td>
-                                        <td>
-                                            <button
-                                                type="button"
-                                                class="text-xs text-red-400"
-                                                @click="editRows.splice(idx, 1)"
-                                            >
-                                                Quitar
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="flex flex-wrap gap-2">
-                            <AppButton type="button" variant="secondary" @click="editRows.push(emptyRow())">
-                                + Opción
-                            </AppButton>
-                            <AppButton
-                                type="button"
-                                :disabled="savingCatalogId === c.id"
-                                @click="saveCatalogEdit"
-                            >
-                                {{ savingCatalogId === c.id ? 'Guardando…' : 'Guardar catálogo' }}
-                            </AppButton>
-                            <button type="button" class="text-portal-muted text-sm underline" @click="cancelEdit">
-                                Cancelar
-                            </button>
-                        </div>
-                    </div>
-
-                    <ul v-else class="divide-y divide-white/5 rounded-lg border border-white/10">
-                        <li
-                            v-for="o in c.options"
-                            :key="o.value"
-                            class="px-3 py-2 text-sm"
+                        <div
+                            v-if="expandedCatalogId === c.id"
+                            class="space-y-3 border-t border-white/10 px-4 py-4"
                         >
-                            <p class="text-portal-heading font-medium">
-                                <span class="text-portal-muted font-mono text-xs">{{ o.value }}</span>
-                                — {{ o.label }}
-                            </p>
-                            <p v-if="o.description" class="text-portal-muted mt-0.5 text-xs leading-snug">
-                                {{ o.description }}
-                            </p>
-                        </li>
-                    </ul>
-                </div>
-
-                <form v-if="canWrite" class="portal-form-panel max-w-4xl space-y-4" @submit.prevent="createCatalog">
-                    <h4 class="text-portal-heading text-sm font-medium">Nuevo catálogo</h4>
-                    <MaterialField v-model="newCatalogName" label="Nombre del catálogo" required />
-                    <div class="overflow-x-auto">
-                        <table class="portal-data-table w-full min-w-[36rem] text-sm">
-                            <thead>
-                                <tr>
-                                    <th>Valor</th>
-                                    <th>Nombre</th>
-                                    <th>Descripción</th>
-                                    <th />
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="(row, idx) in newCatalogRows" :key="idx">
-                                    <td>
-                                        <input v-model="row.value" class="field-input w-full font-mono text-xs" placeholder="operativo" />
-                                    </td>
-                                    <td>
-                                        <input v-model="row.label" class="field-input w-full" placeholder="Operativo" />
-                                    </td>
-                                    <td>
-                                        <input
-                                            v-model="row.description"
-                                            class="field-input w-full"
-                                            placeholder="Texto de ayuda para el técnico"
-                                        />
-                                    </td>
-                                    <td>
-                                        <button
-                                            v-if="newCatalogRows.length > 1"
-                                            type="button"
-                                            class="text-xs text-red-400"
-                                            @click="newCatalogRows.splice(idx, 1)"
-                                        >
-                                            Quitar
-                                        </button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                            <MaterialField v-model="editName" label="Nombre del catálogo" :disabled="!canWrite" />
+                            <div class="overflow-x-auto">
+                                <table class="portal-data-table w-full min-w-[36rem] text-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Valor</th>
+                                            <th>Nombre</th>
+                                            <th>Descripción</th>
+                                            <th />
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(row, idx) in editRows" :key="idx">
+                                            <td>
+                                                <input v-model="row.value" class="field-input w-full font-mono text-xs" />
+                                            </td>
+                                            <td>
+                                                <input v-model="row.label" class="field-input w-full" />
+                                            </td>
+                                            <td>
+                                                <input v-model="row.description" class="field-input w-full" />
+                                            </td>
+                                            <td>
+                                                <button
+                                                    type="button"
+                                                    class="text-xs text-red-400"
+                                                    @click="editRows.splice(idx, 1)"
+                                                >
+                                                    Quitar
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div v-if="canWrite" class="flex flex-wrap gap-2">
+                                <AppButton type="button" variant="secondary" @click="editRows.push(emptyRow())">
+                                    + Opción
+                                </AppButton>
+                                <AppButton
+                                    type="button"
+                                    :disabled="savingCatalogId === c.id"
+                                    @click="saveCatalogEdit(c.id)"
+                                >
+                                    {{ savingCatalogId === c.id ? 'Guardando…' : 'Guardar catálogo' }}
+                                </AppButton>
+                            </div>
+                        </div>
                     </div>
-                    <AppButton type="button" variant="secondary" @click="newCatalogRows.push(emptyRow())">
-                        + Fila
-                    </AppButton>
-                    <AppButton type="submit">Crear catálogo</AppButton>
-                </form>
+                </div>
             </section>
         </template>
 
+        <AppModal :open="showCreateModal && canWrite" title="Nuevo catálogo" size="lg" @close="showCreateModal = false">
+            <form id="new-catalog-form" class="space-y-4" @submit.prevent="createCatalog">
+                <MaterialField v-model="newCatalogName" label="Nombre del catálogo" required />
+                <div class="overflow-x-auto">
+                    <table class="portal-data-table w-full min-w-[36rem] text-sm">
+                        <thead>
+                            <tr>
+                                <th>Valor</th>
+                                <th>Nombre</th>
+                                <th>Descripción</th>
+                                <th />
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(row, idx) in newCatalogRows" :key="idx">
+                                <td>
+                                    <input v-model="row.value" class="field-input w-full font-mono text-xs" placeholder="operativo" />
+                                </td>
+                                <td>
+                                    <input v-model="row.label" class="field-input w-full" placeholder="Operativo" />
+                                </td>
+                                <td>
+                                    <input
+                                        v-model="row.description"
+                                        class="field-input w-full"
+                                        placeholder="Ayuda para el técnico"
+                                    />
+                                </td>
+                                <td>
+                                    <button
+                                        v-if="newCatalogRows.length > 1"
+                                        type="button"
+                                        class="text-xs text-red-400"
+                                        @click="newCatalogRows.splice(idx, 1)"
+                                    >
+                                        Quitar
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <AppButton type="button" variant="secondary" @click="newCatalogRows.push(emptyRow())">
+                    + Fila
+                </AppButton>
+            </form>
+            <template #footer>
+                <button
+                    type="button"
+                    class="text-portal-muted rounded-xl px-4 py-2 text-sm hover:bg-white/5"
+                    @click="showCreateModal = false"
+                >
+                    Cancelar
+                </button>
+                <AppButton type="submit" form="new-catalog-form">Crear catálogo</AppButton>
+            </template>
+        </AppModal>
     </div>
 </template>

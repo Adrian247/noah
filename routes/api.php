@@ -114,6 +114,10 @@ Route::prefix('v1')->group(function (): void {
 
             Route::post('/sync', [SyncController::class, 'sync']);
 
+            Route::get('/catalog/equipment-types/form-options', [EquipmentTypeController::class, 'formOptions'])
+                ->middleware('company.module:catalog_items,read');
+            Route::get('/catalog/equipment-types/{equipmentType}/form-capture', [EquipmentTypeController::class, 'formCapture'])
+                ->middleware('company.module:catalog_items,read');
             Route::get('/catalog/equipment-types', [EquipmentTypeController::class, 'index'])
                 ->middleware('company.module:catalog_items,read');
             Route::post('/catalog/equipment-types', [EquipmentTypeController::class, 'store'])
@@ -123,6 +127,10 @@ Route::prefix('v1')->group(function (): void {
             Route::delete('/catalog/equipment-types/{equipmentType}', [EquipmentTypeController::class, 'destroy'])
                 ->middleware('company.module:catalog_items,write');
 
+            Route::get('/catalog/supply-types/form-options', [SupplyTypeController::class, 'formOptions'])
+                ->middleware('company.module:catalog_supplies,read');
+            Route::get('/catalog/supply-types/{supplyType}/form-capture', [SupplyTypeController::class, 'formCapture'])
+                ->middleware('company.module:catalog_supplies,read');
             Route::get('/catalog/supply-types', [SupplyTypeController::class, 'index'])
                 ->middleware('company.module:catalog_supplies,read');
             Route::post('/catalog/supply-types', [SupplyTypeController::class, 'store'])
@@ -194,6 +202,8 @@ Route::prefix('v1')->group(function (): void {
             Route::put('/design/forms/{form}/schema', [FormDefinitionController::class, 'updateSchema'])
                 ->middleware('company.module:design_forms,write');
             Route::post('/design/forms/{form}/publish', [FormDefinitionController::class, 'publish'])
+                ->middleware('company.module:design_forms,write');
+            Route::delete('/design/forms/{form}', [FormDefinitionController::class, 'destroy'])
                 ->middleware('company.module:design_forms,write');
 
             Route::get('/design/reports', [ReportTemplateController::class, 'index'])

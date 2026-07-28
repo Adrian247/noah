@@ -4,6 +4,11 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\SupplyItem;
+use App\Models\SupplyType;
+use App\Services\Forms\CatalogTypeFormCapture;
+use App\Services\Forms\FormDesignSettings;
+use App\Services\Forms\FormResponseValidator;
+use App\Support\CurrentCompany;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -31,6 +36,11 @@ class SupplyItemController extends Controller
             'supplier_id' => ['nullable', 'exists:suppliers,id'],
         ]);
 
+        $this->validateSpecificationsForType(
+            (int) $data['supply_type_id'],
+            $data['specifications'] ?? [],
+        );
+
         $item = SupplyItem::query()->create($data);
 
         return response()->json(['data' => $item->load('supplyType')], 201);
@@ -48,6 +58,12 @@ class SupplyItemController extends Controller
             'supplier_id' => ['nullable', 'exists:suppliers,id'],
         ]);
 
+        $typeId = (int) ($data['supply_type_id'] ?? $supplyItem->supply_type_id);
+        $this->validateSpecificationsForType(
+            $typeId,
+            $data['specifications'] ?? $supplyItem->specifications ?? [],
+        );
+
         $supplyItem->update($data);
 
         return response()->json(['data' => $supplyItem->fresh()->load('supplyType')]);
@@ -62,5 +78,29 @@ class SupplyItemController extends Controller
         $supplyItem->delete();
 
         return response()->json(['message' => 'Deleted']);
+    }
+
+    /**
+     * @param  array<string, mixed>  $specifications
+     */
+    private function validateSpecificationsForType(int $supplyTypeId, array $specifications): void
+    {
+        $type = SupplyType::query()->findOrFail($supplyTypeId);
+        $payload = app(CatalogTypeFormCapture::class)->forSupplyType($type, app(FormDesignSettings::class));
+
+        if (! ($payload['configured'] ?? false)) {
+            return;
+        }
+
+        $schema = $payload['schema'] ?? null;
+        if (! is_array($schema)) {
+            return;
+        }
+
+        app(FormResponseValidator::class)->validate(
+            $schema,
+            $specifications,
+            app(CurrentCompany::class)->id(),
+        );
     }
 }

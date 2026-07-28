@@ -8,8 +8,11 @@ import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionSubnav from '@/components/ui/SectionSubnav.vue';
 import AppModal from '@/components/ui/AppModal.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
+import MaterialSelect from '@/components/ui/MaterialSelect.vue';
 import AppButton from '@/components/ui/AppButton.vue';
 import { catalogEquipmentSectionNav } from '@/lib/sectionNav';
+
+type FormPick = { id: number; name: string; slug: string };
 
 type EquipmentType = {
     id: number;
@@ -17,6 +20,7 @@ type EquipmentType = {
     name: string;
     description?: string | null;
     sort_order?: number;
+    default_form_definition_id?: number | null;
     default_form_definition?: { id: number; name: string; slug: string } | null;
 };
 
@@ -25,6 +29,7 @@ const toast = useToast();
 const canWrite = computed(() => canWriteModule('catalog_items'));
 
 const items = ref<EquipmentType[]>([]);
+const equipmentForms = ref<FormPick[]>([]);
 const loading = ref(true);
 const saving = ref(false);
 const showForm = ref(false);
@@ -35,10 +40,22 @@ const form = ref({
     name: '',
     description: '',
     sort_order: '0',
+    default_form_definition_id: '',
 });
 
+const formOptions = computed(() => [
+    { value: '', label: '— Sin formulario —' },
+    ...equipmentForms.value.map((f) => ({ value: String(f.id), label: f.name })),
+]);
+
 function resetForm() {
-    form.value = { code: '', name: '', description: '', sort_order: '0' };
+    form.value = {
+        code: '',
+        name: '',
+        description: '',
+        sort_order: '0',
+        default_form_definition_id: '',
+    };
     editingId.value = null;
 }
 
@@ -54,6 +71,9 @@ function openEdit(item: EquipmentType) {
         name: item.name,
         description: item.description ?? '',
         sort_order: String(item.sort_order ?? 0),
+        default_form_definition_id: item.default_form_definition_id
+            ? String(item.default_form_definition_id)
+            : '',
     };
     showForm.value = true;
 }
@@ -61,8 +81,12 @@ function openEdit(item: EquipmentType) {
 async function load() {
     loading.value = true;
     try {
-        const res = await api<{ data: EquipmentType[] }>('/catalog/equipment-types');
-        items.value = res.data;
+        const [typesRes, formsRes] = await Promise.all([
+            api<{ data: EquipmentType[] }>('/catalog/equipment-types'),
+            api<{ data: FormPick[] }>('/catalog/equipment-types/form-options'),
+        ]);
+        items.value = typesRes.data;
+        equipmentForms.value = formsRes.data;
     } catch (e) {
         toast.error((e as Error).message);
     } finally {
@@ -77,6 +101,9 @@ async function save() {
         name: form.value.name.trim(),
         description: form.value.description.trim() || null,
         sort_order: Number(form.value.sort_order) || 0,
+        default_form_definition_id: form.value.default_form_definition_id
+            ? Number(form.value.default_form_definition_id)
+            : null,
     };
     try {
         if (editingId.value) {
@@ -134,7 +161,7 @@ onMounted(load);
                     <tr class="border-b">
                         <th class="py-2">Código</th>
                         <th>Nombre</th>
-                        <th>Formulario por defecto</th>
+                        <th>Formulario de ficha</th>
                         <th class="w-28" />
                     </tr>
                 </thead>
@@ -168,6 +195,11 @@ onMounted(load);
                 <MaterialField v-model="form.code" label="Código" required :disabled="Boolean(editingId)" />
                 <MaterialField v-model="form.name" label="Nombre" required />
                 <MaterialField v-model="form.description" label="Descripción" />
+                <MaterialSelect
+                    v-model="form.default_form_definition_id"
+                    label="Formulario de ficha (equipo)"
+                    :options="formOptions"
+                />
                 <MaterialField v-model="form.sort_order" label="Orden" type="number" />
             </form>
             <template #footer>

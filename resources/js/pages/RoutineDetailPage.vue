@@ -489,7 +489,7 @@ onUnmounted(() => {
                             <span class="text-xs text-slate-600">Insumo</span>
                             <select
                                 v-model="line.supply_item_id"
-                                class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5"
+                                class="field-input mt-1 w-full"
                             >
                                 <option value="">—</option>
                                 <option

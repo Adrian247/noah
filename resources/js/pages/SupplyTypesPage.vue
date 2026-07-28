@@ -8,8 +8,11 @@ import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionSubnav from '@/components/ui/SectionSubnav.vue';
 import AppModal from '@/components/ui/AppModal.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
+import MaterialSelect from '@/components/ui/MaterialSelect.vue';
 import AppButton from '@/components/ui/AppButton.vue';
 import { catalogSuppliesSectionNav } from '@/lib/sectionNav';
+
+type FormPick = { id: number; name: string; slug: string };
 
 type SupplyType = {
     id: number;
@@ -17,6 +20,8 @@ type SupplyType = {
     name: string;
     description?: string | null;
     sort_order?: number;
+    default_form_definition_id?: number | null;
+    default_form_definition?: { id: number; name: string; slug: string } | null;
 };
 
 const { canWriteModule } = useModuleAccess();
@@ -24,6 +29,7 @@ const toast = useToast();
 const canWrite = computed(() => canWriteModule('catalog_supplies'));
 
 const items = ref<SupplyType[]>([]);
+const supplyForms = ref<FormPick[]>([]);
 const loading = ref(true);
 const saving = ref(false);
 const showForm = ref(false);
@@ -34,10 +40,22 @@ const form = ref({
     name: '',
     description: '',
     sort_order: '0',
+    default_form_definition_id: '',
 });
 
+const formOptions = computed(() => [
+    { value: '', label: '— Sin formulario —' },
+    ...supplyForms.value.map((f) => ({ value: String(f.id), label: f.name })),
+]);
+
 function resetForm() {
-    form.value = { code: '', name: '', description: '', sort_order: '0' };
+    form.value = {
+        code: '',
+        name: '',
+        description: '',
+        sort_order: '0',
+        default_form_definition_id: '',
+    };
     editingId.value = null;
 }
 
@@ -53,6 +71,9 @@ function openEdit(item: SupplyType) {
         name: item.name,
         description: item.description ?? '',
         sort_order: String(item.sort_order ?? 0),
+        default_form_definition_id: item.default_form_definition_id
+            ? String(item.default_form_definition_id)
+            : '',
     };
     showForm.value = true;
 }
@@ -60,8 +81,12 @@ function openEdit(item: SupplyType) {
 async function load() {
     loading.value = true;
     try {
-        const res = await api<{ data: SupplyType[] }>('/catalog/supply-types');
-        items.value = res.data;
+        const [typesRes, formsRes] = await Promise.all([
+            api<{ data: SupplyType[] }>('/catalog/supply-types'),
+            api<{ data: FormPick[] }>('/catalog/supply-types/form-options'),
+        ]);
+        items.value = typesRes.data;
+        supplyForms.value = formsRes.data;
     } catch (e) {
         toast.error((e as Error).message);
     } finally {
@@ -76,6 +101,9 @@ async function save() {
         name: form.value.name.trim(),
         description: form.value.description.trim() || null,
         sort_order: Number(form.value.sort_order) || 0,
+        default_form_definition_id: form.value.default_form_definition_id
+            ? Number(form.value.default_form_definition_id)
+            : null,
     };
     try {
         if (editingId.value) {
@@ -133,6 +161,7 @@ onMounted(load);
                     <tr class="border-b">
                         <th class="py-2">Código</th>
                         <th>Nombre</th>
+                        <th>Formulario de ficha</th>
                         <th class="w-28" />
                     </tr>
                 </thead>
@@ -140,6 +169,9 @@ onMounted(load);
                     <tr v-for="row in items" :key="row.id" class="border-b border-portal-border/60">
                         <td class="py-2 font-mono text-sm">{{ row.code }}</td>
                         <td>{{ row.name }}</td>
+                        <td class="text-portal-muted text-sm">
+                            {{ row.default_form_definition?.name ?? '—' }}
+                        </td>
                         <td class="text-right">
                             <template v-if="canWrite">
                                 <button type="button" class="portal-link mr-2" @click="openEdit(row)">Editar</button>
@@ -163,6 +195,11 @@ onMounted(load);
                 <MaterialField v-model="form.code" label="Código" required :disabled="Boolean(editingId)" />
                 <MaterialField v-model="form.name" label="Nombre" required />
                 <MaterialField v-model="form.description" label="Descripción" />
+                <MaterialSelect
+                    v-model="form.default_form_definition_id"
+                    label="Formulario de ficha (insumo)"
+                    :options="formOptions"
+                />
                 <MaterialField v-model="form.sort_order" label="Orden" type="number" />
             </form>
             <template #footer>

@@ -279,7 +279,7 @@ function nodeClass(kind: string): string {
             <template v-if="selectedEdgeId && editable">
                 <p class="text-portal-muted mb-2 text-xs">Transición seleccionada</p>
                 <select
-                    class="mb-3 w-full rounded border border-portal-border bg-transparent px-2 py-1 text-xs"
+                    class="field-input mb-3 w-full py-1 text-xs"
                     :value="selectedEdgeTrigger ?? 'approved'"
                     @change="updateEdgeTrigger(($event.target as HTMLSelectElement).value)"
                 >

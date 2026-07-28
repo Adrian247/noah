@@ -2,54 +2,39 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\FormUsage;
 use App\Enums\MembershipRole;
 use App\Events\FormVersionPublished;
 use App\Http\Controllers\Controller;
 use App\Models\FormDefinition;
 use App\Models\FormVersion;
 use App\Services\Audit\AuditLogger;
+use App\Services\Forms\FormDefinitionGuard;
 use App\Services\Forms\FormDesignSettings;
 use App\Services\Forms\FormSchemaValidator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class FormDefinitionController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
+        $usage = $request->query('usage');
+        if ($usage !== null && ! in_array($usage, array_column(FormUsage::cases(), 'value'), true)) {
+            throw ValidationException::withMessages([
+                'usage' => ['Uso de formulario no válido.'],
+            ]);
+        }
+
         $forms = FormDefinition::query()
+            ->when($usage !== null, fn ($q) => $q->where('usage', $usage))
             ->with(['versions' => fn ($q) => $q->orderByDesc('version')])
             ->orderBy('name')
             ->get()
-            ->map(function (FormDefinition $form) {
-                $latest = $form->versions->first();
-                $published = $form->versions->firstWhere('status', 'published');
-                $draft = $form->versions->firstWhere('status', 'draft');
-
-                return [
-                    'id' => $form->id,
-                    'name' => $form->name,
-                    'slug' => $form->slug,
-                    'latest_version' => $latest ? [
-                        'id' => $latest->id,
-                        'version' => $latest->version,
-                        'status' => $latest->status,
-                        'published_at' => $latest->published_at,
-                    ] : null,
-                    'published_version' => $published ? [
-                        'id' => $published->id,
-                        'version' => $published->version,
-                        'status' => $published->status,
-                        'published_at' => $published->published_at,
-                    ] : null,
-                    'draft_version' => $draft ? [
-                        'id' => $draft->id,
-                        'version' => $draft->version,
-                        'status' => $draft->status,
-                    ] : null,
-                ];
-            });
+            ->map(fn (FormDefinition $form) => $this->serializeListItem($form));
 
         return response()->json(['data' => $forms]);
     }
@@ -61,6 +46,7 @@ class FormDefinitionController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:128'],
+            'usage' => ['required', Rule::enum(FormUsage::class)],
         ]);
 
         $slug = $data['slug'] ?? Str::slug($data['name']);
@@ -68,6 +54,7 @@ class FormDefinitionController extends Controller
         $form = FormDefinition::query()->create([
             'name' => $data['name'],
             'slug' => $slug,
+            'usage' => $data['usage'],
         ]);
 
         FormVersion::query()->create([
@@ -83,13 +70,32 @@ class FormDefinitionController extends Controller
 
     public function show(FormDefinition $form, FormDesignSettings $designSettings): JsonResponse
     {
+        $loaded = $form->load(['versions' => fn ($q) => $q->orderByDesc('version')]);
+
         return response()->json([
-            'data' => $form->load(['versions' => fn ($q) => $q->orderByDesc('version')]),
+            'data' => array_merge($loaded->toArray(), [
+                'usage_label' => $form->usage->label(),
+            ]),
             'form_design' => [
                 'settings' => $designSettings->forCurrentCompany(),
                 'option_catalogs' => $designSettings->optionCatalogsForCurrentCompany(),
             ],
         ]);
+    }
+
+    public function destroy(Request $request, FormDefinition $form, FormDefinitionGuard $guard, AuditLogger $audit): JsonResponse
+    {
+        $this->authorizeDesigner($request);
+
+        $guard->assertCanDelete($form);
+
+        $formId = $form->id;
+        $form->versions()->delete();
+        $form->delete();
+
+        $audit->fromRequest($request, 'form.deleted', FormDefinition::class, $formId, []);
+
+        return response()->json(null, 204);
     }
 
     public function updateSchema(Request $request, FormDefinition $form, AuditLogger $audit, FormSchemaValidator $schemaValidator): JsonResponse
@@ -160,6 +166,41 @@ class FormDefinitionController extends Controller
                 'draft' => $newDraft,
             ],
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function serializeListItem(FormDefinition $form): array
+    {
+        $latest = $form->versions->first();
+        $published = $form->versions->firstWhere('status', 'published');
+        $draft = $form->versions->firstWhere('status', 'draft');
+
+        return [
+            'id' => $form->id,
+            'name' => $form->name,
+            'slug' => $form->slug,
+            'usage' => $form->usage->value,
+            'usage_label' => $form->usage->label(),
+            'latest_version' => $latest ? [
+                'id' => $latest->id,
+                'version' => $latest->version,
+                'status' => $latest->status,
+                'published_at' => $latest->published_at,
+            ] : null,
+            'published_version' => $published ? [
+                'id' => $published->id,
+                'version' => $published->version,
+                'status' => $published->status,
+                'published_at' => $published->published_at,
+            ] : null,
+            'draft_version' => $draft ? [
+                'id' => $draft->id,
+                'version' => $draft->version,
+                'status' => $draft->status,
+            ] : null,
+        ];
     }
 
     private function authorizeDesigner(Request $request): void

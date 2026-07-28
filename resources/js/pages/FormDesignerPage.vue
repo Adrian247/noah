@@ -7,7 +7,7 @@ import { useToast } from '@/composables/useToast';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
 import MaterialSelect from '@/components/ui/MaterialSelect.vue';
-import AppButton from '@/components/ui/AppButton.vue';
+import { formUsageLabel } from '@/lib/formUsage';
 
 type Field = {
     key: string;
@@ -37,6 +37,8 @@ type FormVersion = {
 type FormDef = {
     id: number;
     name: string;
+    usage?: string;
+    usage_label?: string;
     versions: FormVersion[];
 };
 
@@ -207,7 +209,10 @@ onMounted(load);
 <template>
     <div v-if="loading" class="text-portal-muted">Cargando…</div>
     <div v-else-if="form" class="portal-page w-full max-w-none">
-        <PageHeader :title="form.name" subtitle="Diseño del formulario de rutina (borrador y publicación)." />
+        <PageHeader
+            :title="form.name"
+            :subtitle="`Uso: ${form.usage_label ?? formUsageLabel(form.usage ?? 'routine')}. Borrador y publicación del esquema.`"
+        />
         <p class="text-portal-muted text-sm">
             <span v-if="published">En producción: v{{ published.version }}.</span>
             <span v-else class="text-amber-500">Sin versión publicada.</span>

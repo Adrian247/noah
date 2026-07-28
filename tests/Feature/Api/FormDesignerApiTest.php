@@ -20,7 +20,7 @@ class FormDesignerApiTest extends TestCase
 
         $create = $this->withToken($token)
             ->withHeader('X-Company-Id', (string) $company->id)
-            ->postJson('/api/v1/design/forms', ['name' => 'Checklist prueba'])
+            ->postJson('/api/v1/design/forms', ['name' => 'Checklist prueba', 'usage' => 'routine'])
             ->assertCreated();
 
         $formId = $create->json('data.id');

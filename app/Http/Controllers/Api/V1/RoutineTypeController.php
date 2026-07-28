@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\FormUsage;
 use App\Enums\MembershipRole;
 use App\Http\Controllers\Controller;
 use App\Models\FormVersion;
@@ -123,6 +124,7 @@ class RoutineTypeController extends Controller
     private function assertPublishedFormVersion(int $formVersionId, int $companyId): void
     {
         $version = FormVersion::query()
+            ->with('definition')
             ->whereKey($formVersionId)
             ->where('status', 'published')
             ->whereHas('definition', fn ($q) => $q->where('company_id', $companyId))
@@ -131,6 +133,12 @@ class RoutineTypeController extends Controller
         if ($version === null) {
             throw ValidationException::withMessages([
                 'form_version_id' => ['Debe ser una versión de formulario publicada de esta empresa.'],
+            ]);
+        }
+
+        if ($version->definition?->usage !== FormUsage::Routine) {
+            throw ValidationException::withMessages([
+                'form_version_id' => ['El formulario debe ser de uso Rutina.'],
             ]);
         }
     }
