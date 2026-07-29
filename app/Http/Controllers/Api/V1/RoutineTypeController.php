@@ -9,6 +9,7 @@ use App\Models\FormVersion;
 use App\Models\ReportTemplateVersion;
 use App\Models\RoutineType;
 use App\Support\CurrentCompany;
+use App\Services\Reports\FormReportFieldAlignment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -16,6 +17,10 @@ use Illuminate\Validation\ValidationException;
 
 class RoutineTypeController extends Controller
 {
+    public function __construct(
+        private readonly FormReportFieldAlignment $alignment,
+    ) {}
+
     public function index(Request $request): JsonResponse
     {
         $query = RoutineType::query()
@@ -26,7 +31,20 @@ class RoutineTypeController extends Controller
             $query->where('is_active', true);
         }
 
-        return response()->json(['data' => $query->get()]);
+        $items = $query->get()->map(function (RoutineType $type) {
+            $data = $type->toArray();
+            $alignment = $this->alignment->compare($type->formVersion, $type->reportTemplateVersion);
+            $data['field_alignment'] = [
+                'aligned' => $alignment['aligned'],
+                'missing' => $alignment['missing'],
+                'missing_images' => $alignment['missing_images'],
+                'checked' => $type->form_version_id !== null && $type->report_template_version_id !== null,
+            ];
+
+            return $data;
+        });
+
+        return response()->json(['data' => $items]);
     }
 
     public function store(Request $request): JsonResponse
@@ -112,6 +130,19 @@ class RoutineTypeController extends Controller
         }
         if (array_key_exists('report_template_version_id', $data)) {
             $updates['report_template_version_id'] = $data['report_template_version_id'];
+        }
+
+        $nextFormId = array_key_exists('form_version_id', $updates)
+            ? $updates['form_version_id']
+            : $routineType->form_version_id;
+        $nextReportId = array_key_exists('report_template_version_id', $updates)
+            ? $updates['report_template_version_id']
+            : $routineType->report_template_version_id;
+
+        if ($nextFormId && $nextReportId) {
+            $formVersion = FormVersion::query()->with('definition')->find($nextFormId);
+            $reportVersion = ReportTemplateVersion::query()->find($nextReportId);
+            $this->alignment->assertAlignedOrFail($formVersion, $reportVersion);
         }
 
         $routineType->update($updates);

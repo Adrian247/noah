@@ -1,4 +1,4 @@
-# Lenguaje ubicuo — Noah
+# Lenguaje ubicuo — Phoenix
 
 Glosario acordado entre negocio, diseño y desarrollo. Usar estos términos en UI (salvo localización), API y documentación.
 
@@ -6,7 +6,7 @@ Glosario acordado entre negocio, diseño y desarrollo. Usar estos términos en U
 
 | Término | Definición |
 |---------|------------|
-| **Empresa (Tenant)** | Organización que usa Noah; en SaaS, unidad de aislamiento de datos. |
+| **Empresa (Tenant)** | Organización que usa Phoenix; en SaaS, unidad de aislamiento de datos. |
 | **Sucursal / Sitio** | Ubicación física o lógica donde hay activos y rutinas. |
 | **Usuario** | Persona con cuenta; tiene uno o más roles en una empresa. |
 
@@ -82,4 +82,4 @@ Glosario acordado entre negocio, diseño y desarrollo. Usar estos términos en U
 
 - Usar un solo agregado **`Routine`** en MVP; no crear `WorkOrder` en paralelo salvo ADR nueva.
 - En UI en español puede decirse “orden de trabajo” como etiqueta, mapeando siempre a `Routine`.
-- No usar “Mantix”; el producto es **Noah**.
+- No usar “Mantix”; el producto es **Phoenix**.

@@ -2,7 +2,7 @@
 
 ## Problema
 
-Noah modela **empresa operadora**, sitios, activos y proveedores, pero no el **cliente al que se factura** el servicio de mantenimiento. En [billing.md](../../domain/billing.md) la factura prevé “cliente (referencia futura)”; hoy `invoices` solo enlazan `routine_id` sin receptor de cobro.
+Phoenix modela **empresa operadora**, sitios, activos y proveedores, pero no el **cliente al que se factura** el servicio de mantenimiento. En [billing.md](../../domain/billing.md) la factura prevé “cliente (referencia futura)”; hoy `invoices` solo enlazan `routine_id` sin receptor de cobro.
 
 Sin catálogo de clientes:
 

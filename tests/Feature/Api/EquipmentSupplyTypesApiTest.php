@@ -18,7 +18,7 @@ class EquipmentSupplyTypesApiTest extends TestCase
     public function test_equipment_type_crud_and_delete_blocked_when_in_use(): void
     {
         $this->seed();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
         $company = Company::query()->first();
         $token = $admin->createToken('test')->plainTextToken;
         $headers = ['X-Company-Id' => (string) $company->id];
@@ -63,7 +63,7 @@ class EquipmentSupplyTypesApiTest extends TestCase
             ->withHeaders($headers)
             ->getJson('/api/v1/catalog/equipment-types/form-options')
             ->assertOk()
-            ->assertJsonFragment(['slug' => 'inspeccion-vehiculo-v1']);
+            ->assertJsonFragment(['slug' => 'ficha-tecnica-vehiculo-v1']);
 
         $vehiculo = EquipmentType::query()->where('code', 'vehiculo')->firstOrFail();
         $this->withToken($token)
@@ -71,13 +71,13 @@ class EquipmentSupplyTypesApiTest extends TestCase
             ->getJson('/api/v1/catalog/equipment-types/'.$vehiculo->id.'/form-capture')
             ->assertOk()
             ->assertJsonPath('data.configured', true)
-            ->assertJsonPath('data.form.name', 'Inspección vehículo (normalizada)');
+            ->assertJsonPath('data.form.name', 'Ficha técnica vehículo');
     }
 
     public function test_supply_type_crud(): void
     {
         $this->seed();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
         $company = Company::query()->first();
         $token = $admin->createToken('test')->plainTextToken;
         $headers = ['X-Company-Id' => (string) $company->id];
@@ -113,5 +113,41 @@ class EquipmentSupplyTypesApiTest extends TestCase
             ->withHeaders($headers)
             ->deleteJson('/api/v1/catalog/supply-types/'.$type->id)
             ->assertNoContent();
+
+        $filtros = SupplyType::query()->where('code', 'filtros')->firstOrFail();
+        $this->withToken($token)
+            ->withHeaders($headers)
+            ->getJson('/api/v1/catalog/supply-types/'.$filtros->id.'/form-capture')
+            ->assertOk()
+            ->assertJsonPath('data.configured', true)
+            ->assertJsonPath('data.form.name', 'Ficha insumo — filtros');
+
+        $this->withToken($token)
+            ->withHeaders($headers)
+            ->getJson('/api/v1/catalog/supply-types/form-options')
+            ->assertOk()
+            ->assertJsonFragment(['slug' => 'ficha-insumo-filtros-v1']);
+
+        $this->withToken($token)
+            ->withHeaders($headers)
+            ->getJson('/api/v1/catalog/supply-types/unit-options')
+            ->assertOk()
+            ->assertJsonFragment(['value' => 'pza'])
+            ->assertJsonFragment(['value' => 'jgo'])
+            ->assertJsonFragment(['value' => 'par'])
+            ->assertJsonFragment(['value' => 'lt'])
+            ->assertJsonFragment(['value' => 'kg'])
+            ->assertJsonFragment(['value' => 'm'])
+            ->assertJsonFragment(['value' => 'caja']);
+
+        $this->withToken($token)
+            ->withHeaders($headers)
+            ->postJson('/api/v1/inventory/supplies', [
+                'supply_type_id' => $filtros->id,
+                'sku' => 'FIL-BAD-UNIT',
+                'name' => 'Unidad inválida',
+                'unit' => 'xyz-no-existe',
+            ])
+            ->assertStatus(422);
     }
 }

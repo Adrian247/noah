@@ -1,4 +1,4 @@
-# Capacidades futuras — Noah
+# Capacidades futuras — Phoenix
 
 Funcionalidades **no comprometidas** en fases 1–3. Se habilitan cuando el núcleo (motores, AI Gateway, evidencias en storage, historial de activos) esté estable.
 

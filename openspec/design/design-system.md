@@ -1,4 +1,4 @@
-# Design system — Noah
+# Design system — Phoenix
 
 Implementación: **Tailwind CSS 4** + componentes Vue en `resources/js/components/ui/`.
 

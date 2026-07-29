@@ -18,7 +18,7 @@ class RoutineFlowApiTest extends TestCase
     public function test_submit_execution_moves_to_pending_validation(): void
     {
         $this->seed();
-        $user = User::query()->where('email', 'tecnico@noah.local')->first();
+        $user = User::query()->where('email', 'misael.palos@mein-company.com')->first();
         $company = Company::query()->first();
         $routine = $this->demoRoutine($user);
         $token = $user->createToken('test')->plainTextToken;
@@ -40,7 +40,7 @@ class RoutineFlowApiTest extends TestCase
     public function test_routine_show_includes_evidences_relation(): void
     {
         $this->seed();
-        $user = User::query()->where('email', 'tecnico@noah.local')->first();
+        $user = User::query()->where('email', 'misael.palos@mein-company.com')->first();
         $company = Company::query()->first();
         $routine = $this->demoRoutine($user);
         $token = $user->createToken('test')->plainTextToken;

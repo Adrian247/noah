@@ -13,11 +13,11 @@ class RefreshDemoCommandTest extends TestCase
 
     public function test_refresh_demo_seeds_and_resets_credentials(): void
     {
-        $this->artisan('noah:refresh-demo', ['--skip-migrate' => true])->assertSuccessful();
+        $this->artisan('phoenix:refresh-demo', ['--skip-migrate' => true])->assertSuccessful();
 
-        $this->assertTrue(User::query()->where('email', 'admin@noah.local')->exists());
+        $this->assertTrue(User::query()->where('email', 'admin@pyro-systems.com')->exists());
 
-        $admin = User::query()->where('email', 'admin@noah.local')->firstOrFail();
-        $this->assertTrue(Hash::check(config('noah.demo_password'), $admin->password));
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->firstOrFail();
+        $this->assertTrue(Hash::check(config('phoenix.demo_root_password'), $admin->password));
     }
 }

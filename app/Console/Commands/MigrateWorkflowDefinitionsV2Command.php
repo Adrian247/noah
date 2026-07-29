@@ -8,7 +8,7 @@ use Illuminate\Console\Command;
 
 class MigrateWorkflowDefinitionsV2Command extends Command
 {
-    protected $signature = 'noah:migrate-workflow-definitions-v2 {--company= : Company ID}';
+    protected $signature = 'phoenix:migrate-workflow-definitions-v2 {--company= : Company ID}';
 
     protected $description = 'Actualiza definiciones de workflow al grafo v2 (facturación antes del cierre).';
 

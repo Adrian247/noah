@@ -25,23 +25,64 @@ use App\Models\Supplier;
 use App\Models\SupplyItem;
 use App\Models\SupplyType;
 use App\Models\User;
+use App\Services\Routines\DemoRoutineFactory;
+use App\Services\Reports\ReportPresetApplier;
 use App\Services\Workflow\WorkflowRuntime;
 use App\Services\Identity\CompanyAuthorizationService;
 use Database\Seeders\Support\DemoClientLogoGenerator;
 use Database\Seeders\Support\DemoDesignDraftVersions;
+use Database\Seeders\Support\NormalizedSupplyFormSchemas;
 use Database\Seeders\Support\NormalizedVehicleFormSchema;
+use Database\Seeders\Support\VehicleRegistrationFormSchema;
+use App\Support\SupplyUnits;
+use App\Support\PlatformAdmin;
 use Illuminate\Database\Seeder;
 
-class NoahDemoSeeder extends Seeder
+use App\Support\DemoAccounts;
+
+class PhoenixDemoSeeder extends Seeder
 {
     public function run(): void
     {
-        $password = config('noah.demo_password');
+        $tenantPassword = DemoAccounts::tenantPassword();
+        $rootPassword = DemoAccounts::rootPassword();
 
-        $company = Company::query()->updateOrCreate(
-            ['name' => 'Demo Industrial'],
+        $platformAdmin = User::query()->updateOrCreate(
+            ['email' => DemoAccounts::ROOT_EMAIL],
             [
-                'legal_name' => 'Centro de Servicio Premium Noah S.A. de C.V.',
+                'name' => 'Administrador de sistema',
+                'password' => $rootPassword,
+                'is_platform_admin' => true,
+            ],
+        );
+        PlatformAdmin::syncFlagFromConfig($platformAdmin);
+
+        foreach ([\Database\Seeders\Support\TenantDemoProfile::mein(), \Database\Seeders\Support\TenantDemoProfile::domG()] as $profile) {
+            $this->seedDemonstrationTenant($profile, $tenantPassword);
+        }
+
+        PromptTemplate::query()->updateOrCreate(
+            ['company_id' => null, 'slug' => 'grammar_correction_v1', 'version' => 1],
+            [
+                'provider' => 'local',
+                'system_prompt' => 'Eres un corrector de textos técnicos. No agregues información nueva.',
+                'user_template' => '{{technician_text}}',
+                'is_active' => true,
+            ]
+        );
+
+        app(CompanyAuthorizationService::class)->bootstrapAllCompanies();
+
+        DemoClientLogoGenerator::writeAssetFile();
+    }
+
+
+    private function seedDemonstrationTenant(\Database\Seeders\Support\TenantDemoProfile $profile, string $password): Company
+    {
+        $company = Company::query()->updateOrCreate(
+            ['name' => $profile->companyName],
+            [
+                'legal_name' => $profile->companyLegalName,
                 'currency' => 'MXN',
                 'is_active' => true,
                 'form_max_image_size_kb' => 2048,
@@ -104,6 +145,89 @@ class NoahDemoSeeder extends Seeder
             ]
         );
 
+        $combustibleTipoCatalog = FormOptionCatalog::query()->updateOrCreate(
+            ['company_id' => $company->id, 'slug' => 'tipo-combustible-vehiculo'],
+            [
+                'name' => 'Tipo de combustible — vehículo',
+                'options' => [
+                    ['value' => 'gasolina', 'label' => 'Gasolina', 'description' => 'Motor de gasolina.'],
+                    ['value' => 'diesel', 'label' => 'Diésel', 'description' => 'Motor diésel / DI-D.'],
+                ],
+            ]
+        );
+
+        $traccionCatalog = FormOptionCatalog::query()->updateOrCreate(
+            ['company_id' => $company->id, 'slug' => 'traccion-vehiculo'],
+            [
+                'name' => 'Tracción — vehículo',
+                'options' => [
+                    ['value' => '4x2', 'label' => '4x2 (trasera)', 'description' => 'Tracción trasera.'],
+                    ['value' => '4x4', 'label' => '4x4', 'description' => 'Tracción en las cuatro ruedas.'],
+                ],
+            ]
+        );
+
+        $posicionFiltroCatalog = FormOptionCatalog::query()->updateOrCreate(
+            ['company_id' => $company->id, 'slug' => 'posicion-filtro'],
+            [
+                'name' => 'Posición — filtro',
+                'options' => [
+                    ['value' => 'aceite', 'label' => 'Aceite', 'description' => 'Filtro de aceite motor.'],
+                    ['value' => 'aire', 'label' => 'Aire motor', 'description' => 'Filtro de aire de admisión.'],
+                    ['value' => 'habitaculo', 'label' => 'Habitáculo', 'description' => 'Filtro de cabina / polen.'],
+                    ['value' => 'combustible', 'label' => 'Combustible', 'description' => 'Filtro de combustible.'],
+                ],
+            ]
+        );
+
+        $posicionFrenoCatalog = FormOptionCatalog::query()->updateOrCreate(
+            ['company_id' => $company->id, 'slug' => 'posicion-freno'],
+            [
+                'name' => 'Posición — frenos / balatas',
+                'options' => [
+                    ['value' => 'delanteras', 'label' => 'Delanteras', 'description' => 'Eje delantero.'],
+                    ['value' => 'traseras', 'label' => 'Traseras', 'description' => 'Eje trasero.'],
+                ],
+            ]
+        );
+
+        $posicionSuspensionCatalog = FormOptionCatalog::query()->updateOrCreate(
+            ['company_id' => $company->id, 'slug' => 'posicion-suspension'],
+            [
+                'name' => 'Posición — suspensión',
+                'options' => [
+                    ['value' => 'delanteros', 'label' => 'Delanteros', 'description' => 'Eje delantero.'],
+                    ['value' => 'traseros', 'label' => 'Traseros', 'description' => 'Eje trasero.'],
+                ],
+            ]
+        );
+
+        $unidadInsumoCatalog = FormOptionCatalog::query()->updateOrCreate(
+            ['company_id' => $company->id, 'slug' => SupplyUnits::CATALOG_SLUG],
+            [
+                'name' => 'Unidad — insumo',
+                'options' => SupplyUnits::OPTIONS,
+            ]
+        );
+
+        // Retirar catálogo legacy duplicado (presentación = unidad).
+        FormOptionCatalog::query()
+            ->where('company_id', $company->id)
+            ->where('slug', 'presentacion-insumo')
+            ->delete();
+
+        $tecnologiaAmortiguadorCatalog = FormOptionCatalog::query()->updateOrCreate(
+            ['company_id' => $company->id, 'slug' => 'tecnologia-amortiguador'],
+            [
+                'name' => 'Tecnología — amortiguador',
+                'options' => [
+                    ['value' => 'gas', 'label' => 'Gas', 'description' => 'Amortiguador de gas.'],
+                    ['value' => 'aceite', 'label' => 'Aceite', 'description' => 'Amortiguador hidráulico.'],
+                    ['value' => 'gas_aceite', 'label' => 'Gas / aceite', 'description' => 'Combinado.'],
+                ],
+            ]
+        );
+
         $componentField = static fn (string $key, string $label, bool $required = true) => [
             'key' => $key,
             'type' => 'options',
@@ -126,10 +250,10 @@ class NoahDemoSeeder extends Seeder
         ];
 
         $demoClient = Client::query()->updateOrCreate(
-            ['company_id' => $company->id, 'code' => 'CLI-001'],
+            ['company_id' => $company->id, 'code' => $profile->clientCode],
             [
-                'legal_name' => 'Automotriz Ejecutiva S.A. de C.V.',
-                'trade_name' => 'Cliente Premium Demo',
+                'legal_name' => $profile->clientLegalName,
+                'trade_name' => $profile->clientTradeName,
                 'tax_id' => 'APE850101ABC',
                 'billing_email' => 'facturacion@clientepremium.example',
                 'is_active' => true,
@@ -138,51 +262,33 @@ class NoahDemoSeeder extends Seeder
         $this->seedDemoClientLogo($demoClient);
 
         $site = Site::query()->updateOrCreate(
-            ['company_id' => $company->id, 'name' => 'Centro de servicio premium'],
+            ['company_id' => $company->id, 'name' => $profile->siteName],
             ['address' => 'Av. Reforma 2500, CDMX']
         );
 
-        $admin = User::query()->updateOrCreate(
-            ['email' => 'admin@noah.local'],
-            ['name' => 'Administrador Noah', 'password' => $password]
-        );
-
-        $technician = User::query()->updateOrCreate(
-            ['email' => 'tecnico@noah.local'],
-            ['name' => 'Técnico Demo', 'password' => $password]
-        );
-
-        $supervisor = User::query()->updateOrCreate(
-            ['email' => 'supervisor@noah.local'],
-            ['name' => 'Supervisor Demo', 'password' => $password]
-        );
-
-        $billing = User::query()->updateOrCreate(
-            ['email' => 'facturacion@noah.local'],
-            ['name' => 'Facturación Demo', 'password' => $password]
-        );
-
-        $clientUser = User::query()->updateOrCreate(
-            ['email' => 'cliente@noah.local'],
-            ['name' => 'Cliente Portal Demo', 'password' => $password]
-        );
-
-        foreach ([
-            [$admin, MembershipRole::Administrator, null],
-            [$technician, MembershipRole::Technician, null],
-            [$supervisor, MembershipRole::Supervisor, null],
-            [$billing, MembershipRole::Billing, null],
-            [$clientUser, MembershipRole::Client, $demoClient->id],
-        ] as [$user, $role, $clientId]) {
+        $admin = null;
+        foreach ($profile->staff as $staffRow) {
+            $user = User::query()->updateOrCreate(
+                ['email' => $staffRow['email']],
+                ['name' => $staffRow['name'], 'password' => $password],
+            );
+            if ($staffRow['role'] === MembershipRole::Administrator) {
+                $admin = $user;
+            }
+            $clientId = ! empty($staffRow['portal_client']) ? $demoClient->id : null;
             CompanyMembership::query()->updateOrCreate(
                 ['company_id' => $company->id, 'user_id' => $user->id],
-                ['role' => $role, 'is_active' => true, 'client_id' => $clientId]
+                ['role' => $staffRow['role'], 'is_active' => true, 'client_id' => $clientId],
             );
+        }
+
+        if ($admin === null) {
+            throw new \RuntimeException('Tenant demo profile must include an administrator.');
         }
 
         $normalizedFormDef = FormDefinition::query()->updateOrCreate(
             ['company_id' => $company->id, 'slug' => 'inspeccion-vehiculo-v1'],
-            ['name' => 'Inspección vehículo (normalizada)', 'usage' => FormUsage::Equipment]
+            ['name' => 'Inspección vehículo (normalizada)', 'usage' => FormUsage::Routine]
         );
 
         $normalizedFormVersion = FormVersion::query()->updateOrCreate(
@@ -203,13 +309,105 @@ class NoahDemoSeeder extends Seeder
 
         DemoDesignDraftVersions::ensureFormDraft($normalizedFormDef, $normalizedFormVersion, $admin);
 
+        $fichaVehiculoFormDef = FormDefinition::query()->updateOrCreate(
+            ['company_id' => $company->id, 'slug' => 'ficha-tecnica-vehiculo-v1'],
+            ['name' => 'Ficha técnica vehículo', 'usage' => FormUsage::Equipment]
+        );
+
+        $fichaVehiculoFormVersion = FormVersion::query()->updateOrCreate(
+            ['form_definition_id' => $fichaVehiculoFormDef->id, 'version' => 1],
+            [
+                'status' => 'published',
+                'published_at' => now(),
+                'created_by' => $admin->id,
+                'schema' => [
+                    'sections' => VehicleRegistrationFormSchema::sections(
+                        $combustibleTipoCatalog->id,
+                        $traccionCatalog->id,
+                    ),
+                ],
+            ]
+        );
+
+        DemoDesignDraftVersions::ensureFormDraft($fichaVehiculoFormDef, $fichaVehiculoFormVersion, $admin);
+
+        $formFiltrosDef = FormDefinition::query()->updateOrCreate(
+            ['company_id' => $company->id, 'slug' => 'ficha-insumo-filtros-v1'],
+            ['name' => 'Ficha insumo — filtros', 'usage' => FormUsage::Supply]
+        );
+        $formFiltrosVersion = FormVersion::query()->updateOrCreate(
+            ['form_definition_id' => $formFiltrosDef->id, 'version' => 1],
+            [
+                'status' => 'published',
+                'published_at' => now(),
+                'created_by' => $admin->id,
+                'schema' => NormalizedSupplyFormSchemas::filtros(
+                    $posicionFiltroCatalog->id,
+                    $unidadInsumoCatalog->id,
+                ),
+            ]
+        );
+        DemoDesignDraftVersions::ensureFormDraft($formFiltrosDef, $formFiltrosVersion, $admin);
+
+        $formFrenosDef = FormDefinition::query()->updateOrCreate(
+            ['company_id' => $company->id, 'slug' => 'ficha-insumo-frenos-v1'],
+            ['name' => 'Ficha insumo — frenos y balatas', 'usage' => FormUsage::Supply]
+        );
+        $formFrenosVersion = FormVersion::query()->updateOrCreate(
+            ['form_definition_id' => $formFrenosDef->id, 'version' => 1],
+            [
+                'status' => 'published',
+                'published_at' => now(),
+                'created_by' => $admin->id,
+                'schema' => NormalizedSupplyFormSchemas::frenos(
+                    $posicionFrenoCatalog->id,
+                    $unidadInsumoCatalog->id,
+                ),
+            ]
+        );
+        DemoDesignDraftVersions::ensureFormDraft($formFrenosDef, $formFrenosVersion, $admin);
+
+        $formSuspensionDef = FormDefinition::query()->updateOrCreate(
+            ['company_id' => $company->id, 'slug' => 'ficha-insumo-suspension-v1'],
+            ['name' => 'Ficha insumo — suspensión', 'usage' => FormUsage::Supply]
+        );
+        $formSuspensionVersion = FormVersion::query()->updateOrCreate(
+            ['form_definition_id' => $formSuspensionDef->id, 'version' => 1],
+            [
+                'status' => 'published',
+                'published_at' => now(),
+                'created_by' => $admin->id,
+                'schema' => NormalizedSupplyFormSchemas::suspension(
+                    $posicionSuspensionCatalog->id,
+                    $tecnologiaAmortiguadorCatalog->id,
+                    $unidadInsumoCatalog->id,
+                ),
+            ]
+        );
+        DemoDesignDraftVersions::ensureFormDraft($formSuspensionDef, $formSuspensionVersion, $admin);
+
+        $formFluidosDef = FormDefinition::query()->updateOrCreate(
+            ['company_id' => $company->id, 'slug' => 'ficha-insumo-fluidos-v1'],
+            ['name' => 'Ficha insumo — fluidos y lubricantes', 'usage' => FormUsage::Supply]
+        );
+        $formFluidosVersion = FormVersion::query()->updateOrCreate(
+            ['form_definition_id' => $formFluidosDef->id, 'version' => 1],
+            [
+                'status' => 'published',
+                'published_at' => now(),
+                'created_by' => $admin->id,
+                'schema' => NormalizedSupplyFormSchemas::fluidos($unidadInsumoCatalog->id),
+            ]
+        );
+        DemoDesignDraftVersions::ensureFormDraft($formFluidosDef, $formFluidosVersion, $admin);
+
         $typeVehiculo = EquipmentType::query()->updateOrCreate(
             ['company_id' => $company->id, 'code' => 'vehiculo'],
             [
                 'name' => 'Vehículo',
                 'description' => 'Automóviles y camionetas',
                 'sort_order' => 1,
-                'default_form_definition_id' => $normalizedFormDef->id,
+                'default_form_definition_id' => $fichaVehiculoFormDef->id,
             ]
         );
 
@@ -225,68 +423,81 @@ class NoahDemoSeeder extends Seeder
 
         $supplyTypeFiltros = SupplyType::query()->updateOrCreate(
             ['company_id' => $company->id, 'code' => 'filtros'],
-            ['name' => 'Filtros', 'sort_order' => 1]
+            [
+                'name' => 'Filtros',
+                'sort_order' => 1,
+                'default_form_definition_id' => $formFiltrosDef->id,
+            ]
         );
         $supplyTypeFrenos = SupplyType::query()->updateOrCreate(
             ['company_id' => $company->id, 'code' => 'frenos'],
-            ['name' => 'Frenos y balatas', 'sort_order' => 2]
+            [
+                'name' => 'Frenos y balatas',
+                'sort_order' => 2,
+                'default_form_definition_id' => $formFrenosDef->id,
+            ]
         );
         $supplyTypeSuspension = SupplyType::query()->updateOrCreate(
             ['company_id' => $company->id, 'code' => 'suspension'],
-            ['name' => 'Suspensión', 'sort_order' => 3]
+            [
+                'name' => 'Suspensión',
+                'sort_order' => 3,
+                'default_form_definition_id' => $formSuspensionDef->id,
+            ]
         );
         SupplyType::query()->updateOrCreate(
             ['company_id' => $company->id, 'code' => 'fluidos'],
-            ['name' => 'Fluidos y lubricantes', 'sort_order' => 4]
-        );
-
-        PromptTemplate::query()->updateOrCreate(
-            ['company_id' => null, 'slug' => 'grammar_correction_v1', 'version' => 1],
             [
-                'provider' => 'local',
-                'system_prompt' => 'Eres un corrector de textos técnicos. No agregues información nueva.',
-                'user_template' => '{{technician_text}}',
-                'is_active' => true,
+                'name' => 'Fluidos y lubricantes',
+                'sort_order' => 4,
+                'default_form_definition_id' => $formFluidosDef->id,
             ]
         );
 
         $catalog = CatalogItem::query()->updateOrCreate(
-            ['company_id' => $company->id, 'code' => 'VEH-L200-2018'],
+            ['company_id' => $company->id, 'code' => $profile->catalogCode],
             [
                 'equipment_type_id' => $typeVehiculo->id,
-                'name' => 'Mitsubishi L200 2018',
+                'name' => $profile->catalogName,
                 'manufacturer' => 'Mitsubishi',
                 'specifications' => [
                     'modelo' => 'L200',
                     'anio' => 2018,
-                    'mercado' => 'MX',
+                    'mercado' => 'México',
                     'chasis' => 'Rise Body',
-                    'variante_demo' => '2.5L DI-D 4x4',
-                    'motor' => '2.5L Turbo Diésel Common Rail',
+                    'variante' => '2.5L DI-D 4x4',
+                    'tipo_combustible' => 'diesel',
+                    'motor' => '2.5 Litros, 4 cilindros Turbo Diésel (Intercooler)',
                     'potencia_hp' => 134,
+                    'potencia_rpm' => 4000,
                     'torque_lb_pie' => 232,
-                    'transmision' => 'Manual 5 vel. + reductora',
-                    'traccion' => '4x4 Easy Select',
+                    'torque_rpm' => 2000,
+                    'transmision' => 'Manual de 5 velocidades (con caja reductora)',
+                    'traccion' => '4x4',
+                    'alimentacion' => 'Inyección Directa Common Rail de Alta Presión',
+                    'suspension_delantera' => 'Independiente de doble horquilla con resortes helicoidales y barra estabilizadora',
+                    'suspension_trasera' => 'Eje rígido con muelles elípticos (ballestas) reforzadas para carga',
                     'frenos_delanteros' => 'Discos ventilados',
                     'frenos_traseros' => 'Tambor',
-                    'tanque_litros' => 75,
+                    'asistencias' => 'ABS y EBD',
+                    'direccion' => 'Hidráulica asistida de piñón y cremallera',
+                    'largo_mm' => 5205,
+                    'ancho_mm' => 1785,
+                    'alto_mm' => 1775,
+                    'batalla_mm' => 3000,
                     'capacidad_carga_kg' => 1050,
-                    'dimensiones_mm' => [
-                        'largo' => 5205,
-                        'ancho' => 1785,
-                        'alto' => 1775,
-                        'batalla' => 3000,
-                    ],
+                    'tanque_litros' => 75,
+                    'rines' => 'Aluminio de 16 pulgadas',
                 ],
             ]
         );
 
         $asset = Asset::query()->updateOrCreate(
-            ['company_id' => $company->id, 'tag' => 'L200-2018-DEMO'],
+            ['company_id' => $company->id, 'tag' => $profile->assetTag],
             [
                 'site_id' => $site->id,
                 'catalog_item_id' => $catalog->id,
-                'serial_number' => 'MMBJNKB40JH000001',
+                'serial_number' => $profile->assetSerial,
                 'location_label' => 'Bahía 3 — recepción',
             ]
         );
@@ -314,6 +525,9 @@ class NoahDemoSeeder extends Seeder
                 'specifications' => [
                     'marca' => 'Mitsubishi',
                     'referencia_oem' => '1230A153',
+                    'posicion' => 'aceite',
+                    'unidad' => 'pza',
+                    'notas_mercado' => 'OEM original; rango estimado $500–$600 MXN.',
                 ],
             ],
             [
@@ -325,6 +539,9 @@ class NoahDemoSeeder extends Seeder
                 'specifications' => [
                     'marca' => 'Sakura',
                     'referencia_oem' => '2030515',
+                    'posicion' => 'aire',
+                    'unidad' => 'pza',
+                    'notas_mercado' => 'Rango estimado $237–$445 MXN.',
                 ],
             ],
             [
@@ -336,6 +553,10 @@ class NoahDemoSeeder extends Seeder
                 'specifications' => [
                     'marca' => 'Brembo',
                     'referencia_oem' => 'P54038',
+                    'posicion' => 'delanteras',
+                    'material' => 'Cerámicas',
+                    'unidad' => 'jgo',
+                    'notas_mercado' => 'Rango estimado $1,130–$1,406 MXN.',
                 ],
             ],
             [
@@ -347,6 +568,10 @@ class NoahDemoSeeder extends Seeder
                 'specifications' => [
                     'marca' => 'GROB',
                     'referencia_oem' => 'AMORT-DEL-PAR',
+                    'posicion' => 'delanteros',
+                    'tecnologia' => 'gas',
+                    'unidad' => 'par',
+                    'notas_mercado' => 'Precio estimado $1,698 MXN (par).',
                 ],
             ],
         ] as $supplySeed) {
@@ -554,9 +779,15 @@ class NoahDemoSeeder extends Seeder
             ['company_id' => $company->id, 'slug' => 'informe-revision-mayor-vehiculo'],
             [
                 'name' => 'Informe revisión mayor vehículo',
-                'description' => 'Informe alineado al formulario demo revisión mayor SUV premium',
+                'description' => 'Informe alineado al formulario normalizado inspeccion-vehiculo-v1',
             ]
         );
+
+        $reportComponents = app(ReportPresetApplier::class)->componentsFromFormVersion($normalizedFormVersion);
+        $reportComponents[] = ['type' => 'divider', 'style' => 'solid', 'margin_pt' => 12];
+        $reportComponents[] = ['type' => 'subtitle', 'text' => 'Anexos', 'align' => 'left'];
+        $reportComponents[] = ['type' => 'section_template', 'section_template_id' => $sectionAlcance->id, 'align' => 'left'];
+        $reportComponents[] = ['type' => 'section_template', 'section_template_id' => $sectionGarantia->id, 'align' => 'left'];
 
         $reportVersion = ReportTemplateVersion::query()->updateOrCreate(
             ['report_template_id' => $reportTpl->id, 'version' => 1],
@@ -564,38 +795,7 @@ class NoahDemoSeeder extends Seeder
                 'status' => 'published',
                 'published_at' => now(),
                 'created_by' => $admin->id,
-                'components' => [
-                    ['type' => 'title', 'text' => 'Informe de inspección vehicular', 'align' => 'center'],
-                    ['type' => 'subtitle', 'text' => '{{company}} · {{asset_tag}}', 'align' => 'center'],
-                    ['type' => 'subtitle', 'text' => 'Recepción', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'kilometraje', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'nivel_combustible', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'observaciones_recepcion', 'align' => 'left'],
-                    ['type' => 'divider', 'style' => 'solid', 'margin_pt' => 10],
-                    ['type' => 'subtitle', 'text' => 'Motor y fluidos', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'motor_estado', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'aceite_motor', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'filtro_aceite_reemplazado', 'align' => 'left'],
-                    ['type' => 'subtitle', 'text' => 'Frenos', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'frenos_delanteros', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'frenos_traseros', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'liquido_frenos', 'align' => 'left'],
-                    ['type' => 'subtitle', 'text' => 'Filtros', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'filtro_aire', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'filtro_habitaculo', 'align' => 'left'],
-                    ['type' => 'subtitle', 'text' => 'Suspensión y eléctrico', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'suspension', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'direccion', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'bateria', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'luces', 'align' => 'left'],
-                    ['type' => 'subtitle', 'text' => 'Cierre', 'align' => 'left'],
-                    ['type' => 'paragraph', 'field' => 'comentarios_cierre', 'align' => 'left'],
-                    ['type' => 'image', 'field' => 'foto_evidencia', 'align' => 'center'],
-                    ['type' => 'divider', 'style' => 'solid', 'margin_pt' => 12],
-                    ['type' => 'subtitle', 'text' => 'Anexos', 'align' => 'left'],
-                    ['type' => 'section_template', 'section_template_id' => $sectionAlcance->id, 'align' => 'left'],
-                    ['type' => 'section_template', 'section_template_id' => $sectionGarantia->id, 'align' => 'left'],
-                ],
+                'components' => $reportComponents,
                 'page_settings' => [
                     'size' => 'A4',
                     'font_family' => 'source_sans',
@@ -605,14 +805,14 @@ class NoahDemoSeeder extends Seeder
                     ],
                     'footer' => [
                         'enabled' => true,
-                        'text' => 'Documento confidencial — generado por **Noah**',
+                        'text' => 'Documento confidencial — generado por **Phoenix**',
                     ],
                     'page_number' => ['enabled' => true, 'start_at' => 2],
                     'cover_page' => [
                         'enabled' => true,
                         'title' => 'Revisión mayor premium',
                         'subtitle' => '{{company}} · {{asset_tag}}',
-                        'body' => 'Inspección vehicular normalizada: motor, frenos, filtros, suspensión y eléctrico básico.',
+                        'body' => 'Inspección y revisión mayor con evidencias por sección: motor, frenos, filtros, suspensión y cierre.',
                         'show_date' => true,
                         'omit_header_footer' => true,
                         'use_client_logo' => true,
@@ -629,7 +829,7 @@ class NoahDemoSeeder extends Seeder
             ['company_id' => $company->id, 'slug' => 'revision-mayor-vehiculo-premium'],
             [
                 'name' => 'Revisión mayor vehículo (premium)',
-                'form_version_id' => $formVersion->id,
+                'form_version_id' => $normalizedFormVersion->id,
                 'report_template_version_id' => $reportVersion->id,
                 'is_active' => true,
             ]
@@ -646,15 +846,93 @@ class NoahDemoSeeder extends Seeder
                 'unassigned_at' => null,
             ],
             [
-                'serial_number' => $asset->serial_number ?? 'MMBJNKB40JH000001',
+                'serial_number' => $asset->serial_number ?? $profile->assetSerial,
                 'assigned_by_user_id' => $admin->id,
                 'assigned_at' => now(),
             ]
         );
 
-        app(CompanyAuthorizationService::class)->bootstrapAllCompanies();
+        foreach ([
+            [
+                'sku' => 'FLT-AIR-01',
+                'supply_type_id' => $supplyTypeFiltros->id,
+                'name' => 'Filtro de aire motor',
+                'sector' => 'mechanical',
+                'material_kind' => 'spare_part',
+                'unit' => 'pza',
+                'standard_cost' => 320.00,
+                'quantity_on_hand' => 18,
+                'min_stock' => 6,
+                'storage_location' => 'Rack M-12',
+                'is_active' => true,
+            ],
+            [
+                'sku' => 'LUB-5W30',
+                'supply_type_id' => $supplyTypeFiltros->id,
+                'name' => 'Aceite sintético 5W-30',
+                'sector' => 'mechanical',
+                'material_kind' => 'chemical',
+                'unit' => 'lt',
+                'standard_cost' => 180.00,
+                'quantity_on_hand' => 42,
+                'min_stock' => 15,
+                'storage_location' => 'Bodega fluidos',
+                'is_active' => true,
+            ],
+            [
+                'sku' => 'EPP-GLOVE',
+                'supply_type_id' => $supplyTypeFiltros->id,
+                'name' => 'Guantes nitrilo industrial',
+                'sector' => 'safety',
+                'material_kind' => 'consumable',
+                'unit' => 'pqt',
+                'standard_cost' => 95.00,
+                'quantity_on_hand' => 8,
+                'min_stock' => 10,
+                'storage_location' => 'EPP entrada',
+                'is_active' => true,
+            ],
+        ] as $stockSeed) {
+            SupplyItem::query()->updateOrCreate(
+                ['company_id' => $company->id, 'sku' => $stockSeed['sku']],
+                array_merge($stockSeed, ['supplier_id' => $supplier->id]),
+            );
+        }
 
-        DemoClientLogoGenerator::writeAssetFile();
+        $this->ensureDemonstrationRoutine($company, $profile);
+
+        return $company;
+    }
+
+    private function ensureDemonstrationRoutine(Company $company, \Database\Seeders\Support\TenantDemoProfile $profile): void
+    {
+        $hasDemo = Routine::query()
+            ->where('company_id', $company->id)
+            ->where('is_demo', true)
+            ->exists();
+
+        if ($hasDemo) {
+            return;
+        }
+
+        $technicianEmail = null;
+        foreach ($profile->staff as $staffRow) {
+            if ($staffRow['role'] === MembershipRole::Technician) {
+                $technicianEmail = $staffRow['email'];
+                break;
+            }
+        }
+
+        if ($technicianEmail === null) {
+            return;
+        }
+
+        $technician = User::query()->where('email', $technicianEmail)->first();
+        if ($technician === null) {
+            return;
+        }
+
+        app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
     }
 
     private function seedDemoClientLogo(Client $client): void

@@ -14,6 +14,7 @@ import '@vue-flow/core/dist/theme-default.css';
 import '@vue-flow/controls/dist/style.css';
 import RichTextEditor from '@/components/ui/RichTextEditor.vue';
 import MaterialSelect from '@/components/ui/MaterialSelect.vue';
+import IconActionButton from '@/components/ui/IconActionButton.vue';
 import type { WorkflowDefinition } from '@/lib/workflowFlowMapper';
 import {
     type ActionEmailConfig,
@@ -34,6 +35,7 @@ import {
     edgeDisplayLabel,
     defaultEdgeForAction,
     defaultNotifyClose,
+    defaultAssignmentNotify,
     defaultBlockGraph,
 } from '@/lib/workflowBlockModel';
 import WorkflowBlockNode from '@/components/workflow/WorkflowBlockNode.vue';
@@ -285,6 +287,18 @@ function ensureNotify(edge: BlockEdge): ActionEmailConfig {
     return edge.notify;
 }
 
+function ensureAssignmentNotify(node: BlockNode): ActionEmailConfig {
+    if (!node.assignment_notify) {
+        node.assignment_notify = {
+            enabled: false,
+            subject: '',
+            body_html: '',
+            recipients: [],
+        };
+    }
+    return node.assignment_notify;
+}
+
 function updateEdgeLabel(value: string) {
     const edge = selectedEdge.value;
     if (!edge || !props.editable) {
@@ -312,6 +326,19 @@ function toggleEdgeNotify() {
     emitCompiled();
 }
 
+function toggleAssignmentNotify() {
+    const node = selectedNode.value;
+    if (!node || node.kind !== 'routine' || !props.editable) {
+        return;
+    }
+    const notify = ensureAssignmentNotify(node);
+    notify.enabled = !notify.enabled;
+    if (notify.enabled && (!notify.subject || notify.recipients.length === 0)) {
+        Object.assign(notify, defaultAssignmentNotify());
+    }
+    emitCompiled();
+}
+
 function updateEdgeNotifyField(field: 'subject' | 'body_html', value: string) {
     const edge = selectedEdge.value;
     if (!edge || !props.editable) {
@@ -321,12 +348,36 @@ function updateEdgeNotifyField(field: 'subject' | 'body_html', value: string) {
     emitCompiled();
 }
 
+function updateAssignmentNotifyField(field: 'subject' | 'body_html', value: string) {
+    const node = selectedNode.value;
+    if (!node || node.kind !== 'routine' || !props.editable) {
+        return;
+    }
+    ensureAssignmentNotify(node)[field] = value;
+    emitCompiled();
+}
+
 function toggleRecipient(key: ActionEmailRecipientKey) {
     const edge = selectedEdge.value;
     if (!edge || !props.editable) {
         return;
     }
     const notify = ensureNotify(edge);
+    const idx = notify.recipients.indexOf(key);
+    if (idx >= 0) {
+        notify.recipients.splice(idx, 1);
+    } else {
+        notify.recipients.push(key);
+    }
+    emitCompiled();
+}
+
+function toggleAssignmentRecipient(key: ActionEmailRecipientKey) {
+    const node = selectedNode.value;
+    if (!node || node.kind !== 'routine' || !props.editable) {
+        return;
+    }
+    const notify = ensureAssignmentNotify(node);
     const idx = notify.recipients.indexOf(key);
     if (idx >= 0) {
         notify.recipients.splice(idx, 1);
@@ -352,6 +403,17 @@ const edgeNotifyBody = computed({
     },
     set(v: string) {
         updateEdgeNotifyField('body_html', v);
+    },
+});
+
+const assignmentNotifyBody = computed({
+    get(): string {
+        return selectedNode.value?.kind === 'routine'
+            ? (selectedNode.value.assignment_notify?.body_html ?? '')
+            : '';
+    },
+    set(v: string) {
+        updateAssignmentNotifyField('body_html', v);
     },
 });
 
@@ -482,6 +544,49 @@ ensureEnd();
                 </template>
             </template>
 
+            <template v-else-if="selectedNode?.kind === 'routine'">
+                <p class="text-portal-heading font-medium">{{ selectedNode.label }}</p>
+                <p class="text-portal-muted mb-2 text-xs">
+                    Correo al asignar la rutina a un técnico.
+                </p>
+                <label class="mt-1 flex items-center gap-2 text-xs">
+                    <input
+                        type="checkbox"
+                        :checked="selectedNode.assignment_notify?.enabled"
+                        :disabled="!editable"
+                        @change="toggleAssignmentNotify"
+                    />
+                    Notificar por correo al asignar
+                </label>
+                <template v-if="selectedNode.assignment_notify?.enabled">
+                    <label class="text-portal-muted mb-1 mt-2 block text-xs">Asunto</label>
+                    <input
+                        class="mb-2 w-full rounded border border-portal-border bg-transparent px-2 py-1 text-xs"
+                        :value="selectedNode.assignment_notify.subject"
+                        :readonly="!editable"
+                        @input="updateAssignmentNotifyField('subject', ($event.target as HTMLInputElement).value)"
+                    />
+                    <p class="text-portal-muted mb-1 text-xs">{{ EMAIL_TOKENS.map((t) => t.key).join(', ') }}</p>
+                    <div v-if="editable" class="mb-2 max-h-40 overflow-y-auto">
+                        <RichTextEditor v-model="assignmentNotifyBody" />
+                    </div>
+                    <p class="text-portal-muted mb-1 mt-2 text-xs font-medium">Destinatarios</p>
+                    <label
+                        v-for="opt in recipientOptions"
+                        :key="opt.value"
+                        class="mb-1 flex items-center gap-2 text-xs"
+                    >
+                        <input
+                            type="checkbox"
+                            :checked="selectedNode.assignment_notify?.recipients.includes(opt.value)"
+                            :disabled="!editable"
+                            @change="toggleAssignmentRecipient(opt.value)"
+                        />
+                        {{ opt.label }}
+                    </label>
+                </template>
+            </template>
+
             <template v-else-if="selectedNode?.kind === 'role'">
                 <p class="text-portal-heading font-medium">Bloque rol</p>
                 <MaterialSelect
@@ -492,14 +597,14 @@ ensureEnd();
                     :options="roleCatalogOptions"
                 />
                 <p v-else class="text-portal-muted text-xs">{{ roleCatalogLabel(selectedNode.assigned_role ?? '') }}</p>
-                <button
+                <IconActionButton
                     v-if="editable"
-                    type="button"
-                    class="mt-3 text-xs text-red-500 underline"
+                    icon="trash"
+                    label="Eliminar bloque"
+                    variant="danger"
+                    class="mt-3"
                     @click="removeSelectedNode"
-                >
-                    Eliminar bloque
-                </button>
+                />
             </template>
 
             <template v-else-if="selectedNode">

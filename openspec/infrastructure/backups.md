@@ -1,4 +1,4 @@
-# Backups — Noah
+# Backups — Phoenix
 
 ## PostgreSQL
 
@@ -13,7 +13,7 @@
 
 ## Configuración
 
-- Export de definiciones (forms, reports, workflows) recomendado antes de cambios masivos — script futuro `noah:export-tenant`.
+- Export de definiciones (forms, reports, workflows) recomendado antes de cambios masivos — script futuro `phoenix:export-tenant`.
 
 ## Disaster recovery
 

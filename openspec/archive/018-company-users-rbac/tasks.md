@@ -5,7 +5,7 @@
 - [x] ADR-011: Spatie Permission con `company_id` como team
 - [x] Seeder catálogo de permisos (slugs de target-users + `company.users.manage`)
 - [x] Seeder roles plantilla y asignación permisos por rol
-- [x] Comando `noah:bootstrap-permissions` (enum → Spatie) para datos existentes
+- [x] Comando `phoenix:bootstrap-permissions` (enum → Spatie) para datos existentes
 
 ## Fase 1 — Infraestructura Identity
 

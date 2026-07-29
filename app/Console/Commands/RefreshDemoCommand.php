@@ -2,7 +2,8 @@
 
 namespace App\Console\Commands;
 
-use Database\Seeders\NoahDemoSeeder;
+use Database\Seeders\PhoenixDemoSeeder;
+use App\Support\DemoAccounts;
 use Illuminate\Console\Command;
 
 /**
@@ -11,10 +12,10 @@ use Illuminate\Console\Command;
  */
 class RefreshDemoCommand extends Command
 {
-    protected $signature = 'noah:refresh-demo
+    protected $signature = 'phoenix:refresh-demo
                             {--skip-migrate : No ejecutar migrate}';
 
-    protected $description = 'Reaplica NoahDemoSeeder, permisos y restablece credenciales demo';
+    protected $description = 'Reaplica PhoenixDemoSeeder, permisos y restablece credenciales demo';
 
     public function handle(): int
     {
@@ -22,13 +23,13 @@ class RefreshDemoCommand extends Command
             $this->call('migrate', ['--force' => true]);
         }
 
-        $this->call('noah:bootstrap-permissions');
-        $this->call('db:seed', ['--class' => NoahDemoSeeder::class, '--force' => true]);
-        $this->call('noah:ensure-demo', ['--reset-credentials' => true]);
+        $this->call('phoenix:bootstrap-permissions');
+        $this->call('db:seed', ['--class' => PhoenixDemoSeeder::class, '--force' => true]);
+        $this->call('phoenix:ensure-demo', ['--reset-credentials' => true]);
 
-        $password = config('noah.demo_password');
         $this->newLine();
-        $this->info('Demo listo. Credenciales (@noah.local / '.$password.'):');
+        $this->info('Demo listo. Root: '.DemoAccounts::ROOT_EMAIL.' / '.config('phoenix.demo_root_password'));
+        $this->info('Tenants: contraseña '.config('phoenix.demo_password'));
         foreach (EnsureDemoDataCommand::demoAccountEmails() as $email) {
             $this->line('  · '.$email);
         }

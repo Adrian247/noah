@@ -7,6 +7,8 @@ export type TourStep = {
     route?: string;
     target?: string;
     audioUrl: string;
+    /** Voz local macOS (`afconvert`) cuando no hay ffmpeg */
+    audioUrlAlt?: string;
     padding?: number;
     spotlight?: 'sidebar' | 'nav' | 'panel';
 };
@@ -37,6 +39,7 @@ function materialize(def: TourStepDef): TourStep {
         target: def.target,
         padding: def.padding ?? 8,
         audioUrl: `/audio/onboarding/${def.id}.mp3`,
+        audioUrlAlt: `/audio/onboarding/${def.id}.m4a`,
         spotlight: def.spotlight,
     };
 }
@@ -46,6 +49,14 @@ export const TOUR_STEP_DEFS: TourStepDef[] = [
     { id: '01-welcome' },
     { id: '02-dashboard', route: '/app/dashboard', target: '[data-tour="dashboard-cards"]', spotlight: 'panel' },
     { id: '03-navigation', route: '/app/dashboard', target: '[data-tour="app-sidebar"]', padding: 4, spotlight: 'sidebar' },
+    {
+        id: '04-workspace',
+        requiresPlatformAdmin: true,
+        route: '/app/dashboard',
+        target: '[data-tour="sidebar-workspace"]',
+        padding: 6,
+        spotlight: 'sidebar',
+    },
     {
         id: '10-routines',
         moduleId: 'routines',
@@ -72,9 +83,9 @@ export const TOUR_STEP_DEFS: TourStepDef[] = [
     },
     {
         id: '13-catalog-supplies',
-        moduleId: 'catalog_supplies',
+        moduleId: 'inventory',
         route: '/app/dashboard',
-        target: '[data-tour="nav-catalog-supplies"]',
+        target: '[data-tour="nav-inventory"]',
         padding: 6,
         spotlight: 'nav',
     },
@@ -128,6 +139,7 @@ export const TOUR_STEP_DEFS: TourStepDef[] = [
     {
         id: '23-design-workflows',
         moduleId: 'design_workflows',
+        requiresPlatformAdmin: true,
         route: '/app/dashboard',
         target: '[data-tour="nav-design-workflows"]',
         padding: 6,
@@ -165,6 +177,14 @@ export const TOUR_STEP_DEFS: TourStepDef[] = [
         padding: 6,
         spotlight: 'nav',
     },
+    {
+        id: '43-platform-tenants',
+        requiresPlatformAdmin: true,
+        route: '/app/dashboard',
+        target: '[data-tour="nav-platform-tenants"]',
+        padding: 6,
+        spotlight: 'nav',
+    },
     { id: '99-finish', route: '/app/dashboard' },
 ];
 
@@ -186,4 +206,4 @@ export function buildProductTourSteps(
 /** @deprecated usar buildProductTourSteps; se mantiene para tests estáticos. */
 export const productTourSteps = buildProductTourSteps(() => true, true);
 
-export const PRODUCT_TOUR_STORAGE_KEY = 'noah_product_tour_v2_completed';
+export const PRODUCT_TOUR_STORAGE_KEY = 'phoenix_product_tour_v3_completed';

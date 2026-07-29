@@ -13,7 +13,7 @@ Orden sugerido: **A → B → C → D → E**. Marcar `[x]` al cerrar cada ítem
 - [ ] `RoutineStatus::PendingBilling` + actualizar transiciones en código y UI (`StatusBadge`, filtros).
 - [ ] `WorkflowRuntime::defaultDefinition()` v2 (`billing_review`, `invoice_issued` → `complete`).
 - [ ] Ajustar `WorkflowDefinitionValidator` para grafo v2 (mantener compatibilidad documentada v1 → v2).
-- [ ] Comando `noah:migrate-workflow-definitions-v2` (empresa o global).
+- [ ] Comando `phoenix:migrate-workflow-definitions-v2` (empresa o global).
 - [ ] `onApproved`: transición a `billing_review`, `RoutineStatus::PendingBilling`, disparar `routine_validated` (PDF + borrador) sin `complete`.
 - [ ] Nuevo `onInvoiceIssued` (o hook post-`issue`) → transición `invoice_issued`, `RoutineStatus::Invoiced`, `complete`.
 - [ ] Propagar `correlation_id` en `AuditLogger`, transiciones workflow, rechazo, validación, emisión.
@@ -58,9 +58,9 @@ Orden sugerido: **A → B → C → D → E**. Marcar `[x]` al cerrar cada ítem
 
 ### Identity
 
-- [ ] `MembershipRole::Client` (o equivalente) + permisos `portal.*` en `NoahPermission` y bootstrap.
+- [ ] `MembershipRole::Client` (o equivalente) + permisos `portal.*` en `PhoenixPermission` y bootstrap.
 - [ ] `company_memberships.client_id` (nullable, FK).
-- [ ] Seed: `cliente@noah.local` vinculado a cliente demo con activo asignado.
+- [ ] Seed: `cliente@pyro-systems.com` vinculado a cliente demo con activo asignado.
 
 ### API portal
 
@@ -78,7 +78,7 @@ Orden sugerido: **A → B → C → D → E**. Marcar `[x]` al cerrar cada ítem
 
 ## Fase E — Rutina demo bajo demanda
 
-- [ ] Quitar bloque `Routine::create` de `NoahDemoSeeder` (mantener `ensureInstance` solo si queda alguna rutina — no debería).
+- [ ] Quitar bloque `Routine::create` de `PhoenixDemoSeeder` (mantener `ensureInstance` solo si queda alguna rutina — no debería).
 - [ ] Servicio `DemoRoutineFactory`: rutina + ejecución borrador o assigned con `responses` fake + fotos placeholder.
 - [ ] `POST /api/v1/routines/demo` — solo administrador.
 - [ ] `routines.is_demo` boolean (opcional métricas).

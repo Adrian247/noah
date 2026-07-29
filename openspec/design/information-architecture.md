@@ -1,4 +1,4 @@
-# Arquitectura de información — Web Noah
+# Arquitectura de información — Web Phoenix
 
 Navegación principal de la aplicación administrativa (Vue SPA). Iconografía y labels finales en implementación.
 

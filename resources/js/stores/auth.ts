@@ -16,6 +16,10 @@ export type CompanyOption = {
     name: string;
     role: string;
     client_id?: number | null;
+    assumed?: boolean;
+    company_is_active?: boolean;
+    /** Usuario de facturación activo en esta empresa (para mensajes de solo lectura). */
+    billing_contact_email?: string | null;
     permissions?: string[];
     modules?: Record<string, ModuleAccessState>;
 };
@@ -54,10 +58,11 @@ export const useAuthStore = defineStore('auth', () => {
                 companies: CompanyOption[];
             }>('/auth/login', {
                 method: 'POST',
-                body: JSON.stringify({ email: normalizedEmail, password, device_name: 'noah-web' }),
+                body: JSON.stringify({ email: normalizedEmail, password, device_name: 'phoenix-web' }),
             });
             token.value = data.token;
             setToken(data.token);
+            clearCompanyId();
             user.value = data.user;
             companies.value = data.companies;
         } catch (e) {

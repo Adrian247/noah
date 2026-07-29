@@ -6,7 +6,7 @@
 
 ## Backend
 
-- [x] `NoahModuleCatalog` + `module_access` en membresía
+- [x] `PhoenixModuleCatalog` + `module_access` en membresía
 - [x] Resolución `modules` en `/auth/me` y permisos efectivos
 - [x] `PUT /company/users` con `modules`
 - [x] Tests (ocultar módulo clientes, etc.)

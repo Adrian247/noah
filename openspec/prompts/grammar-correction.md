@@ -1,4 +1,4 @@
-# Prompt — Corrección gramatical (Noah)
+# Prompt — Corrección gramatical (Phoenix)
 
 Caso de uso: comentarios del técnico en rutina de mantenimiento. Dominio: [ai.md](../domain/ai.md).
 

@@ -1,4 +1,4 @@
-# Bounded contexts — Noah
+# Bounded contexts — Phoenix
 
 Cada contexto tiene su agregado principal, lenguaje y límites. La comunicación entre contextos es por **eventos de integración** o **servicios de aplicación** explícitos.
 

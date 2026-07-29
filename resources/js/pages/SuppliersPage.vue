@@ -8,6 +8,9 @@ import PageHeader from '@/components/ui/PageHeader.vue';
 import AppModal from '@/components/ui/AppModal.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
 import AppButton from '@/components/ui/AppButton.vue';
+import IconActionButton from '@/components/ui/IconActionButton.vue';
+import ConfigurableDataTable from '@/components/ui/ConfigurableDataTable.vue';
+import { tableActionsColumn, type TableColumnDef } from '@/lib/tableColumns';
 
 type Supplier = {
     id: number;
@@ -20,6 +23,18 @@ type Supplier = {
 const { canWriteModule } = useModuleAccess();
 const toast = useToast();
 const canWrite = computed(() => canWriteModule('catalog_suppliers'));
+
+const supplierTableColumns = computed((): TableColumnDef[] => {
+    const cols: TableColumnDef[] = [
+        { id: 'code', label: 'Código' },
+        { id: 'name', label: 'Nombre' },
+        { id: 'contact', label: 'Contacto' },
+    ];
+    if (canWrite.value) {
+        cols.push(tableActionsColumn({ cellClass: 'table-row-actions' }));
+    }
+    return cols;
+});
 
 const suppliers = ref<Supplier[]>([]);
 const loading = ref(true);
@@ -95,32 +110,32 @@ onMounted(load);
             </AppButton>
         </div>
         <p v-if="loading" class="text-portal-muted">Cargando…</p>
-        <div v-else class="portal-table-wrap">
-            <table class="portal-data-table">
-                <thead>
-                    <tr class="border-b">
-                        <th class="py-2">Código</th>
-                        <th>Nombre</th>
-                        <th>Contacto</th>
-                        <th v-if="canWrite" />
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="s in suppliers" :key="s.id" class="border-b">
-                        <td class="text-portal-heading py-2 font-mono text-xs">{{ s.code }}</td>
-                        <td class="text-portal-heading">{{ s.name }}</td>
-                        <td class="text-portal-muted">{{ s.contact_email ?? s.contact_phone ?? '—' }}</td>
-                        <td v-if="canWrite" class="text-right">
-                            <button type="button" class="text-portal-link text-sm underline" @click="openEdit(s)">
-                                Editar
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <p v-if="!loading && suppliers.length === 0" class="text-portal-muted text-sm">No hay proveedores registrados.</p>
-        <ReadOnlyNotice v-if="!canWrite" module-label="Proveedores" />
+        <ConfigurableDataTable
+            v-else
+            table-id="catalog-suppliers"
+            :columns="supplierTableColumns"
+            :rows="suppliers"
+            row-key="id"
+            empty-text="No hay proveedores registrados."
+        >
+            <template #code="{ row }">
+                <span class="text-portal-heading font-mono text-xs">{{ (row as { code: string }).code }}</span>
+            </template>
+            <template #name="{ row }">
+                <span class="text-portal-heading">{{ (row as { name: string }).name }}</span>
+            </template>
+            <template #contact="{ row }">
+                <span class="text-portal-muted">{{
+                    (row as { contact_email?: string; contact_phone?: string }).contact_email ??
+                    (row as { contact_phone?: string }).contact_phone ??
+                    '—'
+                }}</span>
+            </template>
+            <template #actions="{ row }">
+                <IconActionButton icon="pencil" label="Editar proveedor" @click="openEdit(row)" />
+            </template>
+        </ConfigurableDataTable>
+        <ReadOnlyNotice v-if="!loading && !canWrite" module-label="Proveedores" />
 
         <AppModal
             :open="showForm && canWrite"

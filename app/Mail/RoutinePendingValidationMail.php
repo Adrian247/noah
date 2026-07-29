@@ -18,7 +18,7 @@ class RoutinePendingValidationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Noah — Rutina pendiente de validación #'.$this->routine->id,
+            subject: 'Phoenix — Rutina pendiente de validación #'.$this->routine->id,
         );
     }
 

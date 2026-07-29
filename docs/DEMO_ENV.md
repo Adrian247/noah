@@ -1,38 +1,35 @@
-# Entorno demo local (Docker)
+# Demo multi-tenant (Mein Company + Dom-G)
 
-## Credenciales
+## Root (plataforma)
 
 | Email | Contraseña |
 |-------|------------|
-| `admin@noah.local` | `noah_application` (o `NOAH_DEMO_PASSWORD`) |
-| `tecnico@noah.local` | igual |
-| `supervisor@noah.local` | igual |
-| `facturacion@noah.local` | igual |
-| `cliente@noah.local` | igual (portal cliente: facturas y rutinas de equipos vinculados por serie) |
+| `admin@pyro-systems.com` | `pyro.2026$` |
 
-El seed **no** crea una rutina por defecto. Un administrador puede generar una rutina de prueba desde **Rutinas → Generar rutina demo**.
+Variables: `PHOENIX_DEMO_ROOT_PASSWORD`, `PHOENIX_PLATFORM_ADMIN_EMAILS`.
 
-## Ritual obligatorio para asistentes y desarrolladores
+## Cuentas tenant (Mein, Dom-G, etc.)
 
-Tras **cualquier** cambio que toque `NoahDemoSeeder`, usuarios `@noah.local`, permisos/RBAC, `noah:bootstrap-permissions` o flujo de login demo:
+Contraseña común: **`phoenix.2026$`** (o `PHOENIX_DEMO_PASSWORD`).
 
-```bash
-docker compose exec app php artisan noah:refresh-demo
-```
+## Mein Company
 
-Ese comando ejecuta, en orden: `migrate` → `noah:bootstrap-permissions` → `NoahDemoSeeder` → `noah:ensure-demo --reset-credentials`.
+| Email | Rol |
+|-------|-----|
+| `emilio.sanchez@mein-company.com` | Administrador |
+| `misael.palos@mein-company.com` | Técnico |
+| `claudio.rodriguez@mein-company.com` | Supervisión |
+| `elena.sanchez@mein-company.com` | Facturación |
 
-**Al cerrar la tarea**, el asistente debe:
+## Dom-G
 
-1. Ejecutar `noah:refresh-demo` (o confirmar que no aplica).
-2. Indicar al usuario las credenciales de la tabla anterior.
+| Email | Rol |
+|-------|-----|
+| `gilberto-dominguez@dom-g.com` | Administrador |
+| `technician@dom-g.com` | Técnico |
+| `gilberto-sanchez@dom-g.com` | Supervisión |
+| `luis-olvera@dom-g.com` | Facturación |
 
-### Variantes
+El root **no** tiene membresía en los tenants: elige empresa en el selector (marcada «plataforma») y cada cambio registra auditoría `platform.tenant_assumed`.
 
-| Situación | Comando |
-|-----------|---------|
-| Ritual completo | `php artisan noah:refresh-demo` |
-| Sin migraciones | `php artisan noah:refresh-demo --skip-migrate` |
-| Solo contraseñas | `php artisan noah:ensure-demo --reset-credentials` |
-
-Docker `app` ejecuta `migrate` + `noah:refresh-demo --skip-migrate` al arrancar (`docker-compose.yml`). Si la BD quedó vacía sin reiniciar el contenedor, ejecuta `noah:refresh-demo` a mano.
+Ritual: `docker compose exec app php artisan phoenix:refresh-demo`

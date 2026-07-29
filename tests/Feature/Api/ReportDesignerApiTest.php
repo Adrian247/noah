@@ -16,7 +16,7 @@ class ReportDesignerApiTest extends TestCase
     public function test_admin_can_rename_template_and_preview_html(): void
     {
         $this->seed();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
         $company = Company::query()->first();
         $token = $admin->createToken('test')->plainTextToken;
         $template = ReportTemplate::query()->where('company_id', $company->id)->first();
@@ -36,13 +36,33 @@ class ReportDesignerApiTest extends TestCase
         $response->assertOk();
         $response->assertHeader('content-type', 'text/html; charset=UTF-8');
         $this->assertStringContainsString('Vista previa', $response->getContent());
-        $this->assertStringContainsString('Informe de revisión mayor premium', $response->getContent());
+        $this->assertStringContainsString('Informe de servicio', $response->getContent());
+    }
+
+    public function test_list_thumbnail_preview_uses_scaled_first_page(): void
+    {
+        $this->seed();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
+        $company = Company::query()->first();
+        $token = $admin->createToken('test')->plainTextToken;
+        $template = ReportTemplate::query()->where('company_id', $company->id)->first();
+
+        $response = $this->withToken($token)
+            ->withHeader('X-Company-Id', (string) $company->id)
+            ->get("/api/v1/design/reports/{$template->id}/preview?thumbnail=1");
+
+        $response->assertOk();
+        $html = $response->getContent();
+        $this->assertStringContainsString('report-thumb-fit', $html);
+        $this->assertStringContainsString('report-page', $html);
+        $this->assertStringNotContainsString('report-thumb-sheet', $html);
+        $this->assertStringNotContainsString('Vista previa — datos de ejemplo', $html);
     }
 
     public function test_admin_can_save_page_settings_with_components(): void
     {
         $this->seed();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
         $company = Company::query()->first();
         $token = $admin->createToken('test')->plainTextToken;
         $template = ReportTemplate::query()->where('company_id', $company->id)->first();
@@ -73,7 +93,7 @@ class ReportDesignerApiTest extends TestCase
     public function test_admin_can_preview_draft_via_post(): void
     {
         $this->seed();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
         $company = Company::query()->first();
         $token = $admin->createToken('test')->plainTextToken;
         $template = ReportTemplate::query()->where('company_id', $company->id)->first();
@@ -95,7 +115,7 @@ class ReportDesignerApiTest extends TestCase
     public function test_admin_can_save_description(): void
     {
         $this->seed();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
         $company = Company::query()->first();
         $token = $admin->createToken('test')->plainTextToken;
         $template = ReportTemplate::query()->where('company_id', $company->id)->first();
@@ -113,7 +133,7 @@ class ReportDesignerApiTest extends TestCase
     public function test_preview_draft_accepts_empty_components(): void
     {
         $this->seed();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
         $company = Company::query()->first();
         $token = $admin->createToken('test')->plainTextToken;
         $template = ReportTemplate::query()->where('company_id', $company->id)->first();
@@ -132,7 +152,7 @@ class ReportDesignerApiTest extends TestCase
     {
         $this->seed();
         Storage::fake('public');
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
         $company = Company::query()->first();
         $token = $admin->createToken('test')->plainTextToken;
         $template = ReportTemplate::query()->where('company_id', $company->id)->first();
@@ -175,5 +195,110 @@ class ReportDesignerApiTest extends TestCase
         $preview->assertOk();
         $this->assertStringContainsString('report-cover-image', $preview->getContent());
         $this->assertStringContainsString('Portada con logo', $preview->getContent());
+    }
+
+    public function test_admin_can_list_design_presets(): void
+    {
+        $this->seed();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
+        $company = Company::query()->first();
+        $token = $admin->createToken('test')->plainTextToken;
+
+        $this->withToken($token)
+            ->withHeader('X-Company-Id', (string) $company->id)
+            ->getJson('/api/v1/design/reports/presets')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', 'phoenix_industrial')
+            ->assertJsonStructure(['data' => [['id', 'label', 'description', 'layout', 'swatch']]]);
+    }
+
+    public function test_admin_can_apply_preset_to_draft_from_routine_form(): void
+    {
+        $this->seed();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
+        $company = Company::query()->first();
+        $token = $admin->createToken('test')->plainTextToken;
+        $template = ReportTemplate::query()->where('company_id', $company->id)->first();
+
+        $response = $this->withToken($token)
+            ->withHeader('X-Company-Id', (string) $company->id)
+            ->postJson("/api/v1/design/reports/{$template->id}/apply-preset", [
+                'preset_id' => 'corporate_navy',
+                'form_slug' => 'inspeccion-vehiculo-v1',
+            ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('data.page_settings.theme.preset_id', 'corporate_navy');
+
+        $draft = $template->versions()->where('status', 'draft')->orderByDesc('version')->first();
+        $this->assertNotNull($draft);
+        $this->assertNotEmpty($draft->components);
+        $this->assertSame('corporate_navy', $draft->page_settings['theme']['preset_id'] ?? null);
+
+        $preview = $this->withToken($token)
+            ->withHeader('X-Company-Id', (string) $company->id)
+            ->get("/api/v1/design/reports/{$template->id}/preview");
+
+        $preview->assertOk();
+        $this->assertStringContainsString('#1e3a5f', $preview->getContent());
+    }
+
+    public function test_tenant_admin_can_delete_unlinked_report_template(): void
+    {
+        $this->seed();
+        $tenantAdmin = User::query()->where('email', 'emilio.sanchez@mein-company.com')->first();
+        $this->assertNotNull($tenantAdmin);
+        $companyId = $tenantAdmin->memberships()->where('is_active', true)->value('company_id');
+        $this->assertNotNull($companyId);
+        $token = $tenantAdmin->createToken('test')->plainTextToken;
+
+        $create = $this->withToken($token)
+            ->withHeader('X-Company-Id', (string) $companyId)
+            ->postJson('/api/v1/design/reports', ['name' => 'Reporte desechable']);
+
+        $create->assertCreated();
+        $id = (int) $create->json('data.id');
+
+        $this->withToken($token)
+            ->withHeader('X-Company-Id', (string) $companyId)
+            ->deleteJson("/api/v1/design/reports/{$id}")
+            ->assertNoContent();
+
+        $this->assertNull(ReportTemplate::query()->withoutGlobalScopes()->find($id));
+    }
+
+    public function test_platform_admin_can_delete_unlinked_report_template(): void
+    {
+        $this->seed();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
+        $company = Company::query()->first();
+        $token = $admin->createToken('test')->plainTextToken;
+
+        $create = $this->withToken($token)
+            ->withHeader('X-Company-Id', (string) $company->id)
+            ->postJson('/api/v1/design/reports', ['name' => 'Reporte plataforma']);
+
+        $create->assertCreated();
+        $id = (int) $create->json('data.id');
+
+        $this->withToken($token)
+            ->withHeader('X-Company-Id', (string) $company->id)
+            ->deleteJson("/api/v1/design/reports/{$id}")
+            ->assertNoContent();
+    }
+
+    public function test_cannot_delete_report_linked_to_routine_type(): void
+    {
+        $this->seed();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
+        $company = Company::query()->first();
+        $token = $admin->createToken('test')->plainTextToken;
+        $template = ReportTemplate::query()->where('company_id', $company->id)->first();
+
+        $this->withToken($token)
+            ->withHeader('X-Company-Id', (string) $company->id)
+            ->deleteJson("/api/v1/design/reports/{$template->id}")
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['report']);
     }
 }

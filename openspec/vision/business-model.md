@@ -1,12 +1,12 @@
-# Modelo de negocio — Noah
+# Modelo de negocio — Phoenix
 
 ## Propuesta de valor
 
-Noah reduce el costo de **adaptar** operaciones de mantenimiento y documentación técnica: nuevos formatos de servicio, reportes con marca del cliente y flujo validación–factura sin desarrollo a medida.
+Phoenix reduce el costo de **adaptar** operaciones de mantenimiento y documentación técnica: nuevos formatos de servicio, reportes con marca del cliente y flujo validación–factura sin desarrollo a medida.
 
 ## Segmentos iniciales
 
-| Segmento | Dolor | Cómo ayuda Noah |
+| Segmento | Dolor | Cómo ayuda Phoenix |
 |----------|-------|-----------------|
 | Empresas de mantenimiento industrial | PDFs y Excel por cliente | Tipos de rutina y plantillas configurables |
 | Contratistas multi-sitio | Campo sin señal | Móvil offline + sync (fase 2) |

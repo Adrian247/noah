@@ -20,7 +20,7 @@ Nuevas propiedades en cada campo del esquema:
 | Propiedad | Tipo | Default | Reglas |
 |-----------|------|---------|--------|
 | `allow_multiple` | bool | `false` | Si es `true`, el campo acepta varias imágenes. |
-| `max_images` | int | `4` | Solo si `allow_multiple`; mínimo **1**, máximo sugerido **10** (límite configurable en `config/noah.php` si hace falta). |
+| `max_images` | int | `4` | Solo si `allow_multiple`; mínimo **1**, máximo sugerido **10** (límite configurable en `config/phoenix.php` si hace falta). |
 | `caption_enabled` | bool | `false` | Muestra campo de descripción por imagen. |
 | `caption_required` | bool | `false` | Solo si `caption_enabled`; exige texto no vacío por imagen. |
 

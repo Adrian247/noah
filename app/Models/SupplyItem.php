@@ -17,8 +17,15 @@ class SupplyItem extends Model
         'supplier_id',
         'sku',
         'name',
+        'sector',
+        'material_kind',
         'unit',
         'standard_cost',
+        'quantity_on_hand',
+        'min_stock',
+        'storage_location',
+        'notes',
+        'is_active',
         'specifications',
     ];
 
@@ -26,8 +33,16 @@ class SupplyItem extends Model
     {
         return [
             'standard_cost' => 'decimal:4',
+            'quantity_on_hand' => 'decimal:4',
+            'min_stock' => 'decimal:4',
+            'is_active' => 'boolean',
             'specifications' => 'array',
         ];
+    }
+
+    public function movements(): HasMany
+    {
+        return $this->hasMany(InventoryMovement::class);
     }
 
     public function consumptions(): HasMany

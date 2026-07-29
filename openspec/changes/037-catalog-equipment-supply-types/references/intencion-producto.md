@@ -17,7 +17,7 @@ No se exige pegar literalmente cada párrafo del MD en la base de datos; se **ex
 
 Significa:
 
-1. **Tipo de equipo Vehículo** lleva un **formulario de rutina normalizado** para ese tipo: inspección/mantenimiento de vehículos ligeros/pickup, coherente con la ficha (frenos disco/tambor, filtros, fluidos, kilometraje, etc.) y con la **estructura** que ya demuestra Noah (secciones, `options`, fotos opcionales), pero **simplificado y estandarizado** para servir a cualquier vehículo del tipo, no solo al caso premium SUV.
+1. **Tipo de equipo Vehículo** lleva un **formulario de rutina normalizado** para ese tipo: inspección/mantenimiento de vehículos ligeros/pickup, coherente con la ficha (frenos disco/tambor, filtros, fluidos, kilometraje, etc.) y con la **estructura** que ya demuestra Phoenix (secciones, `options`, fotos opcionales), pero **simplificado y estandarizado** para servir a cualquier vehículo del tipo, no solo al caso premium SUV.
 
 2. **Tipo de insumo** no es un `FormDefinition` de campo en 037, sino un **catálogo normalizado**: campos de maestro (SKU, nombre, tipo, unidad, costo, proveedor, referencias OEM/marca en `specifications` JSON) derivados de las filas del MD.
 

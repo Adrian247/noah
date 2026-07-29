@@ -1,4 +1,4 @@
-# Diagrama — Flujo de eventos (Noah)
+# Diagrama — Flujo de eventos (Phoenix)
 
 Flujo típico post-campo hasta factura. Detalle: [domain-events.md](../architecture/domain-events.md).
 

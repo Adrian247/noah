@@ -16,12 +16,12 @@ Si el usuario sigue viendo módulos en el menú aunque no deba usarlos, la exper
 
 ## Modelo
 
-### Catálogo de módulos (`NoahModuleCatalog`)
+### Catálogo de módulos (`PhoenixModuleCatalog`)
 
 Cada módulo define:
 
 - `id`, `label`, rutas de navegación (`nav_routes`)
-- permisos de **lectura** y **escritura** (slugs `NoahPermission`)
+- permisos de **lectura** y **escritura** (slugs `PhoenixPermission`)
 - excepciones: `dashboard` siempre visible; `sites` visible por defecto si no hay override
 
 ### Overrides por membresía

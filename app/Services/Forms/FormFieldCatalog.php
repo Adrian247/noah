@@ -2,15 +2,17 @@
 
 namespace App\Services\Forms;
 
+use App\Enums\FormUsage;
 use App\Models\FormDefinition;
 use App\Support\CurrentCompany;
 
 class FormFieldCatalog
 {
     /**
-     * @return list<array{key: string, label: string, form_name: string}>
+     * @param  FormUsage|null  $usage  Por defecto solo formularios de rutina (informes).
+     * @return list<array{key: string, label: string, form_name: string, field_type?: string}>
      */
-    public function listForCurrentCompany(): array
+    public function listForCurrentCompany(?FormUsage $usage = FormUsage::Routine): array
     {
         $companyId = app(CurrentCompany::class)->id();
         if ($companyId === null) {
@@ -19,8 +21,12 @@ class FormFieldCatalog
 
         $fields = $this->baseExecutionFields();
 
-        $forms = FormDefinition::query()
-            ->where('company_id', $companyId)
+        $query = FormDefinition::query()->where('company_id', $companyId);
+        if ($usage !== null) {
+            $query->where('usage', $usage);
+        }
+
+        $forms = $query
             ->with(['versions' => fn ($q) => $q->where('status', 'published')->orderByDesc('version')])
             ->get();
 
@@ -54,13 +60,23 @@ class FormFieldCatalog
     }
 
     /**
-     * @return list<array{key: string, label: string, form_name: string}>
+     * @return list<array{key: string, label: string, form_name: string, field_type?: string}>
      */
     private function baseExecutionFields(): array
     {
         return [
-            ['key' => 'corrected_comments', 'label' => 'Comentario corregido (IA)', 'form_name' => 'Ejecución'],
-            ['key' => 'technician_comments', 'label' => 'Comentario técnico', 'form_name' => 'Ejecución'],
+            [
+                'key' => 'corrected_comments',
+                'label' => 'Comentario corregido (IA)',
+                'form_name' => 'Ejecución',
+                'field_type' => 'textarea',
+            ],
+            [
+                'key' => 'technician_comments',
+                'label' => 'Comentario técnico',
+                'form_name' => 'Ejecución',
+                'field_type' => 'textarea',
+            ],
         ];
     }
 }

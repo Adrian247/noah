@@ -1,10 +1,10 @@
-# Usuarios objetivo — Noah
+# Usuarios objetivo — Phoenix
 
 Complementa personas en [design/personas-and-journeys.md](../design/personas-and-journeys.md).
 
 ## Roles del sistema
 
-| Rol | Objetivo en Noah | Frecuencia |
+| Rol | Objetivo en Phoenix | Frecuencia |
 |-----|------------------|------------|
 | **Administrador** | Configurar empresa, catálogos, diseño, permisos | Diaria |
 | **Supervisor** | Validar ejecuciones, revisar costos y evidencias | Diaria |

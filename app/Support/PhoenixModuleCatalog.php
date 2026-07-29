@@ -3,7 +3,7 @@
 namespace App\Support;
 
 /**
- * Catálogo de módulos de la UI: lectura / escritura → permisos Noah.
+ * Catálogo de módulos de la UI: lectura / escritura → permisos Phoenix.
  *
  * @phpstan-type ModuleDefinition array{
  *     id: string,
@@ -15,7 +15,7 @@ namespace App\Support;
  *     default_visible?: bool,
  * }
  */
-class NoahModuleCatalog
+class PhoenixModuleCatalog
 {
     /**
      * @return list<ModuleDefinition>
@@ -51,11 +51,11 @@ class NoahModuleCatalog
                 'write' => ['catalog.manage'],
             ],
             [
-                'id' => 'catalog_supplies',
-                'label' => 'Insumos',
-                'nav_routes' => ['/app/catalog/supplies'],
-                'read' => ['catalog.view', 'catalog.manage'],
-                'write' => ['catalog.manage'],
+                'id' => 'inventory',
+                'label' => 'Inventario',
+                'nav_routes' => ['/app/inventory', '/app/inventory/types'],
+                'read' => ['inventory.view', 'inventory.manage'],
+                'write' => ['inventory.manage'],
             ],
             [
                 'id' => 'catalog_suppliers',
@@ -82,8 +82,13 @@ class NoahModuleCatalog
                 'id' => 'design_routine_types',
                 'label' => 'Tipos de rutina',
                 'nav_routes' => ['/app/routines/types'],
-                'read' => ['design.forms.view', 'design.forms'],
-                'write' => ['design.forms'],
+                'read' => [
+                    'design.forms.view',
+                    'design.forms',
+                    'design.reports.view',
+                    'design.reports',
+                ],
+                'write' => ['design.forms', 'design.reports'],
             ],
             [
                 'id' => 'design_forms',

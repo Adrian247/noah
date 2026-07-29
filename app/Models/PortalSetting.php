@@ -42,16 +42,16 @@ class PortalSetting extends Model
         return [
             'hero_image_url' => 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=1600&q=80',
             'hero_image_alt' => 'Trabajador industrial con equipo de protección en planta',
-            'service_title' => 'Mantenimiento que no se detiene',
-            'service_description' => 'Noah centraliza rutinas en campo, validación técnica, evidencias y facturación en una sola plataforma pensada para operaciones industriales.',
+            'service_title' => 'Gestión técnica clara para operaciones industriales',
+            'service_description' => 'Phoenix centraliza rutinas en campo, validación técnica, evidencias y facturación en una sola plataforma pensada para operaciones industriales.',
             'service_highlights' => [
                 'Rutinas y validación en tiempo real',
                 'Formularios y reportes configurables',
                 'Trazabilidad y auditoría por empresa',
             ],
-            'help_title' => '¿Necesitas ayuda para entrar?',
-            'help_text' => 'Contacta al administrador de tu empresa si olvidaste tu contraseña o no tienes acceso asignado.',
-            'contact_email' => 'soporte@noah.local',
+            'help_title' => '¿Problemas para acceder?',
+            'help_text' => 'Si olvidaste tu contraseña o no tienes usuario, contacta al administrador de tu empresa.',
+            'contact_email' => 'soporte@pyro-systems.com',
             'contact_phone' => '+52 55 0000 0000',
             'contact_hours' => 'Lun–Vie 8:00–18:00 (hora Ciudad de México)',
         ];

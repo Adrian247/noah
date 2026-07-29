@@ -9,7 +9,7 @@ El cálculo de borradores (insumos, IVA, mano de obra opcional) existía en back
 - Pantalla **Facturación** como hub: listado, detalle de borrador, desglose subtotal/IVA/líneas.
 - **Configuración por empresa**: tarifa hora mano de obra, tasa IVA (admin/facturación).
 - API `GET/PUT /billing/settings` y documentación de reglas de cálculo.
-- El servicio `InvoiceDraftService` prioriza valores de empresa sobre `config/noah.php`.
+- El servicio `InvoiceDraftService` prioriza valores de empresa sobre `config/phoenix.php`.
 
 ## Alcance v1
 

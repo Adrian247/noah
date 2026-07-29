@@ -1,10 +1,10 @@
-# Intención del proyecto — Noah
+# Intención del proyecto — Phoenix
 
-Documento breve que fija **por qué existe Noah** y **qué problema resuelve**. El detalle técnico y de diseño vive en el resto de `openspec/`.
+Documento breve que fija **por qué existe Phoenix** y **qué problema resuelve**. El detalle técnico y de diseño vive en el resto de `openspec/`.
 
 ## Objetivo
 
-Construir **Noah**: plataforma para empresas que prestan o gestionan **mantenimiento industrial**, con:
+Construir **Phoenix**: plataforma para empresas que prestan o gestionan **mantenimiento industrial**, con:
 
 1. **Catálogos** de equipo, insumos y costos.
 2. **Operación** de rutinas/mantenimientos con evidencias.
@@ -21,7 +21,7 @@ No es un CRUD grande: es una plataforma **configurable por metadatos** (formular
 ## Alcance explícito
 
 - Proyecto **nuevo**; sin cruce de datos ni código con otros sistemas ([scope.md](scope.md)).
-- Nombre del producto: **Noah**.
+- Nombre del producto: **Phoenix**.
 
 ## Capacidades futuras (IA y visión)
 

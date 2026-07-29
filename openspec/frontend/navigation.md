@@ -1,4 +1,4 @@
-# Navegación — Noah (web)
+# Navegación — Phoenix (web)
 
 Alineada con [information-architecture.md](../design/information-architecture.md).
 

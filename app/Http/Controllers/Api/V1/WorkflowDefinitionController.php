@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Enums\MembershipRole;
 use App\Enums\WorkflowTemplate;
 use App\Http\Controllers\Controller;
+use App\Support\PlatformAdmin;
 use App\Models\RoutineType;
 use App\Models\WorkflowDefinition;
 use App\Services\Audit\AuditLogger;
@@ -327,12 +327,8 @@ class WorkflowDefinitionController extends Controller
 
     private function authorizeDesigner(Request $request): void
     {
-        $membership = $request->attributes->get('membership');
-        $role = $membership->role;
-        $roleValue = $role instanceof MembershipRole ? $role->value : (string) $role;
-
-        if ($roleValue !== MembershipRole::Administrator->value) {
-            abort(403, 'Administrator role required.');
+        if (! PlatformAdmin::isPlatformAdmin($request->user())) {
+            abort(403, 'Platform administrator access required for workflow design.');
         }
     }
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { RouterLink } from 'vue-router';
+import { RouterLink, useRouter } from 'vue-router';
 import { api } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
 import { useToast } from '@/composables/useToast';
@@ -10,6 +10,7 @@ import MaterialField from '@/components/ui/MaterialField.vue';
 import MaterialSelect from '@/components/ui/MaterialSelect.vue';
 import AppButton from '@/components/ui/AppButton.vue';
 import AppModal from '@/components/ui/AppModal.vue';
+import IconActionButton from '@/components/ui/IconActionButton.vue';
 import { FORM_USAGE_OPTIONS, formUsageLabel } from '@/lib/formUsage';
 
 type FormRow = {
@@ -24,6 +25,7 @@ type FormRow = {
 
 const { canWriteModule } = useModuleAccess();
 const toast = useToast();
+const router = useRouter();
 const canWrite = computed(() => canWriteModule('design_forms'));
 
 const forms = ref<FormRow[]>([]);
@@ -143,33 +145,40 @@ onMounted(load);
         <ul v-else class="portal-list-panel divide-y">
             <li v-for="f in forms" :key="f.id" class="flex items-center justify-between gap-3 px-4 py-3 text-sm">
                 <div class="min-w-0 flex-1">
-                    <RouterLink class="text-portal-link font-medium underline" :to="`/app/design/forms/${f.id}`">
+                    <RouterLink class="text-portal-heading font-medium hover:text-amber-600" :to="`/app/design/forms/${f.id}`">
                         {{ f.name }}
                     </RouterLink>
                     <p class="text-portal-muted text-xs">{{ f.slug }}</p>
                     <span
-                        class="mt-1 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-200/90"
+                        class="portal-msg-warning mt-1 inline-block rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide"
                     >
                         {{ f.usage_label ?? formUsageLabel(f.usage) }}
                     </span>
                 </div>
-                <div class="text-portal-muted shrink-0 text-right text-xs">
-                    <p v-if="f.published_version">
+                <div class="flex shrink-0 flex-col items-end gap-2">
+                    <p v-if="f.published_version" class="text-portal-muted text-right text-xs">
                         En uso:
                         <span class="text-portal-heading font-medium"
                             >v{{ f.published_version.version }} publicada</span
                         >
                     </p>
-                    <p v-else class="text-amber-500">Sin versión publicada</p>
-                    <p v-if="f.draft_version">Borrador: v{{ f.draft_version.version }}</p>
-                    <button
-                        v-if="canWrite"
-                        type="button"
-                        class="mt-2 text-xs text-red-400 hover:text-red-300"
-                        @click="removeForm(f)"
-                    >
-                        Eliminar
-                    </button>
+                    <p v-else class="text-right text-xs text-amber-500">Sin versión publicada</p>
+                    <p v-if="f.draft_version" class="text-portal-muted text-right text-xs">
+                        Borrador: v{{ f.draft_version.version }}
+                    </p>
+                    <div v-if="canWrite" class="table-row-actions justify-end">
+                        <IconActionButton
+                            icon="pencil"
+                            label="Abrir diseñador de formulario"
+                            @click="router.push(`/app/design/forms/${f.id}`)"
+                        />
+                        <IconActionButton
+                            icon="trash"
+                            label="Eliminar formulario"
+                            variant="danger"
+                            @click="removeForm(f)"
+                        />
+                    </div>
                 </div>
             </li>
         </ul>

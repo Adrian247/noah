@@ -15,7 +15,7 @@ class ReportSectionTemplateApiTest extends TestCase
     public function test_admin_can_list_and_create_section_templates(): void
     {
         $this->seed();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
         $company = Company::query()->first();
         $token = $admin->createToken('test')->plainTextToken;
         $headers = [
@@ -54,7 +54,7 @@ class ReportSectionTemplateApiTest extends TestCase
     public function test_report_show_includes_section_templates(): void
     {
         $this->seed();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
         $company = Company::query()->first();
         $token = $admin->createToken('test')->plainTextToken;
         $template = \App\Models\ReportTemplate::query()->where('company_id', $company->id)->first();

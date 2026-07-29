@@ -8,10 +8,11 @@ use App\Models\CompanyMembership;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use App\Services\Identity\CompanyAuthorizationService;
+use App\Services\Platform\TenantUserProvisioner;
 use App\Support\CurrentCompany;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -21,6 +22,7 @@ class CompanyUserController extends Controller
     public function __construct(
         private readonly CompanyAuthorizationService $authorization,
         private readonly AuditLogger $audit,
+        private readonly TenantUserProvisioner $provisioner,
     ) {}
 
     public function index(): JsonResponse
@@ -51,24 +53,28 @@ class CompanyUserController extends Controller
             'extra_permissions' => ['sometimes', 'array'],
             'extra_permissions.*' => ['string', 'max:64'],
             'modules' => ['prohibited'],
+            'send_invitation' => ['sometimes', 'boolean'],
         ]);
 
         $email = strtolower($validated['email']);
-        $user = User::query()->where('email', $email)->first();
+        $company = \App\Models\Company::query()->findOrFail($companyId);
 
-        if ($user === null) {
-            $user = User::query()->create([
-                'email' => $email,
-                'name' => $validated['name'] ?? Str::before($email, '@'),
-                'password' => Hash::make(Str::random(32)),
-            ]);
-        } elseif ($validated['name'] ?? null) {
-            $user->update(['name' => $validated['name']]);
-        }
+        $provisioned = $this->provisioner->provision(
+            $company,
+            $email,
+            $validated['name'] ?? Str::before($email, '@'),
+            MembershipRole::from($validated['role']),
+            (bool) ($validated['send_invitation'] ?? true),
+        );
+        $user = $provisioned['user'];
 
         $membership = CompanyMembership::query()->firstOrCreate(
             ['company_id' => $companyId, 'user_id' => $user->id],
-            ['role' => $validated['role'], 'is_active' => true],
+            [
+                'role' => $validated['role'],
+                'is_active' => true,
+                'client_id' => null,
+            ],
         );
 
         if (! $membership->wasRecentlyCreated) {
@@ -184,6 +190,37 @@ class CompanyUserController extends Controller
         ]);
     }
 
+    public function updateAvatar(Request $request, User $user): JsonResponse
+    {
+        $companyId = app(CurrentCompany::class)->id();
+
+        $membership = CompanyMembership::query()
+            ->where('company_id', $companyId)
+            ->where('user_id', $user->id)
+            ->firstOrFail();
+
+        $request->validate([
+            'avatar' => ['required', 'image', 'max:2048', 'mimes:jpg,jpeg,png,webp'],
+        ]);
+
+        if ($user->avatar_path && Storage::disk('public')->exists($user->avatar_path)) {
+            Storage::disk('public')->delete($user->avatar_path);
+        }
+
+        $path = $request->file('avatar')->store('avatars/'.$user->id, 'public');
+        $user->update(['avatar_path' => $path]);
+
+        $this->audit->fromRequest($request, 'user.avatar_updated', User::class, $user->id, [
+            'membership_id' => $membership->id,
+        ]);
+
+        $labels = $this->authorization->roleLabels();
+
+        return response()->json([
+            'data' => $this->formatMembership($membership->fresh('user'), $labels, $companyId),
+        ]);
+    }
+
     /**
      * @param  array<string, string>  $labels
      * @return array<string, mixed>
@@ -201,6 +238,7 @@ class CompanyUserController extends Controller
             'membership_id' => $m->id,
             'name' => $m->user->name,
             'email' => $m->user->email,
+            'avatar_url' => ProfileController::avatarUrl($m->user),
             'role' => $roleValue,
             'role_label' => $labels[$roleValue] ?? $roleValue,
             'is_active' => $m->is_active,

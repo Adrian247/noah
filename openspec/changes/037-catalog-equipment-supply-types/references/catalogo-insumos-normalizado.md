@@ -19,7 +19,7 @@ Taxonomía corta derivada de las refacciones del MD + coherencia con formulario 
 
 ### `supply_items` — campos
 
-| Campo Noah | Origen MD | Normalización |
+| Campo Phoenix | Origen MD | Normalización |
 |------------|-----------|---------------|
 | `sku` | — | Código interno estable (ej. `FIL-1230A153-OEM`) |
 | `name` | Refacción | Nombre comercial claro |

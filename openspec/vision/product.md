@@ -1,8 +1,8 @@
-# Producto — Noah
+# Producto — Phoenix
 
 ## Resumen
 
-**Noah** permite a empresas de servicios técnicos e industriales:
+**Phoenix** permite a empresas de servicios técnicos e industriales:
 
 1. Administrar **catálogos** (equipos, refacciones, insumos, proveedores).
 2. Registrar **costos** de mantenimiento e insumos.
@@ -37,4 +37,4 @@
 
 ## Nombre
 
-El producto se llama **Noah** en código, documentación y experiencia de usuario (marca a definir en diseño visual).
+El producto se llama **Phoenix** en código, documentación y experiencia de usuario (marca a definir en diseño visual).

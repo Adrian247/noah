@@ -7,6 +7,8 @@ const props = defineProps<{
     subdued?: boolean;
     /** Tinte ámbar/industrial para pantalla de login */
     warm?: boolean;
+    /** Paleta para tema claro del portal */
+    light?: boolean;
 }>();
 
 const canvasWrapper = ref<HTMLDivElement | null>(null);
@@ -34,8 +36,13 @@ const colorIdle = { r: 79, g: 70, b: 229 };
 const colorActive = { r: 99, g: 102, b: 241 };
 const colorWarmIdle = { r: 180, g: 120, b: 40 };
 const colorWarmActive = { r: 251, g: 191, b: 36 };
+const colorLightIdle = { r: 146, g: 64, b: 14 };
+const colorLightActive = { r: 217, g: 119, b: 6 };
 
 function palette() {
+    if (props.light) {
+        return { idle: colorLightIdle, active: colorLightActive };
+    }
     if (props.warm) {
         return { idle: colorWarmIdle, active: colorWarmActive };
     }
@@ -43,6 +50,9 @@ function palette() {
 }
 
 function intensityFactor() {
+    if (props.light) {
+        return 0.42;
+    }
     return props.subdued ? 0.72 : 1;
 }
 
@@ -239,7 +249,7 @@ watch(
 );
 
 watch(
-    () => [props.subdued, props.warm],
+    () => [props.subdued, props.warm, props.light],
     () => {
         /* intensityFactor / palette read props each frame */
     },

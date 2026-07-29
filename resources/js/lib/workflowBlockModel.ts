@@ -45,6 +45,7 @@ export type BlockNode = {
     position: { x: number; y: number };
     assigned_role?: string;
     locked?: boolean;
+    assignment_notify?: ActionEmailConfig;
 };
 
 export type BlockEdge = {
@@ -89,6 +90,19 @@ const DEFAULT_CLOSE_SUBJECT = 'Cierre de rutina {routine.id}';
 const DEFAULT_CLOSE_BODY =
     '<p>Hola {user.name}, le informamos que la rutina {routine.id} del cliente {client.name} ha sido finalizada, a continuación el detalle de la rutina realizada:</p><p>{routine.tasks_detail}</p>';
 
+const DEFAULT_ASSIGNMENT_SUBJECT = 'Nueva rutina asignada #{routine.id}';
+const DEFAULT_ASSIGNMENT_BODY =
+    '<p>Hola {user.name}, se te asignó la rutina {routine.id} ({routine_type.name}) en el activo {asset.tag}.</p><p>Entra a Phoenix para revisarla y ejecutarla.</p>';
+
+export function defaultAssignmentNotify(): ActionEmailConfig {
+    return {
+        enabled: true,
+        subject: DEFAULT_ASSIGNMENT_SUBJECT,
+        body_html: DEFAULT_ASSIGNMENT_BODY,
+        recipients: ['executing_technician'],
+    };
+}
+
 export function defaultNotifyClose(): ActionEmailConfig {
     return {
         enabled: true,
@@ -107,6 +121,7 @@ export function defaultBlockGraph(): BlockGraph {
                 label: 'Rutina',
                 position: STANDARD_WORKFLOW_LAYOUT[ROUTINE_ID],
                 locked: true,
+                assignment_notify: defaultAssignmentNotify(),
             },
             {
                 id: SUPERVISOR_STEP_ID,
@@ -140,7 +155,7 @@ export function defaultBlockGraph(): BlockGraph {
                     enabled: true,
                     subject: 'Ejecuta rutina {routine.id}',
                     body_html:
-                        '<p>Hola {user.name}, registramos tu ejecución de la rutina {routine.id} ({routine_type.name}) en el activo {asset.name}.</p>',
+                        '<p>Hola {user.name}, registramos tu ejecución de la rutina {routine.id} ({routine_type.name}) en el activo {asset.tag}.</p>',
                     recipients: ['executing_technician'],
                 },
             },
@@ -300,6 +315,10 @@ export function normalizeBlockGraph(graph: BlockGraph, definition?: WorkflowDefi
         routine.label = routine.label || 'Rutina';
         if (!routine.position || (routine.position.x === 0 && routine.position.y === 0)) {
             routine.position = layout[ROUTINE_ID] ?? { x: 48, y: 160 };
+        }
+        const stepNotify = definition?.steps?.[ROUTINE_ID]?.assignment_notify;
+        if (!routine.assignment_notify && stepNotify && typeof stepNotify === 'object') {
+            routine.assignment_notify = stepNotify as ActionEmailConfig;
         }
     }
 
@@ -465,8 +484,17 @@ export function compileBlockGraph(graph: BlockGraph, base?: WorkflowDefinition):
 
 function stepFromNode(node: BlockNode): WorkflowDefinition['steps'][string] {
     switch (node.kind) {
-        case 'routine':
-            return { type: 'human_task', label: node.label, assigned_role: 'technician' };
+        case 'routine': {
+            const step: WorkflowDefinition['steps'][string] = {
+                type: 'human_task',
+                label: node.label,
+                assigned_role: 'technician',
+            };
+            if (node.assignment_notify?.enabled) {
+                step.assignment_notify = node.assignment_notify;
+            }
+            return step;
+        }
         case 'role':
             return {
                 type: 'human_task',

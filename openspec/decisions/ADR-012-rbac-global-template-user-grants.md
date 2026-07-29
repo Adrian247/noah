@@ -12,8 +12,8 @@ Los administradores de empresa deben gestionar acceso sin redefinir qué signifi
 
 - La **matriz rol → permiso** es **global** (código + bootstrap); idéntica en todas las empresas.
 - El **admin de empresa** solo: asigna `MembershipRole` y opcionalmente **permisos directos** Spatie (`extra_permissions`) aditivos respecto al rol.
-- La visibilidad de **módulos** en UI es **derivada** de permisos efectivos (`NoahModuleCatalog`); no se persiste override por módulo en v2 del mantenedor (columna `module_access` obsoleta).
-- Cambios a la plantilla global: equipo de plataforma (deploy / `noah:bootstrap-permissions`), no UI tenant.
+- La visibilidad de **módulos** en UI es **derivada** de permisos efectivos (`PhoenixModuleCatalog`); no se persiste override por módulo en v2 del mantenedor (columna `module_access` obsoleta).
+- Cambios a la plantilla global: equipo de plataforma (deploy / `phoenix:bootstrap-permissions`), no UI tenant.
 
 ## Consecuencias
 

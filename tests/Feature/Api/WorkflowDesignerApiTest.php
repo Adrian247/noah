@@ -15,7 +15,7 @@ class WorkflowDesignerApiTest extends TestCase
 
     private function adminToken(Company $company): array
     {
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
 
         return [
             'token' => $admin->createToken('test')->plainTextToken,
@@ -127,8 +127,8 @@ class WorkflowDesignerApiTest extends TestCase
     public function test_non_admin_cannot_create_workflow(): void
     {
         $this->seed();
-        $company = Company::query()->first();
-        $user = User::query()->where('email', 'supervisor@noah.local')->first();
+        $company = Company::query()->where('name', 'Mein Company')->firstOrFail();
+        $user = User::query()->where('email', 'emilio.sanchez@mein-company.com')->firstOrFail();
         $token = $user->createToken('test')->plainTextToken;
 
         $this->withToken($token)

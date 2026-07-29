@@ -19,12 +19,12 @@ class BillingSettingsController extends Controller
             'data' => [
                 'currency' => $company->currency,
                 'billing_labor_rate_per_hour' => $company->billing_labor_rate_per_hour
-                    ?? config('noah.billing.labor_rate_per_hour', 0),
+                    ?? config('phoenix.billing.labor_rate_per_hour', 0),
                 'billing_tax_rate' => $company->billing_tax_rate
-                    ?? config('noah.billing.tax_rate', 0.16),
+                    ?? config('phoenix.billing.tax_rate', 0.16),
                 'defaults' => [
-                    'labor_rate' => (float) config('noah.billing.labor_rate_per_hour', 0),
-                    'tax_rate' => (float) config('noah.billing.tax_rate', 0.16),
+                    'labor_rate' => (float) config('phoenix.billing.labor_rate_per_hour', 0),
+                    'tax_rate' => (float) config('phoenix.billing.tax_rate', 0.16),
                 ],
             ],
         ]);

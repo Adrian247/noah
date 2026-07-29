@@ -28,10 +28,10 @@ class ReportGenerationService
             'routine_execution_id' => $execution->id,
             'report_template_version_id' => $templateVersion?->id,
             'status' => 'queued',
-            'disk' => config('noah.reports.disk', 'local'),
+            'disk' => config('phoenix.reports.disk', 'local'),
         ]);
 
-        if (! config('noah.reports.async', true)) {
+        if (! config('phoenix.reports.async', true)) {
             $this->processQueuedReport($report->fresh());
         } else {
             GenerateRoutineReportJob::dispatch($report->id);
@@ -69,9 +69,9 @@ class ReportGenerationService
             $pdf->getDomPDF()->set_option('isPhpEnabled', $enablePhp);
             $pdf->getDomPDF()->set_option('isRemoteEnabled', false);
 
-            $path = config('noah.reports.path_prefix').'/'.Str::uuid().'.pdf';
+            $path = config('phoenix.reports.path_prefix').'/'.Str::uuid().'.pdf';
             $disk = Storage::disk($report->disk);
-            $prefix = config('noah.reports.path_prefix');
+            $prefix = config('phoenix.reports.path_prefix');
             if (! $disk->exists($prefix)) {
                 $disk->makeDirectory($prefix);
             }

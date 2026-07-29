@@ -19,7 +19,10 @@ use App\Http\Controllers\Api\V1\FormDefinitionController;
 use App\Http\Controllers\Api\V1\FormDesignSettingsController;
 use App\Http\Controllers\Api\V1\FormOptionCatalogController;
 use App\Http\Controllers\Api\V1\GeneratedReportController;
+use App\Http\Controllers\Api\V1\InventoryMetaController;
+use App\Http\Controllers\Api\V1\InventoryMovementController;
 use App\Http\Controllers\Api\V1\InvoiceController;
+use App\Http\Controllers\Api\V1\InvoiceEvidenceController;
 use App\Http\Controllers\Api\V1\RoutineController;
 use App\Http\Controllers\Api\V1\RoutineExecutionController;
 use App\Http\Controllers\Api\V1\RoutineFormFieldUploadController;
@@ -41,14 +44,16 @@ Route::prefix('v1')->group(function (): void {
 
         $payload = [
             'status' => 'ok',
-            'message' => 'Noah API',
-            'product' => 'noah',
+            'message' => 'Phoenix API',
+            'product' => 'phoenix',
         ];
 
         if (app()->environment('local')) {
             $payload['demo'] = [
-                'accounts_ready' => \App\Models\User::query()->where('email', 'admin@noah.local')->exists(),
-                'password' => config('noah.demo_password'),
+                'accounts_ready' => \App\Models\User::query()->where('email', \App\Support\DemoAccounts::ROOT_EMAIL)->exists(),
+                'root_email' => \App\Support\DemoAccounts::ROOT_EMAIL,
+                'password' => config('phoenix.demo_root_password'),
+                'tenant_password' => config('phoenix.demo_password'),
             ];
         }
 
@@ -67,6 +72,13 @@ Route::prefix('v1')->group(function (): void {
         Route::middleware('platform.admin')->prefix('platform')->group(function (): void {
             Route::get('/role-permissions', [\App\Http\Controllers\Api\V1\PlatformRolePermissionController::class, 'show']);
             Route::put('/role-permissions', [\App\Http\Controllers\Api\V1\PlatformRolePermissionController::class, 'update']);
+            Route::get('/tenants', [\App\Http\Controllers\Api\V1\PlatformTenantController::class, 'index']);
+            Route::post('/tenants', [\App\Http\Controllers\Api\V1\PlatformTenantController::class, 'store']);
+            Route::patch('/tenants/{company}', [\App\Http\Controllers\Api\V1\PlatformTenantController::class, 'update']);
+            Route::post('/tenants/{company}/logo', [\App\Http\Controllers\Api\V1\PlatformTenantController::class, 'updateLogo']);
+            Route::post('/tenants/{company}/memberships', [\App\Http\Controllers\Api\V1\PlatformTenantController::class, 'storeMembership']);
+            Route::post('/users/{user}/avatar', [\App\Http\Controllers\Api\V1\PlatformTenantController::class, 'updateUserAvatar']);
+            Route::post('/tenants/{company}/assume', [\App\Http\Controllers\Api\V1\PlatformTenantController::class, 'assume']);
         });
 
         Route::middleware('company')->group(function (): void {
@@ -107,6 +119,7 @@ Route::prefix('v1')->group(function (): void {
                 Route::get('/company/users', [CompanyUserController::class, 'index']);
                 Route::post('/company/users', [CompanyUserController::class, 'store']);
                 Route::put('/company/users/{user}', [CompanyUserController::class, 'update']);
+                Route::post('/company/users/{user}/avatar', [CompanyUserController::class, 'updateAvatar']);
                 Route::get('/company/roles', [CompanyRoleController::class, 'index']);
                 Route::get('/portal/settings', [PortalController::class, 'show']);
                 Route::put('/portal/settings', [PortalController::class, 'update']);
@@ -128,17 +141,19 @@ Route::prefix('v1')->group(function (): void {
                 ->middleware('company.module:catalog_items,write');
 
             Route::get('/catalog/supply-types/form-options', [SupplyTypeController::class, 'formOptions'])
-                ->middleware('company.module:catalog_supplies,read');
+                ->middleware('company.module:inventory,read');
+            Route::get('/catalog/supply-types/unit-options', [SupplyTypeController::class, 'unitOptions'])
+                ->middleware('company.module:inventory,read');
             Route::get('/catalog/supply-types/{supplyType}/form-capture', [SupplyTypeController::class, 'formCapture'])
-                ->middleware('company.module:catalog_supplies,read');
+                ->middleware('company.module:inventory,read');
             Route::get('/catalog/supply-types', [SupplyTypeController::class, 'index'])
-                ->middleware('company.module:catalog_supplies,read');
+                ->middleware('company.module:inventory,read');
             Route::post('/catalog/supply-types', [SupplyTypeController::class, 'store'])
-                ->middleware('company.module:catalog_supplies,write');
+                ->middleware('company.module:inventory,write');
             Route::put('/catalog/supply-types/{supplyType}', [SupplyTypeController::class, 'update'])
-                ->middleware('company.module:catalog_supplies,write');
+                ->middleware('company.module:inventory,write');
             Route::delete('/catalog/supply-types/{supplyType}', [SupplyTypeController::class, 'destroy'])
-                ->middleware('company.module:catalog_supplies,write');
+                ->middleware('company.module:inventory,write');
 
             Route::get('/catalog/items', [CatalogItemController::class, 'index'])
                 ->middleware('company.module:catalog_items,read');
@@ -149,14 +164,25 @@ Route::prefix('v1')->group(function (): void {
             Route::delete('/catalog/items/{catalogItem}', [CatalogItemController::class, 'destroy'])
                 ->middleware('company.module:catalog_items,write');
 
+            Route::get('/inventory/meta', [InventoryMetaController::class, 'options'])
+                ->middleware('company.module:inventory,read');
+            Route::get('/inventory/materials/meta', [InventoryMetaController::class, 'options'])
+                ->middleware('company.module:inventory,read');
+
             Route::get('/inventory/supplies', [SupplyItemController::class, 'index'])
-                ->middleware('company.module:catalog_supplies,read');
+                ->middleware('company.module:inventory,read');
             Route::post('/inventory/supplies', [SupplyItemController::class, 'store'])
-                ->middleware('company.module:catalog_supplies,write');
+                ->middleware('company.module:inventory,write');
+            Route::post('/inventory/supplies/import', [SupplyItemController::class, 'import'])
+                ->middleware('company.module:inventory,write');
             Route::put('/inventory/supplies/{supplyItem}', [SupplyItemController::class, 'update'])
-                ->middleware('company.module:catalog_supplies,write');
+                ->middleware('company.module:inventory,write');
             Route::delete('/inventory/supplies/{supplyItem}', [SupplyItemController::class, 'destroy'])
-                ->middleware('company.module:catalog_supplies,write');
+                ->middleware('company.module:inventory,write');
+            Route::get('/inventory/supplies/{supplyItem}/movements', [InventoryMovementController::class, 'index'])
+                ->middleware('company.module:inventory,read');
+            Route::post('/inventory/supplies/{supplyItem}/movements', [InventoryMovementController::class, 'store'])
+                ->middleware('company.module:inventory,write');
 
             Route::get('/assets', [AssetController::class, 'index'])
                 ->middleware('company.module:assets,read');
@@ -178,6 +204,7 @@ Route::prefix('v1')->group(function (): void {
                 Route::get('/assets', [ClientPortalController::class, 'assets']);
                 Route::get('/routines', [ClientPortalController::class, 'routines']);
                 Route::get('/routines/{routine}', [ClientPortalController::class, 'showRoutine']);
+                Route::get('/routines/{routine}/reports/{report}/download', [ClientPortalController::class, 'downloadRoutineReport']);
             });
 
             Route::get('/design/forms/settings', [FormDesignSettingsController::class, 'show'])
@@ -206,6 +233,8 @@ Route::prefix('v1')->group(function (): void {
             Route::delete('/design/forms/{form}', [FormDefinitionController::class, 'destroy'])
                 ->middleware('company.module:design_forms,write');
 
+            Route::get('/design/reports/presets', [ReportTemplateController::class, 'presets'])
+                ->middleware('company.module:design_reports,read');
             Route::get('/design/reports', [ReportTemplateController::class, 'index'])
                 ->middleware('company.module:design_reports,read');
             Route::post('/design/reports', [ReportTemplateController::class, 'store'])
@@ -224,9 +253,13 @@ Route::prefix('v1')->group(function (): void {
                 ->middleware('company.module:design_reports,read');
             Route::put('/design/reports/{reportTemplate}', [ReportTemplateController::class, 'update'])
                 ->middleware('company.module:design_reports,write');
+            Route::delete('/design/reports/{reportTemplate}', [ReportTemplateController::class, 'destroy'])
+                ->middleware('company.module:design_reports,write');
             Route::get('/design/reports/{reportTemplate}', [ReportTemplateController::class, 'show'])
                 ->middleware('company.module:design_reports,read');
             Route::put('/design/reports/{reportTemplate}/components', [ReportTemplateController::class, 'updateComponents'])
+                ->middleware('company.module:design_reports,write');
+            Route::post('/design/reports/{reportTemplate}/apply-preset', [ReportTemplateController::class, 'applyPreset'])
                 ->middleware('company.module:design_reports,write');
             Route::post('/design/reports/{reportTemplate}/cover-image', [ReportTemplateController::class, 'uploadCoverImage'])
                 ->middleware('company.module:design_reports,write');
@@ -278,8 +311,12 @@ Route::prefix('v1')->group(function (): void {
                 ->middleware('company.module:routines,write');
             Route::get('/routines/{routine}', [RoutineController::class, 'show'])
                 ->middleware('company.module:routines,read');
+            Route::delete('/routines/{routine}', [RoutineController::class, 'destroy'])
+                ->middleware('company.module:routines,read');
             Route::post('/routines/{routine}/form-field-upload', [RoutineFormFieldUploadController::class, 'store'])
                 ->middleware('company.permission:routines.execute,routines.assign');
+            Route::get('/routines/{routine}/form-field-media', [RoutineFormFieldUploadController::class, 'show'])
+                ->middleware('company.module:routines,read');
             Route::post('/routines/{routine}/executions', [RoutineExecutionController::class, 'store'])
                 ->middleware('company.permission:routines.execute,routines.assign');
             Route::post('/routines/{routine}/evidences', [ExecutionEvidenceController::class, 'store'])
@@ -310,7 +347,19 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/billing/invoices/{invoice}/issue', [InvoiceController::class, 'issue'])
                 ->middleware('company.module:billing,write');
 
+            Route::get('/billing/invoices/{invoice}/package', [InvoiceController::class, 'downloadPackage'])
+                ->middleware('company.module:billing,read');
+
+            Route::post('/billing/invoices/{invoice}/evidences', [InvoiceEvidenceController::class, 'store'])
+                ->middleware('company.module:billing,write');
+            Route::delete('/billing/invoices/{invoice}/evidences/{evidence}', [InvoiceEvidenceController::class, 'destroy'])
+                ->middleware('company.module:billing,write');
+            Route::get('/billing/invoices/{invoice}/evidences/{evidence}/file', [InvoiceEvidenceController::class, 'download'])
+                ->middleware('company.module:billing,read');
+
             Route::get('/audit/entries', [AuditController::class, 'index'])
+                ->middleware('company.module:audit,read');
+            Route::get('/audit/threads', [AuditController::class, 'threads'])
                 ->middleware('company.module:audit,read');
         });
     });

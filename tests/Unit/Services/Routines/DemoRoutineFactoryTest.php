@@ -17,21 +17,30 @@ class DemoRoutineFactoryTest extends TestCase
         $this->seed();
 
         $company = Company::query()->firstOrFail();
-        $technician = User::query()->where('email', 'tecnico@noah.local')->firstOrFail();
+        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
 
         $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
         $responses = $routine->latestExecution?->responses ?? [];
 
         $this->assertSame('tres_cuartos', $responses['nivel_combustible'] ?? null);
-        $this->assertSame('si', $responses['filtro_aceite_reemplazado'] ?? null);
-        $this->assertSame('operativo', $responses['motor_estado'] ?? null);
+        $this->assertNotEmpty($responses['kilometraje'] ?? null);
+        $this->assertArrayHasKey('frenos', $responses);
 
-        $disk = \Illuminate\Support\Facades\Storage::disk(config('noah.evidence.disk', 'evidence'));
-        $evidencia = $responses['foto_evidencia'] ?? [];
-        $this->assertIsArray($evidencia);
-        $this->assertNotEmpty($evidencia);
-        $photoPath = $evidencia[0]['path'] ?? '';
-        $this->assertNotSame('', $photoPath);
-        $this->assertTrue($disk->exists($photoPath), 'Demo photos must be stored on the evidence disk for PDF reports.');
+        $disk = \Illuminate\Support\Facades\Storage::disk(config('phoenix.evidence.disk', 'evidence'));
+        $photoPaths = [];
+        foreach ($responses as $value) {
+            if (! is_array($value)) {
+                continue;
+            }
+            foreach ($value as $entry) {
+                if (is_array($entry) && isset($entry['path']) && is_string($entry['path'])) {
+                    $photoPaths[] = $entry['path'];
+                }
+            }
+        }
+        $this->assertNotEmpty($photoPaths, 'Demo routine should include at least one photo field.');
+        foreach ($photoPaths as $photoPath) {
+            $this->assertTrue($disk->exists($photoPath), 'Demo photos must be stored on the evidence disk for PDF reports.');
+        }
     }
 }

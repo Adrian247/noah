@@ -1,4 +1,4 @@
-# Integraciones — Noah
+# Integraciones — Phoenix
 
 ## Estado
 
@@ -6,7 +6,7 @@ Placeholder — sin integraciones activas en fase documental.
 
 ## Principio
 
-Noah no depende de sistemas externos para su MVP. Cualquier integración futura:
+Phoenix no depende de sistemas externos para su MVP. Cualquier integración futura:
 
 1. Se documenta aquí con contrato (API, eventos, datos).
 2. Vive detrás de adapters en el monolito.
@@ -23,4 +23,4 @@ Noah no depende de sistemas externos para su MVP. Cualquier integración futura:
 
 ## Referencias cruzadas
 
-Ninguna integración con otros productos internos está planificada; Noah es dominio propio.
+Ninguna integración con otros productos internos está planificada; Phoenix es dominio propio.

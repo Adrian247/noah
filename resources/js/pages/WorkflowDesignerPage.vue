@@ -6,6 +6,7 @@ import { useModuleAccess } from '@/composables/useModuleAccess';
 import { useToast } from '@/composables/useToast';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import AppButton from '@/components/ui/AppButton.vue';
+import IconActionButton from '@/components/ui/IconActionButton.vue';
 import ReadOnlyNotice from '@/components/ui/ReadOnlyNotice.vue';
 import WorkflowBlockCanvas from '@/components/workflow/WorkflowBlockCanvas.vue';
 import type { WorkflowDefinition } from '@/lib/workflowFlowMapper';
@@ -160,21 +161,20 @@ onMounted(load);
                 >
                     Publicar workflow
                 </AppButton>
-                <AppButton
+                <IconActionButton
                     v-if="canWrite"
-                    type="button"
+                    icon="trash"
+                    label="Eliminar workflow"
                     variant="danger"
                     :disabled="deleting || saving || publishing"
                     @click="deleteWorkflow"
-                >
-                    Eliminar
-                </AppButton>
+                />
             </div>
         </div>
 
         <p
             v-if="!isDraft"
-            class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-portal-muted"
+            class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-portal-heading"
         >
             Este workflow está publicado. Duplícalo para editar el grafo.
         </p>

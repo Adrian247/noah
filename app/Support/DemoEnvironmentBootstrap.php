@@ -18,20 +18,20 @@ class DemoEnvironmentBootstrap
             return false;
         }
 
-        if (User::query()->where('email', 'admin@noah.local')->exists()) {
+        if (User::query()->where('email', 'admin@pyro-systems.com')->exists()) {
             return false;
         }
 
         $ran = false;
 
-        Cache::lock('noah-demo-bootstrap', 120)->block(30, function () use (&$ran): void {
-            if (User::query()->where('email', 'admin@noah.local')->exists()) {
+        Cache::lock('phoenix-demo-bootstrap', 120)->block(30, function () use (&$ran): void {
+            if (User::query()->where('email', 'admin@pyro-systems.com')->exists()) {
                 return;
             }
 
-            Log::warning('Demo admin missing; running noah:refresh-demo (--skip-migrate).');
+            Log::warning('Demo admin missing; running phoenix:refresh-demo (--skip-migrate).');
 
-            Artisan::call('noah:refresh-demo', ['--skip-migrate' => true]);
+            Artisan::call('phoenix:refresh-demo', ['--skip-migrate' => true]);
             $ran = true;
         });
 

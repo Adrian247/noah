@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { RouterLink } from 'vue-router';
+import { RouterLink, useRouter } from 'vue-router';
 import { api } from '@/api/client';
 import { useCompanyStore } from '@/stores/company';
+import { hasCompanyAdministratorAccess } from '@/lib/sessionCompany';
 import { useToast } from '@/composables/useToast';
 import GlassCard from '@/components/ui/GlassCard.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import AppButton from '@/components/ui/AppButton.vue';
+import IconActionButton from '@/components/ui/IconActionButton.vue';
 import AlertBanner from '@/components/ui/AlertBanner.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
 
@@ -20,6 +22,7 @@ type InvoiceLine = {
 type Invoice = {
     id: number;
     status: string;
+    custom_reference?: string | null;
     subtotal?: string;
     tax_total?: string;
     total: string;
@@ -29,17 +32,26 @@ type Invoice = {
 
 const company = useCompanyStore();
 const toast = useToast();
+const router = useRouter();
 const invoices = ref<Invoice[]>([]);
 const loading = ref(true);
+const searchQuery = ref('');
 
-const canManage = computed(
-    () => company.current?.role === 'administrator' || company.current?.role === 'billing',
+const canManage = computed(() => {
+    const role = company.current?.role;
+    return hasCompanyAdministratorAccess(role) || role === 'billing';
+});
+
+const billingContactEmail = computed(
+    () => company.current?.billing_contact_email?.trim() || null,
 );
 
 async function load() {
     loading.value = true;
     try {
-        const res = await api<{ data: Invoice[] }>('/billing/invoices');
+        const q = searchQuery.value.trim();
+        const path = q ? `/billing/invoices?search=${encodeURIComponent(q)}` : '/billing/invoices';
+        const res = await api<{ data: Invoice[] }>(path);
         invoices.value = res.data;
     } catch (e) {
         toast.error((e as Error).message);
@@ -76,8 +88,28 @@ onMounted(load);
                 <AppButton variant="secondary">IVA y mano de obra</AppButton>
             </RouterLink>
         </div>
+        <div class="mb-4 flex max-w-md flex-wrap items-end gap-2">
+            <label class="block flex-1 text-sm">
+                <span class="text-portal-muted text-xs">Buscar por ID, folio o nombre personalizado</span>
+                <input
+                    v-model="searchQuery"
+                    type="search"
+                    class="field-input mt-1 w-full"
+                    placeholder="Ej. 42 o Proyecto Torre B"
+                    @keydown.enter="load"
+                />
+            </label>
+            <AppButton type="button" variant="secondary" @click="load">Buscar</AppButton>
+        </div>
         <AlertBanner v-if="!canManage" variant="info" class="mb-4">
-            Estás en modo consulta. Para emitir facturas usa <strong>facturacion@noah.local</strong>.
+            Estás en modo consulta.
+            <template v-if="billingContactEmail">
+                Para emitir facturas usa <strong>{{ billingContactEmail }}</strong
+                ><span v-if="company.current?.name"> ({{ company.current.name }})</span>.
+            </template>
+            <template v-else>
+                Para emitir facturas solicita acceso al rol de facturación de tu empresa.
+            </template>
         </AlertBanner>
         <GlassCard v-if="loading" padding="md">
             <p class="text-portal-muted">Cargando facturas…</p>
@@ -92,7 +124,12 @@ onMounted(load);
             >
                 <div>
                     <div class="flex flex-wrap items-center gap-2">
-                        <h2 class="invoice-list-title">Factura #{{ inv.id }}</h2>
+                        <h2 class="invoice-list-title">
+                            Factura #{{ inv.id }}
+                            <span v-if="inv.custom_reference" class="text-portal-muted font-normal">
+                                · {{ inv.custom_reference }}
+                            </span>
+                        </h2>
                         <StatusBadge :status="inv.status" />
                     </div>
                     <p class="text-portal-muted text-sm">Rutina #{{ inv.routine_id ?? '—' }}</p>
@@ -101,16 +138,18 @@ onMounted(load);
                         <strong class="text-portal-heading">Total ${{ inv.total }}</strong>
                     </p>
                 </div>
-                <div class="flex gap-2">
-                    <RouterLink :to="`/app/billing/${inv.id}`">
-                        <AppButton variant="secondary">Ver detalle</AppButton>
-                    </RouterLink>
-                    <AppButton
+                <div class="table-row-actions">
+                    <IconActionButton
+                        icon="eye"
+                        label="Ver detalle de factura"
+                        @click="router.push(`/app/billing/${inv.id}`)"
+                    />
+                    <IconActionButton
                         v-if="inv.status === 'draft' && canManage"
+                        icon="send"
+                        label="Emitir factura"
                         @click="issue(inv.id)"
-                    >
-                        Emitir
-                    </AppButton>
+                    />
                 </div>
             </GlassCard>
             <p v-if="invoices.length === 0" class="text-portal-muted text-sm">No hay facturas aún.</p>

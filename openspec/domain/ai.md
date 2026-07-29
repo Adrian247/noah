@@ -1,4 +1,4 @@
-# Dominio — AI (Noah)
+# Dominio — AI (Phoenix)
 
 Capa de dominio delimitada para casos de uso IA. Implementación: [ai-gateway.md](../architecture/ai-gateway.md).
 

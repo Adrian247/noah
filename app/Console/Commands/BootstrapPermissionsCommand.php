@@ -7,7 +7,7 @@ use Illuminate\Console\Command;
 
 class BootstrapPermissionsCommand extends Command
 {
-    protected $signature = 'noah:bootstrap-permissions';
+    protected $signature = 'phoenix:bootstrap-permissions';
 
     protected $description = 'Sync permission catalog, company roles, and membership role assignments (Spatie)';
 

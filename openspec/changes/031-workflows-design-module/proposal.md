@@ -50,7 +50,7 @@ El **runtime lineal v1** no se reescribe: siguen los tres disparadores (`executi
 ### Documentación y demo
 
 - Actualizar `docs/IMPLEMENTATION.md` (o sección en `openspec/domain/workflows.md`) con contrato API y reglas del validador.
-- Demo: `NoahDemoSeeder` / `noah:refresh-demo` sigue ofreciendo al menos un workflow publicado; opcional segundo workflow de ejemplo duplicado.
+- Demo: `PhoenixDemoSeeder` / `phoenix:refresh-demo` sigue ofreciendo al menos un workflow publicado; opcional segundo workflow de ejemplo duplicado.
 
 ### Tests
 

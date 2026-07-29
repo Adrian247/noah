@@ -132,7 +132,7 @@ onMounted(load);
         <template v-else>
             <MaterialSelect v-model="selectedRole" label="Rol a editar" :options="roleOptions" />
 
-            <p v-if="currentRole?.locked" class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-portal-muted">
+            <p v-if="currentRole?.locked" class="portal-callout portal-callout--warning">
                 El rol Administrador incluye siempre todos los permisos del catálogo.
             </p>
 

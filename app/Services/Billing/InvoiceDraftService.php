@@ -22,9 +22,9 @@ class InvoiceDraftService
         $currency = $company?->currency ?? 'MXN';
 
         $laborRate = (float) ($company?->billing_labor_rate_per_hour
-            ?? config('noah.billing.labor_rate_per_hour', 0));
+            ?? config('phoenix.billing.labor_rate_per_hour', 0));
         $taxRate = (float) ($company?->billing_tax_rate
-            ?? config('noah.billing.tax_rate', 0.16));
+            ?? config('phoenix.billing.tax_rate', 0.16));
 
         $laborHours = max(($execution->duration_minutes ?? 0) / 60, 0);
 

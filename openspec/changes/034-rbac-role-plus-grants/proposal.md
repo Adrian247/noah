@@ -7,7 +7,7 @@ La UI de usuarios (021) editaba **acceso por módulo** (`module_access`), lo que
 ## Objetivo
 
 1. **Plantilla de roles** definida en plataforma (`CompanyAuthorizationService::rolePermissionMap()` + bootstrap Spatie); ningún admin de empresa puede redefinir permisos de un rol.
-2. **Admin de empresa** asigna **rol** y, opcionalmente, **permisos adicionales** (`extra_permissions`, slugs `NoahPermission` no incluidos en el rol).
+2. **Admin de empresa** asigna **rol** y, opcionalmente, **permisos adicionales** (`extra_permissions`, slugs `PhoenixPermission` no incluidos en el rol).
 3. **Menú y middleware** derivan de permisos efectivos: `rol ∪ extras` (sin matriz `module_access`).
 4. Deprecar escritura de `modules` / `module_access` en API; columna JSON se ignora en resolución (reservada para migración futura).
 
@@ -15,10 +15,10 @@ La UI de usuarios (021) editaba **acceso por módulo** (`module_access`), lo que
 
 ```
 permisos_efectivos = permisos(rol_global) ∪ permisos_directos_usuario
-modules[*] = proyección UX desde permisos_efectivos (NoahModuleCatalog)
+modules[*] = proyección UX desde permisos_efectivos (PhoenixModuleCatalog)
 ```
 
-- Cambios a la plantilla global: **despliegue / admin de sistema** (código + `noah:bootstrap-permissions`), no UI tenant.
+- Cambios a la plantilla global: **despliegue / admin de sistema** (código + `phoenix:bootstrap-permissions`), no UI tenant.
 - Auditoría: `membership.permissions_updated` al guardar extras.
 
 ## API

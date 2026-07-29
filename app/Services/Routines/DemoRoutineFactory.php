@@ -38,6 +38,7 @@ class DemoRoutineFactory
     {
         $type = RoutineType::query()
             ->where('company_id', $companyId)
+            ->where('slug', 'revision-mayor-vehiculo-premium')
             ->where('is_active', true)
             ->with('formVersion')
             ->firstOrFail();
@@ -152,8 +153,8 @@ class DemoRoutineFactory
      */
     private function fakePhotoValue(int $routineId, string $fieldKey): array
     {
-        $diskName = config('noah.evidence.disk', 'evidence');
-        $path = config('noah.evidence.path_prefix').'/'.$routineId.'/demo/'.$fieldKey.'-'.Str::uuid().'.jpg';
+        $diskName = config('phoenix.evidence.disk', 'evidence');
+        $path = config('phoenix.evidence.path_prefix').'/'.$routineId.'/demo/'.$fieldKey.'-'.Str::uuid().'.jpg';
         $binary = $this->demoJpegBytes($fieldKey);
 
         $disk = Storage::disk($diskName);
@@ -179,7 +180,7 @@ class DemoRoutineFactory
                 imagefilledrectangle($image, 0, 0, $width, $height, $background);
                 imagefilledrectangle($image, 0, 0, $width, 56, $accent);
                 $label = 'Evidencia demo — '.$fieldKey;
-                imagestring($image, 5, 16, 20, 'Noah', $background);
+                imagestring($image, 5, 16, 20, 'Phoenix', $background);
                 imagestring($image, 5, 16, (int) ($height / 2), $label, $text);
                 ob_start();
                 imagejpeg($image, null, 88);

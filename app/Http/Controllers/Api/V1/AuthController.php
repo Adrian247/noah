@@ -5,7 +5,8 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
-use App\Services\Identity\CompanyAuthorizationService;
+use App\Services\Identity\UserCompanyDirectory;
+use App\Support\PlatformAdmin;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -13,7 +14,7 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    public function login(Request $request, AuditLogger $audit, CompanyAuthorizationService $authorization): JsonResponse
+    public function login(Request $request, AuditLogger $audit, UserCompanyDirectory $directory): JsonResponse
     {
         $credentials = $request->validate([
             'email' => ['required', 'email'],
@@ -32,7 +33,10 @@ class AuthController extends Controller
             ]);
         }
 
-        $token = $user->createToken($credentials['device_name'] ?? 'noah-web')->plainTextToken;
+        PlatformAdmin::syncFlagFromConfig($user);
+        $user->refresh();
+
+        $token = $user->createToken($credentials['device_name'] ?? 'phoenix-web')->plainTextToken;
 
         $audit->record(
             null,
@@ -47,7 +51,7 @@ class AuthController extends Controller
         return response()->json([
             'token' => $token,
             'user' => ProfileController::formatUser($user),
-            'companies' => $this->formatCompanies($user, $authorization),
+            'companies' => $directory->companiesForUser($user)->values(),
         ]);
     }
 
@@ -69,32 +73,15 @@ class AuthController extends Controller
         return response()->json(['message' => 'Logged out']);
     }
 
-    public function me(Request $request, CompanyAuthorizationService $authorization): JsonResponse
+    public function me(Request $request, UserCompanyDirectory $directory): JsonResponse
     {
         $user = $request->user();
+        PlatformAdmin::syncFlagFromConfig($user);
+        $user->refresh();
 
         return response()->json([
             'user' => ProfileController::formatUser($user),
-            'companies' => $this->formatCompanies($user, $authorization),
+            'companies' => $directory->companiesForUser($user)->values(),
         ]);
-    }
-
-    /**
-     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
-     */
-    private function formatCompanies(User $user, CompanyAuthorizationService $authorization)
-    {
-        return $user->memberships()
-            ->where('is_active', true)
-            ->with('company')
-            ->get()
-            ->map(fn ($m) => [
-                'id' => $m->company->id,
-                'name' => $m->company->name,
-                'role' => $m->role->value,
-                'client_id' => $m->client_id,
-                'permissions' => $authorization->permissionsForUser($user, $m->company->id),
-                'modules' => $authorization->modulesForMembership($m),
-            ]);
     }
 }

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Api;
 
-use App\Enums\NoahPermission;
+use App\Enums\PhoenixPermission;
 use App\Models\Company;
 use App\Models\User;
 use App\Services\Identity\CompanyAuthorizationService;
@@ -24,12 +24,12 @@ class PlatformRolePermissionsApiTest extends TestCase
 
     public function test_platform_admin_can_update_supervisor_role(): void
     {
-        $admin = User::query()->where('email', 'admin@noah.local')->firstOrFail();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->firstOrFail();
         Sanctum::actingAs($admin);
 
         $templates = app(RolePermissionTemplateService::class);
         $map = $templates->map();
-        $map['supervisor'][] = NoahPermission::ClientsView->value;
+        $map['supervisor'][] = PhoenixPermission::ClientsView->value;
         $map['supervisor'] = array_values(array_unique($map['supervisor']));
 
         $this->putJson('/api/v1/platform/role-permissions', ['roles' => $map])
@@ -37,12 +37,12 @@ class PlatformRolePermissionsApiTest extends TestCase
             ->assertJsonPath('data.roles.1.name', 'supervisor');
 
         $fresh = $templates->map();
-        $this->assertContains(NoahPermission::ClientsView->value, $fresh['supervisor']);
+        $this->assertContains(PhoenixPermission::ClientsView->value, $fresh['supervisor']);
     }
 
     public function test_non_platform_user_cannot_access(): void
     {
-        $supervisor = User::query()->where('email', 'supervisor@noah.local')->firstOrFail();
+        $supervisor = User::query()->where('email', 'claudio.rodriguez@mein-company.com')->firstOrFail();
         Sanctum::actingAs($supervisor);
 
         $this->getJson('/api/v1/platform/role-permissions')->assertForbidden();
@@ -50,7 +50,7 @@ class PlatformRolePermissionsApiTest extends TestCase
 
     public function test_me_includes_platform_admin_flag_for_demo_admin(): void
     {
-        $admin = User::query()->where('email', 'admin@noah.local')->firstOrFail();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->firstOrFail();
         Sanctum::actingAs($admin);
 
         $this->getJson('/api/v1/auth/me')
@@ -60,13 +60,13 @@ class PlatformRolePermissionsApiTest extends TestCase
 
     public function test_company_admin_sees_updated_role_permissions(): void
     {
-        $admin = User::query()->where('email', 'admin@noah.local')->firstOrFail();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->firstOrFail();
         $company = Company::query()->firstOrFail();
         Sanctum::actingAs($admin);
 
         $templates = app(RolePermissionTemplateService::class);
         $map = $templates->map();
-        $map['technician'][] = NoahPermission::AssetsView->value;
+        $map['technician'][] = PhoenixPermission::AssetsView->value;
         $map['technician'] = array_values(array_unique($map['technician']));
 
         $this->putJson('/api/v1/platform/role-permissions', ['roles' => $map])->assertOk();
@@ -80,6 +80,6 @@ class PlatformRolePermissionsApiTest extends TestCase
             ->json('data');
 
         $technician = collect($roles)->firstWhere('name', 'technician');
-        $this->assertContains(NoahPermission::AssetsView->value, $technician['permissions']);
+        $this->assertContains(PhoenixPermission::AssetsView->value, $technician['permissions']);
     }
 }

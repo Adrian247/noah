@@ -18,9 +18,9 @@ class AiGateway
     {
         $companyId = app(CurrentCompany::class)->id();
         $template = PromptTemplate::activeFor('grammar_correction_v1', $companyId);
-        $provider = $template?->provider ?? config('noah.ai.default_provider', 'local');
+        $provider = $template?->provider ?? config('phoenix.ai.default_provider', 'local');
 
-        if ($provider === 'openai' && config('noah.ai.openai.api_key')) {
+        if ($provider === 'openai' && config('phoenix.ai.openai.api_key')) {
             return $this->invokeOpenAi($text, $template, $companyId, $userId);
         }
 
@@ -34,12 +34,12 @@ class AiGateway
     {
         $system = $template?->system_prompt ?? 'Corrige gramática sin agregar datos.';
         $user = str_replace('{{technician_text}}', $text, $template?->user_template ?? '{{technician_text}}');
-        $model = $template?->model ?? config('noah.ai.openai.model');
+        $model = $template?->model ?? config('phoenix.ai.openai.model');
 
         try {
-            $response = Http::withToken(config('noah.ai.openai.api_key'))
+            $response = Http::withToken(config('phoenix.ai.openai.api_key'))
                 ->timeout(30)
-                ->post(rtrim(config('noah.ai.openai.base_url'), '/').'/chat/completions', [
+                ->post(rtrim(config('phoenix.ai.openai.base_url'), '/').'/chat/completions', [
                     'model' => $model,
                     'temperature' => (float) ($template?->temperature ?? 0.2),
                     'messages' => [

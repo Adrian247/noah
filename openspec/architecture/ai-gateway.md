@@ -1,4 +1,4 @@
-# AI Gateway — Noah
+# AI Gateway — Phoenix
 
 La IA es un servicio transversal.
 

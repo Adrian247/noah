@@ -127,7 +127,7 @@ function measureTarget(step: TourStep | null) {
     applyTourDomEffects(step, el);
 
     // Menú lateral u otros targets muy altos: spotlight visible, tarjeta fija abajo.
-    if (targetRect.value.height > viewportH * 0.42) {
+    if (step.spotlight === 'sidebar' || targetRect.value.height > viewportH * 0.42) {
         setCardBottomCenter();
         return;
     }
@@ -178,16 +178,58 @@ async function applyStepRoute(step: TourStep | null): Promise<boolean> {
     }
 }
 
+let speechUtterance: SpeechSynthesisUtterance | null = null;
+
+function stopStepSpeech() {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+    }
+    speechUtterance = null;
+}
+
+function speakStepNarration(step: TourStep) {
+    if (muted.value || typeof window === 'undefined' || !window.speechSynthesis) {
+        return;
+    }
+    stopStepSpeech();
+    const utterance = new SpeechSynthesisUtterance(step.body);
+    utterance.lang = 'es-MX';
+    utterance.rate = 0.95;
+    speechUtterance = utterance;
+    window.speechSynthesis.speak(utterance);
+}
+
 function playStepAudio(step: TourStep | null) {
     const audio = audioEl.value;
     if (!audio || !step || muted.value) {
         return;
     }
+    stopStepSpeech();
     audio.pause();
-    audio.src = step.audioUrl;
-    void audio.play().catch(() => {
-        /* autoplay blocked or missing file */
-    });
+    const sources = [step.audioUrl, step.audioUrlAlt].filter(
+        (url): url is string => typeof url === 'string' && url.length > 0,
+    );
+    let sourceIndex = 0;
+
+    const tryNextSource = () => {
+        if (sourceIndex >= sources.length) {
+            speakStepNarration(step);
+            return;
+        }
+        audio.src = sources[sourceIndex]!;
+        sourceIndex += 1;
+        const onMissing = () => {
+            audio.removeEventListener('error', onMissing);
+            tryNextSource();
+        };
+        audio.addEventListener('error', onMissing, { once: true });
+        void audio.play().catch(() => {
+            audio.removeEventListener('error', onMissing);
+            tryNextSource();
+        });
+    };
+
+    tryNextSource();
 }
 
 async function syncStep() {
@@ -221,6 +263,7 @@ watch(
         if (!isActive) {
             syncGeneration += 1;
             audioEl.value?.pause();
+            stopStepSpeech();
             syncing.value = false;
             clearTourDomEffects();
             return;
@@ -232,6 +275,7 @@ watch(
 watch(muted, (isMuted) => {
     if (isMuted) {
         audioEl.value?.pause();
+        stopStepSpeech();
     } else if (active.value) {
         playStepAudio(currentStep.value);
     }
@@ -276,21 +320,27 @@ const spotlightStyle = computed(() => {
 <template>
     <Teleport to="body">
         <audio ref="audioEl" preload="auto" />
-        <div
-            v-if="active && currentStep"
-            class="product-tour-root"
-            role="dialog"
-            aria-modal="true"
-            :aria-label="currentStep.title"
-        >
-            <div class="product-tour-backdrop" aria-hidden="true" />
+        <template v-if="active && currentStep">
             <div
-                v-if="spotlightStyle"
-                :class="spotlightClass"
-                :style="spotlightStyle"
+                class="product-tour-root"
+                role="presentation"
                 aria-hidden="true"
-            />
-            <div class="product-tour-card" :style="cardStyle">
+            >
+                <div class="product-tour-backdrop" aria-hidden="true" />
+                <div
+                    v-if="spotlightStyle"
+                    :class="spotlightClass"
+                    :style="spotlightStyle"
+                    aria-hidden="true"
+                />
+            </div>
+            <div
+                class="product-tour-card"
+                role="dialog"
+                aria-modal="true"
+                :aria-label="currentStep.title"
+                :style="cardStyle"
+            >
                 <p class="product-tour-card__progress">{{ progressLabel }}</p>
                 <h2 class="product-tour-card__title">{{ currentStep.title }}</h2>
                 <p class="product-tour-card__body">{{ currentStep.body }}</p>
@@ -317,7 +367,7 @@ const spotlightStyle = computed(() => {
                     </div>
                 </div>
             </div>
-        </div>
+        </template>
     </Teleport>
 </template>
 
@@ -383,7 +433,7 @@ const spotlightStyle = computed(() => {
 
 .product-tour-card {
     position: fixed;
-    z-index: 3;
+    z-index: 10080;
     pointer-events: auto;
     padding: 1.25rem 1.35rem;
     border-radius: 1rem;

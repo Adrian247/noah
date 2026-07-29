@@ -13,7 +13,7 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
-RUN useradd -ms /bin/bash noah \
-    && chown -R noah:noah /var/www/html
+RUN useradd -ms /bin/bash phoenix \
+    && chown -R phoenix:phoenix /var/www/html
 
-USER noah
+USER phoenix

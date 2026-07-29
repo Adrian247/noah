@@ -8,13 +8,24 @@ use App\Http\Controllers\Controller;
 use App\Models\ReportSectionTemplate;
 use App\Models\ReportTemplate;
 use App\Models\ReportTemplateVersion;
+use App\Models\RoutineType;
 use App\Services\Audit\AuditLogger;
 use App\Services\Forms\FormFieldCatalog;
+use App\Services\Reports\FormReportFieldAlignment;
+use App\Services\Reports\ReportDesignPresetCatalog;
 use App\Services\Reports\ReportHtmlBuilder;
+use App\Services\Reports\ReportPresetApplier;
+use App\Services\Reports\ReportTemplateGuard;
+use App\Enums\FormUsage;
+use App\Models\FormDefinition;
+use App\Models\Company;
+use App\Services\Platform\PlatformTenantService;
+use App\Support\PlatformAdmin;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class ReportTemplateController extends Controller
 {
@@ -104,6 +115,33 @@ class ReportTemplateController extends Controller
         return response()->json(['data' => $reportTemplate->fresh()]);
     }
 
+    public function destroy(
+        Request $request,
+        ReportTemplate $reportTemplate,
+        ReportTemplateGuard $guard,
+        AuditLogger $audit,
+    ): JsonResponse {
+        $this->authorizeDesigner($request);
+        $guard->assertCanDelete($reportTemplate);
+
+        $templateId = $reportTemplate->id;
+        $name = $reportTemplate->name;
+
+        $reportTemplate->load('versions');
+        foreach ($reportTemplate->versions as $version) {
+            $this->purgeCoverImageFromPageSettings(is_array($version->page_settings) ? $version->page_settings : []);
+        }
+
+        $reportTemplate->versions()->delete();
+        $reportTemplate->delete();
+
+        $audit->fromRequest($request, 'report.template_deleted', ReportTemplate::class, $templateId, [
+            'name' => $name,
+        ]);
+
+        return response()->json(null, 204);
+    }
+
     public function preview(Request $request, ReportTemplate $reportTemplate, ReportHtmlBuilder $htmlBuilder): \Illuminate\Http\Response
     {
         $thumbnail = $request->boolean('thumbnail');
@@ -134,7 +172,7 @@ class ReportTemplateController extends Controller
         return response($html, 200, ['Content-Type' => 'text/html; charset=UTF-8']);
     }
 
-    public function show(ReportTemplate $reportTemplate, FormFieldCatalog $fields): JsonResponse
+    public function show(ReportTemplate $reportTemplate, FormFieldCatalog $fields, FormReportFieldAlignment $alignment): JsonResponse
     {
         $sections = ReportSectionTemplate::query()
             ->where('company_id', $reportTemplate->company_id)
@@ -142,11 +180,93 @@ class ReportTemplateController extends Controller
             ->get()
             ->map(fn (ReportSectionTemplate $row) => ReportSectionTemplateController::format($row));
 
+        $draft = $reportTemplate->versions()->where('status', 'draft')->orderByDesc('version')->first();
+        $components = $draft?->components ?? [];
+        $orphans = $alignment->orphanFieldsAgainstRoutineForms(
+            is_array($components) ? $components : [],
+            (int) $reportTemplate->company_id,
+        );
+
+        $company = Company::query()->find($reportTemplate->company_id);
+
+        $routineTypeLinks = $this->routineTypeLinksForTemplate($reportTemplate, $alignment, $draft);
+
         return response()->json([
             'data' => $reportTemplate->load(['versions' => fn ($q) => $q->orderByDesc('version')]),
             'form_fields' => $fields->listForCurrentCompany(),
             'section_templates' => $sections,
+            'routine_forms' => $this->routineFormSources((int) $reportTemplate->company_id),
+            'routine_type_links' => $routineTypeLinks,
+            'company_branding' => [
+                'name' => $company?->name,
+                'logo_url' => PlatformTenantService::logoUrl($company),
+            ],
+            'field_alignment' => [
+                'orphan_fields' => $orphans,
+                'aligned' => $orphans === [],
+            ],
         ]);
+    }
+
+    public function presets(Request $request): JsonResponse
+    {
+        $this->authorizeDesigner($request);
+
+        $data = array_map(static fn (array $preset) => [
+            'id' => $preset['id'],
+            'label' => $preset['label'],
+            'description' => $preset['description'],
+            'layout' => $preset['layout'],
+            'swatch' => $preset['swatch'],
+        ], ReportDesignPresetCatalog::all());
+
+        return response()->json(['data' => $data]);
+    }
+
+    public function applyPreset(
+        Request $request,
+        ReportTemplate $reportTemplate,
+        ReportPresetApplier $applier,
+        AuditLogger $audit,
+    ): JsonResponse {
+        $this->authorizeDesigner($request);
+
+        $data = $request->validate([
+            'preset_id' => ['required', 'string', 'max:64'],
+            'form_slug' => ['nullable', 'string', 'max:128'],
+        ]);
+
+        $draft = $applier->applyToDraft(
+            $reportTemplate,
+            $data['preset_id'],
+            (int) $request->user()->id,
+            $data['form_slug'] ?? null,
+        );
+
+        $audit->fromRequest($request, 'report.preset_applied', ReportTemplate::class, $reportTemplate->id, [
+            'preset_id' => $data['preset_id'],
+            'form_slug' => $data['form_slug'] ?? null,
+        ]);
+
+        return response()->json(['data' => $draft]);
+    }
+
+    /**
+     * @return list<array{slug: string, name: string}>
+     */
+    private function routineFormSources(int $companyId): array
+    {
+        return FormDefinition::query()
+            ->where('company_id', $companyId)
+            ->where('usage', FormUsage::Routine)
+            ->whereHas('versions', fn ($q) => $q->where('status', 'published'))
+            ->orderBy('name')
+            ->get(['slug', 'name'])
+            ->map(fn (FormDefinition $form) => [
+                'slug' => (string) $form->slug,
+                'name' => (string) $form->name,
+            ])
+            ->all();
     }
 
     public function updateComponents(Request $request, ReportTemplate $reportTemplate, AuditLogger $audit): JsonResponse
@@ -201,6 +321,7 @@ class ReportTemplateController extends Controller
 
         $path = $request->file('image')->store('report-templates/'.$reportTemplate->id.'/cover', 'public');
         $cover['image_path'] = $path;
+        $cover['logo_source'] = 'custom';
         $cover['use_client_logo'] = false;
         unset($cover['client_id']);
         $pageSettings['cover_page'] = $cover;
@@ -238,7 +359,7 @@ class ReportTemplateController extends Controller
         return response()->json(['data' => ['page_settings' => $draft->fresh()->page_settings]]);
     }
 
-    public function publish(Request $request, ReportTemplate $reportTemplate, AuditLogger $audit): JsonResponse
+    public function publish(Request $request, ReportTemplate $reportTemplate, AuditLogger $audit, FormReportFieldAlignment $alignment): JsonResponse
     {
         $this->authorizeDesigner($request);
 
@@ -246,6 +367,22 @@ class ReportTemplateController extends Controller
         if ($draft === null) {
             return response()->json(['message' => 'No draft to publish.'], 422);
         }
+
+        $orphans = $alignment->orphanFieldsAgainstRoutineForms(
+            is_array($draft->components) ? $draft->components : [],
+            (int) $reportTemplate->company_id,
+        );
+        if ($orphans !== []) {
+            throw ValidationException::withMessages([
+                'components' => [
+                    'No se puede publicar: el informe referencia campos que no existen en ningún formulario de rutina publicado: '
+                    .implode(', ', $orphans)
+                    .'. Corrige los bloques párrafo/imagen o publica primero el formulario con esas keys.',
+                ],
+            ]);
+        }
+
+        $this->assertLinkedRoutineTypesAligned($reportTemplate, $draft, $alignment);
 
         $draft->update([
             'status' => 'published',
@@ -272,12 +409,28 @@ class ReportTemplateController extends Controller
 
     private function authorizeDesigner(Request $request): void
     {
+        if (PlatformAdmin::isPlatformAdmin($request->user())) {
+            return;
+        }
+
         $membership = $request->attributes->get('membership');
         $role = $membership->role;
         $roleValue = $role instanceof MembershipRole ? $role->value : (string) $role;
 
         if ($roleValue !== MembershipRole::Administrator->value) {
             abort(403, 'Administrator role required for report design.');
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $pageSettings
+     */
+    private function purgeCoverImageFromPageSettings(array $pageSettings): void
+    {
+        $cover = is_array($pageSettings['cover_page'] ?? null) ? $pageSettings['cover_page'] : [];
+        $oldPath = (string) ($cover['image_path'] ?? '');
+        if ($oldPath !== '' && Storage::disk('public')->exists($oldPath)) {
+            Storage::disk('public')->delete($oldPath);
         }
     }
 
@@ -317,5 +470,72 @@ class ReportTemplateController extends Controller
         }
 
         return Storage::disk('public')->url($path);
+    }
+
+    /**
+     * @return list<array{
+     *     routine_type_id: int,
+     *     routine_type_name: string,
+     *     form_slug: string|null,
+     *     form_name: string|null,
+     *     aligned_with_draft: bool,
+     *     missing: list<string>
+     * }>
+     */
+    private function routineTypeLinksForTemplate(
+        ReportTemplate $reportTemplate,
+        FormReportFieldAlignment $alignment,
+        ?ReportTemplateVersion $draft,
+    ): array {
+        $types = RoutineType::query()
+            ->where('company_id', $reportTemplate->company_id)
+            ->whereNotNull('report_template_version_id')
+            ->whereHas(
+                'reportTemplateVersion',
+                fn ($q) => $q->where('report_template_id', $reportTemplate->id),
+            )
+            ->with(['formVersion.definition', 'reportTemplateVersion'])
+            ->orderBy('name')
+            ->get();
+
+        return $types->map(function (RoutineType $type) use ($alignment, $draft) {
+            $compareVersion = $draft ?? $type->reportTemplateVersion;
+            $result = $alignment->compare($type->formVersion, $compareVersion);
+
+            return [
+                'routine_type_id' => $type->id,
+                'routine_type_name' => $type->name,
+                'form_slug' => $type->formVersion?->definition?->slug,
+                'form_name' => $type->formVersion?->definition?->name,
+                'aligned_with_draft' => $result['aligned'],
+                'missing' => $result['missing'],
+            ];
+        })->all();
+    }
+
+    private function assertLinkedRoutineTypesAligned(
+        ReportTemplate $reportTemplate,
+        ReportTemplateVersion $draft,
+        FormReportFieldAlignment $alignment,
+    ): void {
+        $types = RoutineType::query()
+            ->where('company_id', $reportTemplate->company_id)
+            ->whereNotNull('form_version_id')
+            ->whereNotNull('report_template_version_id')
+            ->whereHas(
+                'reportTemplateVersion',
+                fn ($q) => $q->where('report_template_id', $reportTemplate->id),
+            )
+            ->with(['formVersion.definition', 'reportTemplateVersion'])
+            ->get();
+
+        foreach ($types as $type) {
+            $result = $alignment->compare($type->formVersion, $draft);
+            if ($result['aligned']) {
+                continue;
+            }
+
+            $alignment->assertAlignedOrFail($type->formVersion, $draft);
+        }
     }
 }

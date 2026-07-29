@@ -26,7 +26,7 @@ class ClientsApiTest extends TestCase
     public function test_admin_can_create_client(): void
     {
         $company = Company::query()->first();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
         Sanctum::actingAs($admin);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
@@ -41,7 +41,7 @@ class ClientsApiTest extends TestCase
     public function test_technician_cannot_create_client(): void
     {
         $company = Company::query()->first();
-        $technician = User::query()->where('email', 'tecnico@noah.local')->first();
+        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
         Sanctum::actingAs($technician);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
@@ -52,7 +52,7 @@ class ClientsApiTest extends TestCase
     public function test_billing_can_list_clients(): void
     {
         $company = Company::query()->first();
-        $billing = User::query()->where('email', 'facturacion@noah.local')->first();
+        $billing = User::query()->where('email', 'elena.sanchez@mein-company.com')->first();
         Sanctum::actingAs($billing);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
@@ -65,7 +65,7 @@ class ClientsApiTest extends TestCase
     {
         Storage::fake('public');
         $company = Company::query()->first();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
         Sanctum::actingAs($admin);
 
         $client = Client::query()->first();

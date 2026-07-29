@@ -4,56 +4,55 @@ namespace App\Console\Commands;
 
 use App\Models\Company;
 use App\Models\User;
-use Database\Seeders\NoahDemoSeeder;
+use App\Support\DemoAccounts;
+use App\Support\PlatformAdmin;
+use Database\Seeders\PhoenixDemoSeeder;
 use Illuminate\Console\Command;
 
 class EnsureDemoDataCommand extends Command
 {
-    protected $signature = 'noah:ensure-demo
-                            {--reset-credentials : Restablece contraseñas de cuentas demo (noah.demo_password)}';
+    protected $signature = 'phoenix:ensure-demo
+                            {--reset-credentials : Restablece contraseñas demo (root y tenants)}';
 
     protected $description = 'Seed demo data when missing; optional reset of demo login passwords';
 
-    /** @var list<array{email: string, name: string}> */
-    private const DEMO_ACCOUNTS = [
-        ['email' => 'admin@noah.local', 'name' => 'Administrador Noah'],
-        ['email' => 'tecnico@noah.local', 'name' => 'Técnico Demo'],
-        ['email' => 'supervisor@noah.local', 'name' => 'Supervisor Demo'],
-        ['email' => 'facturacion@noah.local', 'name' => 'Facturación Demo'],
-    ];
+    private const DEMO_COMPANY_NAME = 'Mein Company';
 
     /**
      * @return list<string>
      */
     public static function demoAccountEmails(): array
     {
-        return array_column(self::DEMO_ACCOUNTS, 'email');
+        return DemoAccounts::allEmails();
     }
 
     public function handle(): int
     {
         if ($this->demoEnvironmentIncomplete()) {
-            $this->call('db:seed', ['--class' => NoahDemoSeeder::class, '--force' => true]);
+            $this->call('db:seed', ['--class' => PhoenixDemoSeeder::class, '--force' => true]);
             $this->info('Demo data seeded (entorno incompleto o vacío).');
         }
 
         if ($this->option('reset-credentials')) {
+            if ($this->demoEnvironmentIncomplete()) {
+                $this->call('db:seed', ['--class' => PhoenixDemoSeeder::class, '--force' => true]);
+            }
             $this->resetDemoCredentials();
-            $this->call('noah:bootstrap-permissions');
-            $this->info('Demo credentials reset (password: '.config('noah.demo_password').').');
+            $this->call('phoenix:bootstrap-permissions');
+            $this->info('Demo credentials reset (root: '.config('phoenix.demo_root_password').', tenants: '.config('phoenix.demo_password').').');
 
             return self::SUCCESS;
         }
 
-        if (! User::query()->where('email', 'admin@noah.local')->exists()) {
-            $this->info('Demo admin missing after seed attempt; check NoahDemoSeeder.');
+        if (! User::query()->where('email', DemoAccounts::ROOT_EMAIL)->exists()) {
+            $this->info('Demo admin missing after seed attempt; check PhoenixDemoSeeder.');
         } else {
-            $this->info('Demo admin present. Use --reset-credentials or noah:refresh-demo if login fails.');
+            $this->info('Demo admin present. Use --reset-credentials or phoenix:refresh-demo if login fails.');
         }
 
-        $this->call('noah:bootstrap-permissions');
+        $this->call('phoenix:bootstrap-permissions');
 
-        $company = Company::query()->where('name', 'Demo Industrial')->first();
+        $company = Company::query()->where('name', self::DEMO_COMPANY_NAME)->first();
         if ($company !== null) {
             app(\App\Services\Workflow\WorkflowRuntime::class)->seedDefinitionForCompany($company->id);
             $this->info('Workflow demo «routine-validation-v1» sincronizado con el diseño estándar.');
@@ -64,20 +63,27 @@ class EnsureDemoDataCommand extends Command
 
     private function demoEnvironmentIncomplete(): bool
     {
-        if (! User::query()->where('email', 'admin@noah.local')->exists()) {
+        if (! User::query()->where('email', DemoAccounts::ROOT_EMAIL)->exists()) {
             return true;
         }
 
-        return ! Company::query()->where('name', 'Demo Industrial')->exists();
+        return ! Company::query()->where('name', self::DEMO_COMPANY_NAME)->exists();
     }
 
     private function resetDemoCredentials(): void
     {
-        foreach (self::DEMO_ACCOUNTS as $account) {
-            User::query()->updateOrCreate(
-                ['email' => $account['email']],
-                ['name' => $account['name'], 'password' => config('noah.demo_password')],
-            );
+        foreach (DemoAccounts::allEmails() as $email) {
+            $user = User::query()->where('email', $email)->first();
+            if ($user === null) {
+                continue;
+            }
+
+            $user->forceFill([
+                'password' => DemoAccounts::passwordForEmail($email),
+                'is_platform_admin' => $email === DemoAccounts::ROOT_EMAIL,
+            ])->save();
+
+            PlatformAdmin::syncFlagFromConfig($user);
         }
     }
 }

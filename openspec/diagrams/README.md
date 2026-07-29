@@ -1,4 +1,4 @@
-# Diagramas — Noah
+# Diagramas — Phoenix
 
 Índice de diagramas **documentales** (Mermaid). Sirven para alinear objetivo, arquitectura, diseño y flujos sin leer decenas de páginas.
 

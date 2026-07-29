@@ -1,14 +1,14 @@
-# Pruebas manuales — Noah
+# Pruebas manuales — Phoenix
 
 Guía para validar el producto en **http://localhost:8888** (Docker: `docker compose up -d`).
 
 ## Preparación
 
 1. Contenedores: `app`, `web`, `postgres`, `redis`, `queue`, `mailpit` (MinIO opcional para evidencias futuras en S3).
-2. Al arrancar `app` se ejecutan `migrate`, `storage:link` y `noah:ensure-demo` si no hay usuarios.
+2. Al arrancar `app` se ejecutan `migrate`, `storage:link` y `phoenix:ensure-demo` si no hay usuarios.
 3. Si el login falla o tras actualizar el seed demo:
    ```bash
-   docker compose exec app php artisan noah:refresh-demo
+   docker compose exec app php artisan phoenix:refresh-demo
    ```
    Ver credenciales en [DEMO_ENV.md](DEMO_ENV.md).
 4. Mailpit: **http://localhost:8025**
@@ -17,10 +17,10 @@ Guía para validar el producto en **http://localhost:8888** (Docker: `docker com
 
 | Email | Rol | Contraseña |
 |-------|-----|------------|
-| admin@noah.local | Administrador | noah_application |
-| supervisor@noah.local | Supervisor | noah_application |
-| tecnico@noah.local | Técnico | noah_application |
-| facturacion@noah.local | Facturación | noah_application |
+| admin@pyro-systems.com | Administrador | phoenix_application |
+| claudio.rodriguez@mein-company.com | Supervisor | phoenix_application |
+| misael.palos@mein-company.com | Técnico | phoenix_application |
+| elena.sanchez@mein-company.com | Facturación | phoenix_application |
 
 ---
 
@@ -72,14 +72,14 @@ Orden recomendado: **D0** (caso demo ya enlazado) o **D1 → D2 → D3 → D4** 
 
 ### D0 — Caso demo: revisión mayor SUV premium
 
-Tras `NoahDemoSeeder`:
+Tras `PhoenixDemoSeeder`:
 
 | Pieza | Nombre |
 |--------|--------|
 | Formulario | *Revisión mayor vehículo — agencia premium* |
 | Reporte | *Informe revisión mayor vehículo* (campos alineados al formulario) |
 | Tipo de rutina | *Revisión mayor vehículo (premium)* |
-| Rutina | Activo `L200-2018-DEMO` → técnico `tecnico@noah.local` |
+| Rutina | Activo `L200-2018-DEMO` → técnico `misael.palos@mein-company.com` |
 
 Secciones del formulario: **kilometraje**, **frenos**, **filtros**, **aceite**, **batería**, **luces**, **fusibles**, fotos recomendadas y bloque **Revisiones Plus** (opcional). Flujo: **B4** → **B6–B7** (PDF).
 
@@ -122,7 +122,7 @@ Simula la app de campo con `curl` o Postman.
 ```bash
 curl -s -X POST http://localhost:8888/api/v1/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"email":"tecnico@noah.local","password":"noah_application","device_name":"curl"}'
+  -d '{"email":"misael.palos@mein-company.com","password":"phoenix_application","device_name":"curl"}'
 ```
 
 **Pull** (rutinas asignadas):

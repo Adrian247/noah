@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\CreatesDemoRoutine;
+use Tests\Support\UsesMeinCompany;
 use Tests\Support\VehicleDemoFormResponses;
 use Tests\TestCase;
 
@@ -15,12 +16,13 @@ class MobileSyncApiTest extends TestCase
 {
     use CreatesDemoRoutine;
     use RefreshDatabase;
+    use UsesMeinCompany;
 
     public function test_sync_push_is_idempotent(): void
     {
         $this->seed();
-        $technician = User::query()->where('email', 'tecnico@noah.local')->first();
-        $company = Company::query()->first();
+        $technician = $this->meinUser('misael.palos@mein-company.com');
+        $company = $this->meinCompany();
         $routine = $this->demoRoutine($technician);
 
         Sanctum::actingAs($technician);
@@ -58,8 +60,8 @@ class MobileSyncApiTest extends TestCase
     public function test_sync_pull_returns_assigned_routines(): void
     {
         $this->seed();
-        $technician = User::query()->where('email', 'tecnico@noah.local')->first();
-        $company = Company::query()->first();
+        $technician = $this->meinUser('misael.palos@mein-company.com');
+        $company = $this->meinCompany();
 
         Sanctum::actingAs($technician);
 

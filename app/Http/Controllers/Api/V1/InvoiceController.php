@@ -2,14 +2,18 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\InvoiceEvidenceKind;
 use App\Enums\InvoiceStatus;
 use App\Enums\MembershipRole;
 use App\Enums\RoutineStatus;
 use App\Http\Controllers\Controller;
 use App\Mail\ClientInvoiceIssuedMail;
+use App\Models\GeneratedReport;
 use App\Models\Invoice;
 use App\Services\Audit\AuditLogger;
+use App\Services\Billing\InvoiceDeliveryPackageBuilder;
 use App\Services\Billing\InvoiceDraftEditor;
+use App\Services\Billing\InvoiceEvidenceService;
 use App\Services\Identity\CompanyAuthorizationService;
 use App\Services\Workflow\WorkflowRuntime;
 use App\Support\AuditCorrelation;
@@ -25,21 +29,46 @@ class InvoiceController extends Controller
         private readonly CompanyAuthorizationService $authorization,
         private readonly InvoiceDraftEditor $draftEditor,
         private readonly WorkflowRuntime $workflow,
+        private readonly InvoiceEvidenceService $invoiceEvidences,
+        private readonly InvoiceDeliveryPackageBuilder $deliveryPackage,
     ) {}
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $invoices = Invoice::query()
+        $query = Invoice::query()
             ->with(['lines', 'routine', 'client'])
-            ->orderByDesc('id')
-            ->paginate(15);
+            ->orderByDesc('id');
+
+        $search = trim((string) $request->query('search', ''));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('custom_reference', 'like', '%'.$search.'%');
+                if (ctype_digit($search)) {
+                    $q->orWhere('id', (int) $search);
+                }
+                $q->orWhere('number', 'like', '%'.$search.'%');
+            });
+        }
+
+        $invoices = $query->paginate(15);
 
         return response()->json($invoices);
     }
 
     public function show(Invoice $invoice): JsonResponse
     {
-        $invoice->load(['lines' => fn ($q) => $q->orderBy('sort_order'), 'routine.workflowInstance.definition', 'client']);
+        $invoice->load([
+            'lines' => fn ($q) => $q->orderBy('sort_order'),
+            'routine.workflowInstance.definition',
+            'client',
+            'evidences.generatedReport',
+        ]);
+
+        $evidencePayload = $invoice->evidences
+            ->sortBy(fn ($e) => [$e->kind->value, $e->id])
+            ->values()
+            ->map(fn ($e) => $this->invoiceEvidences->toApiArray($e))
+            ->all();
 
         $issueLabel = 'Emitir factura';
         $instance = $invoice->routine?->workflowInstance;
@@ -52,8 +81,36 @@ class InvoiceController extends Controller
             }
         }
 
+        $attachedReportIds = $invoice->evidences
+            ->where('kind', InvoiceEvidenceKind::RoutineReport)
+            ->pluck('generated_report_id')
+            ->filter()
+            ->all();
+
+        $routineReportsAvailable = [];
+        if ($invoice->routine_id !== null) {
+            $routineReportsAvailable = GeneratedReport::query()
+                ->where('routine_id', $invoice->routine_id)
+                ->where('status', 'ready')
+                ->whereNotNull('path')
+                ->when($attachedReportIds !== [], fn ($q) => $q->whereNotIn('id', $attachedReportIds))
+                ->orderByDesc('id')
+                ->get(['id', 'routine_id', 'routine_execution_id', 'status', 'created_at'])
+                ->map(fn (GeneratedReport $r) => [
+                    'id' => $r->id,
+                    'routine_id' => $r->routine_id,
+                    'routine_execution_id' => $r->routine_execution_id,
+                    'status' => $r->status,
+                    'created_at' => $r->created_at?->toIso8601String(),
+                    'label' => 'Reporte #'.$r->id.' · ejecución #'.$r->routine_execution_id,
+                ])
+                ->all();
+        }
+
         return response()->json([
             'data' => $invoice,
+            'evidences' => $evidencePayload,
+            'routine_reports_available' => $routineReportsAvailable,
             'workflow_action_labels' => [
                 'invoice_issued' => $issueLabel,
             ],
@@ -155,10 +212,23 @@ class InvoiceController extends Controller
         $fresh = $invoice->fresh(['lines', 'client', 'company']);
 
         if ($notify && ! $deferred && $fresh->client?->billing_email) {
-            Mail::to($fresh->client->billing_email)->queue(new ClientInvoiceIssuedMail($fresh));
+            Mail::to($fresh->client->billing_email)->queue(
+                new ClientInvoiceIssuedMail($fresh->load(['lines', 'client', 'company', 'evidences'])),
+            );
         }
 
         return response()->json(['data' => $fresh]);
+    }
+
+    public function downloadPackage(Request $request, Invoice $invoice): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        $this->authorizePermission($request, 'billing.draft');
+
+        if ($invoice->status !== InvoiceStatus::Issued) {
+            abort(422, 'Solo facturas emitidas tienen paquete de entrega.');
+        }
+
+        return $this->deliveryPackage->downloadResponse($invoice->load(['evidences.generatedReport']));
     }
 
     private function authorizePermission(Request $request, string $permission): void

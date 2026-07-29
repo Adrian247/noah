@@ -15,7 +15,7 @@ class RequireCompanyPermission
     ) {}
 
     /**
-     * @param  string  ...$permissions  Slugs de NoahPermission
+     * @param  string  ...$permissions  Slugs de PhoenixPermission
      */
     public function handle(Request $request, Closure $next, string ...$permissions): Response
     {

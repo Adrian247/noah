@@ -1,4 +1,4 @@
-# Personas y journeys — Noah
+# Personas y journeys — Phoenix
 
 ## Personas
 
@@ -6,7 +6,7 @@
 
 - Configura catálogos, tipos de rutina, plantillas PDF y permisos.
 - Frustración actual: cada cliente pide un formato distinto y requiere desarrollo.
-- Éxito en Noah: publica un nuevo tipo de servicio en horas, no semanas.
+- Éxito en Phoenix: publica un nuevo tipo de servicio en horas, no semanas.
 
 ### Luis — Técnico de campo
 

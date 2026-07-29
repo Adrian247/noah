@@ -21,14 +21,14 @@ class GenerateRoutineReportJobTest extends TestCase
     public function test_job_processes_report_even_when_stale_company_context_is_set(): void
     {
         Storage::fake('local');
-        config(['noah.reports.disk' => 'local', 'noah.reports.async' => true]);
+        config(['phoenix.reports.disk' => 'local', 'phoenix.reports.async' => true]);
 
         $this->seed();
 
         $companies = Company::query()->orderBy('id')->get();
         $this->assertGreaterThanOrEqual(1, $companies->count());
 
-        $technician = \App\Models\User::query()->where('email', 'tecnico@noah.local')->firstOrFail();
+        $technician = \App\Models\User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
         $routine = $this->demoRoutine($technician);
         $execution = $routine->latestExecution ?? $routine->executions()->create([
             'performed_by' => $technician->id,

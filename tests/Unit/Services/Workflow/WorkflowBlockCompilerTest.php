@@ -36,6 +36,7 @@ class WorkflowBlockCompilerTest extends TestCase
         );
         $this->assertSame('Revisión', $submit['label'] ?? '');
         $this->assertContains('executing_technician', $submit['notify']['recipients'] ?? []);
+        $this->assertNotEmpty($definition['steps']['field_execution']['assignment_notify']['enabled'] ?? false);
     }
 
     public function test_reject_to_non_routine_fails(): void

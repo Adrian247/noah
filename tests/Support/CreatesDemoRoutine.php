@@ -12,7 +12,7 @@ trait CreatesDemoRoutine
     protected function demoRoutine(?User $technician = null): Routine
     {
         $company = Company::query()->firstOrFail();
-        $technician ??= User::query()->where('email', 'tecnico@noah.local')->firstOrFail();
+        $technician ??= User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
 
         return app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
     }

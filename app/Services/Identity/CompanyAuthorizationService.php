@@ -3,11 +3,13 @@
 namespace App\Services\Identity;
 
 use App\Enums\MembershipRole;
-use App\Enums\NoahPermission;
+use App\Enums\PhoenixPermission;
 use App\Models\Company;
 use App\Models\CompanyMembership;
 use App\Models\User;
-use App\Support\NoahModuleCatalog;
+use App\Support\PhoenixModuleCatalog;
+use App\Support\PlatformAdmin;
+use App\Support\TenantAdministratorPermissions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
@@ -31,7 +33,7 @@ class CompanyAuthorizationService
 
     public function syncPermissionCatalog(): void
     {
-        foreach (NoahPermission::cases() as $permission) {
+        foreach (PhoenixPermission::cases() as $permission) {
             Permission::query()->firstOrCreate(
                 ['name' => $permission->value, 'guard_name' => 'web'],
             );
@@ -103,10 +105,14 @@ class CompanyAuthorizationService
         bool $isActive,
     ): CompanyMembership {
         return DB::transaction(function () use ($membership, $role, $isActive) {
-            $membership->update([
+            $updates = [
                 'role' => $role,
                 'is_active' => $isActive,
-            ]);
+            ];
+            if ($role !== MembershipRole::Client) {
+                $updates['client_id'] = null;
+            }
+            $membership->update($updates);
 
             if ($isActive) {
                 $this->syncMembershipRole($membership->fresh(['user', 'company']));
@@ -134,6 +140,10 @@ class CompanyAuthorizationService
             ->first();
 
         if ($membership === null) {
+            if (PlatformAdmin::isPlatformAdmin($user)) {
+                return $this->permissionsForPlatformAssumption();
+            }
+
             return [];
         }
 
@@ -151,12 +161,22 @@ class CompanyAuthorizationService
             return [];
         }
 
+        if (! $membership->exists && PlatformAdmin::isPlatformAdmin($user)) {
+            return $this->modulesForPlatformAssumption($user);
+        }
+
         $base = $this->baseSpatiePermissions($user, $membership->company_id);
         $effective = $base;
 
         $result = [];
-        foreach (NoahModuleCatalog::definitions() as $module) {
+        foreach (PhoenixModuleCatalog::definitions() as $module) {
             $id = $module['id'];
+
+            if (PlatformAdmin::isPlatformAdmin($user) && $id === 'design_workflows') {
+                $result[$id] = ['read' => true, 'write' => true, 'visible' => true];
+
+                continue;
+            }
 
             if (! empty($module['always_visible'])) {
                 $result[$id] = ['read' => true, 'write' => true, 'visible' => true];
@@ -174,6 +194,53 @@ class CompanyAuthorizationService
             if ($defaultVisible && ! $hasRead && ! $hasWrite) {
                 $hasRead = true;
             }
+
+            $result[$id] = [
+                'read' => $hasRead,
+                'write' => $hasWrite,
+                'visible' => $visible,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function permissionsForPlatformAssumption(): array
+    {
+        return array_values(array_unique(array_merge(
+            TenantAdministratorPermissions::slugs(),
+            [
+                PhoenixPermission::DesignWorkflows->value,
+                PhoenixPermission::DesignWorkflowsView->value,
+            ],
+        )));
+    }
+
+    /**
+     * @return array<string, array{read: bool, write: bool, visible: bool}>
+     */
+    public function modulesForPlatformAssumption(User $user): array
+    {
+        $effective = $this->permissionsForPlatformAssumption();
+        $result = [];
+
+        foreach (PhoenixModuleCatalog::definitions() as $module) {
+            $id = $module['id'];
+
+            if (! empty($module['always_visible'])) {
+                $result[$id] = ['read' => true, 'write' => true, 'visible' => true];
+
+                continue;
+            }
+
+            $readPerms = $module['read'] ?? [];
+            $writePerms = $module['write'] ?? [];
+            $hasRead = $this->hasAnyPermission($effective, $readPerms);
+            $hasWrite = $this->hasAnyPermission($effective, $writePerms);
+            $visible = $hasRead || $hasWrite;
 
             $result[$id] = [
                 'read' => $hasRead,
@@ -215,25 +282,66 @@ class CompanyAuthorizationService
      */
     public function permissionGroupsForGranting(): array
     {
+        return $this->buildPermissionGroups([]);
+    }
+
+    /**
+     * Concesiones de permisos en empresas cliente (sin diseño de workflows).
+     *
+     * @return list<array{
+     *     module_id: string,
+     *     module_label: string,
+     *     permissions: list<array{slug: string, label: string}>
+     * }>
+     */
+    public function permissionGroupsForCompanyGranting(): array
+    {
+        return $this->buildPermissionGroups([
+            PhoenixPermission::DesignWorkflows->value,
+            PhoenixPermission::DesignWorkflowsView->value,
+        ]);
+    }
+
+    /**
+     * @param  list<string>  $excludeSlugs
+     * @return list<array{
+     *     module_id: string,
+     *     module_label: string,
+     *     permissions: list<array{slug: string, label: string}>
+     * }>
+     */
+    private function buildPermissionGroups(array $excludeSlugs): array
+    {
         $labels = $this->permissionLabels();
         $groups = [];
 
-        foreach (NoahModuleCatalog::definitions() as $module) {
+        foreach (PhoenixModuleCatalog::definitions() as $module) {
             if (! empty($module['always_visible'])) {
                 continue;
             }
 
-            $slugs = NoahModuleCatalog::allPermissionSlugsForModule($module);
+            if ($module['id'] === 'design_workflows' && $excludeSlugs !== []) {
+                continue;
+            }
+
+            $slugs = PhoenixModuleCatalog::allPermissionSlugsForModule($module);
             if ($slugs === []) {
                 continue;
             }
 
             $permissions = [];
             foreach ($slugs as $slug) {
+                if (in_array($slug, $excludeSlugs, true)) {
+                    continue;
+                }
                 $permissions[] = [
                     'slug' => $slug,
                     'label' => $labels[$slug] ?? $slug,
                 ];
+            }
+
+            if ($permissions === []) {
+                continue;
             }
 
             usort($permissions, fn (array $a, array $b) => strcmp($a['label'], $b['label']));
@@ -307,7 +415,7 @@ class CompanyAuthorizationService
         }
 
         $rolePermissions = $this->rolePermissionsForMembership($membership);
-        $allowedCatalog = NoahPermission::values();
+        $allowedCatalog = PhoenixPermission::values();
 
         $extras = [];
         foreach ($requestedSlugs as $slug) {
@@ -319,7 +427,7 @@ class CompanyAuthorizationService
             if (in_array($slug, $rolePermissions, true)) {
                 continue;
             }
-            if ($slug === NoahPermission::CompanyUsersManage->value) {
+            if ($slug === PhoenixPermission::CompanyUsersManage->value) {
                 $roleValue = $membership->role instanceof MembershipRole
                     ? $membership->role->value
                     : (string) $membership->role;
@@ -328,6 +436,14 @@ class CompanyAuthorizationService
                         'extra_permissions' => ['Solo un administrador puede tener permiso de administrar usuarios.'],
                     ]);
                 }
+            }
+            if (in_array($slug, [
+                PhoenixPermission::DesignWorkflows->value,
+                PhoenixPermission::DesignWorkflowsView->value,
+            ], true)) {
+                throw ValidationException::withMessages([
+                    'extra_permissions' => ['Los permisos de workflow solo los gestiona el administrador de plataforma.'],
+                ]);
             }
             $extras[] = $slug;
         }
@@ -383,6 +499,8 @@ class CompanyAuthorizationService
             'company.users.manage' => 'Administrar usuarios',
             'catalog.suppliers.manage' => 'Gestionar proveedores',
             'catalog.suppliers.view' => 'Ver proveedores',
+            'inventory.view' => 'Ver inventario operativo',
+            'inventory.manage' => 'Gestionar inventario y movimientos',
             'sites.view' => 'Ver sitios',
             'sites.manage' => 'Gestionar sitios',
             'clients.manage' => 'Administrar clientes',

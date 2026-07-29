@@ -1,4 +1,4 @@
-# Seguridad — Noah (resumen)
+# Seguridad — Phoenix (resumen)
 
 - Autenticación fuerte; MFA opcional en fase posterior.
 - Autorización: **permisos** atómicos + roles; comprobar `company_id` en cada query (multitenancy).

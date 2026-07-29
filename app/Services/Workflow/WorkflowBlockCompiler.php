@@ -30,6 +30,12 @@ class WorkflowBlockCompiler
                     'label' => 'Rutina',
                     'position' => ['x' => 72, 'y' => 240],
                     'locked' => true,
+                    'assignment_notify' => [
+                        'enabled' => true,
+                        'subject' => 'Nueva rutina asignada #{routine.id}',
+                        'body_html' => '<p>Hola {user.name}, se te asignó la rutina {routine.id} ({routine_type.name}) en el activo {asset.tag}.</p><p>Entra a Phoenix para revisarla y ejecutarla.</p>',
+                        'recipients' => ['executing_technician'],
+                    ],
                 ],
                 [
                     'id' => self::SUPERVISOR_STEP,
@@ -62,7 +68,7 @@ class WorkflowBlockCompiler
                     'notify' => [
                         'enabled' => true,
                         'subject' => 'Ejecuta rutina {routine.id}',
-                        'body_html' => '<p>Hola {user.name}, registramos tu ejecución de la rutina {routine.id} ({routine_type.name}) en el activo {asset.name}.</p>',
+                        'body_html' => '<p>Hola {user.name}, registramos tu ejecución de la rutina {routine.id} ({routine_type.name}) en el activo {asset.tag}.</p>',
                         'recipients' => ['executing_technician'],
                     ],
                 ],
@@ -171,7 +177,7 @@ class WorkflowBlockCompiler
 
         $meta = is_array($baseDefinition['meta'] ?? null) ? $baseDefinition['meta'] : [];
         $meta['block_editor_version'] = 2;
-        $meta['block_graph'] = ['nodes' => $nodes, 'edges' => $edges];
+        $meta['block_graph'] = ['nodes' => array_values($nodes), 'edges' => array_values($edges)];
 
         return [
             'initial_step' => self::ROUTINE_STEP,
@@ -413,7 +419,7 @@ class WorkflowBlockCompiler
     {
         $label = (string) ($node['label'] ?? $node['id'] ?? 'Paso');
 
-        return match ($kind) {
+        $step = match ($kind) {
             'routine' => [
                 'type' => 'human_task',
                 'label' => $label,
@@ -432,6 +438,15 @@ class WorkflowBlockCompiler
                 'definition.meta.block_graph' => "Tipo de bloque no soportado: {$kind}",
             ]),
         };
+
+        if ($kind === 'routine'
+            && ! empty($node['assignment_notify'])
+            && is_array($node['assignment_notify'])
+            && ! empty($node['assignment_notify']['enabled'])) {
+            $step['assignment_notify'] = $node['assignment_notify'];
+        }
+
+        return $step;
     }
 
     /**
@@ -496,6 +511,9 @@ class WorkflowBlockCompiler
             ];
             if ($kind === 'role' || $kind === 'billing') {
                 $node['assigned_role'] = (string) ($meta['assigned_role'] ?? 'supervisor');
+            }
+            if ($kind === 'routine' && is_array($meta['assignment_notify'] ?? null)) {
+                $node['assignment_notify'] = $meta['assignment_notify'];
             }
             $nodes[] = $node;
         }

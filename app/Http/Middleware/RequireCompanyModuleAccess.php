@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Services\Identity\CompanyAuthorizationService;
+use App\Support\PlatformCompanyAccess;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,7 +24,12 @@ class RequireCompanyModuleAccess
             return response()->json(['message' => 'Company context required.'], 400);
         }
 
-        $modules = $this->authorization->modulesForMembership($membership);
+        $user = $request->user();
+        if (PlatformCompanyAccess::isAssumption($request) && $user !== null) {
+            $modules = $this->authorization->modulesForPlatformAssumption($user);
+        } else {
+            $modules = $this->authorization->modulesForMembership($membership);
+        }
         $state = $modules[$moduleId] ?? ['read' => false, 'write' => false, 'visible' => false];
 
         if ($level === 'write') {

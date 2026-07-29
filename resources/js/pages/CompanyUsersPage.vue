@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import { api } from '@/api/client';
+import { api, getCompanyId, getToken } from '@/api/client';
 import { useToast } from '@/composables/useToast';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import AppModal from '@/components/ui/AppModal.vue';
 import AppButton from '@/components/ui/AppButton.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
 import MaterialSelect from '@/components/ui/MaterialSelect.vue';
+import UserAvatar from '@/components/ui/UserAvatar.vue';
+import IconActionButton from '@/components/ui/IconActionButton.vue';
+import ConfigurableDataTable from '@/components/ui/ConfigurableDataTable.vue';
+import { tableActionsColumn, type TableColumnDef } from '@/lib/tableColumns';
 
 type ModuleAccessState = { read: boolean; write: boolean; visible: boolean };
 
@@ -15,6 +19,7 @@ type UserRow = {
     membership_id: number;
     name: string;
     email: string;
+    avatar_url?: string | null;
     role: string;
     role_label: string;
     is_active: boolean;
@@ -40,7 +45,6 @@ const roles = ref<RoleOption[]>([]);
 const permissionGroups = ref<PermissionGroup[]>([]);
 const roleOptions = computed(() => roles.value.map((r) => ({ value: r.name, label: r.label })));
 const loading = ref(true);
-const search = ref('');
 
 const showPanel = ref(false);
 const panelUser = ref<UserRow | null>(null);
@@ -51,6 +55,14 @@ const formActive = ref(true);
 const formExtraPermissions = ref<string[]>([]);
 const saving = ref(false);
 const isCreate = ref(false);
+
+const avatarFile = ref<File | null>(null);
+const avatarPreview = ref<string | null>(null);
+const avatarUploading = ref(false);
+const formAvatarUrl = ref<string | null>(null);
+const avatarInput = ref<HTMLInputElement | null>(null);
+
+const displayAvatarUrl = computed(() => avatarPreview.value ?? formAvatarUrl.value);
 
 const rolePermissionSet = computed(() => {
     const role = roles.value.find((r) => r.name === formRole.value);
@@ -67,18 +79,26 @@ const grantableGroups = computed(() =>
         .filter((g) => g.permissions.length > 0),
 );
 
-const filteredUsers = computed(() => {
-    const q = search.value.trim().toLowerCase();
-    if (!q) {
-        return users.value;
-    }
-    return users.value.filter(
-        (u) =>
-            u.name.toLowerCase().includes(q) ||
-            u.email.toLowerCase().includes(q) ||
-            u.role_label.toLowerCase().includes(q),
-    );
-});
+const companyUserTableColumns: TableColumnDef[] = [
+    {
+        id: 'avatar',
+        label: '',
+        locked: true,
+        headerClass: 'portal-table-avatar-cell py-2',
+        cellClass: 'portal-table-avatar-cell py-2',
+    },
+    { id: 'name', label: 'Nombre', cellClass: 'text-portal-heading py-3 pr-4 font-medium' },
+    { id: 'email', label: 'Correo', cellClass: 'text-portal-muted py-3 pr-4' },
+    { id: 'role', label: 'Rol', cellClass: 'text-portal-heading py-3 pr-4' },
+    { id: 'extras', label: 'Extras', cellClass: 'text-portal-muted py-3 pr-4' },
+    { id: 'modules', label: 'Módulos visibles', cellClass: 'text-portal-muted py-3 pr-4' },
+    { id: 'status', label: 'Estado', cellClass: 'py-3 pr-4' },
+    tableActionsColumn({ headerClass: 'py-2 font-medium', cellClass: 'py-3 text-right' }),
+];
+
+function companyUserRowClass(row: unknown): string {
+    return !(row as UserRow).is_active ? 'opacity-60' : '';
+}
 
 watch(formRole, () => {
     if (!showPanel.value) {
@@ -86,6 +106,78 @@ watch(formRole, () => {
     }
     formExtraPermissions.value = formExtraPermissions.value.filter((slug) => !rolePermissionSet.value.has(slug));
 });
+
+function resetAvatarState(url: string | null = null) {
+    if (avatarPreview.value?.startsWith('blob:')) {
+        URL.revokeObjectURL(avatarPreview.value);
+    }
+    avatarFile.value = null;
+    avatarPreview.value = null;
+    formAvatarUrl.value = url;
+}
+
+async function uploadUserAvatar(userId: number, file: File): Promise<UserRow> {
+    const body = new FormData();
+    body.append('avatar', file);
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    const token = getToken();
+    if (token) {
+        headers.Authorization = `Bearer ${token}`;
+    }
+    const companyId = getCompanyId();
+    if (companyId) {
+        headers['X-Company-Id'] = companyId;
+    }
+    const res = await fetch(`/api/v1/company/users/${userId}/avatar`, { method: 'POST', headers, body });
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : null;
+    if (!res.ok) {
+        throw new Error(data?.message ?? res.statusText);
+    }
+    return data.data as UserRow;
+}
+
+function openAvatarPicker() {
+    avatarInput.value?.click();
+}
+
+function onAvatarSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+        return;
+    }
+    if (avatarPreview.value?.startsWith('blob:')) {
+        URL.revokeObjectURL(avatarPreview.value);
+    }
+    avatarFile.value = file;
+    avatarPreview.value = URL.createObjectURL(file);
+    if (panelUser.value) {
+        void uploadAvatarForEditing();
+    }
+    input.value = '';
+}
+
+async function uploadAvatarForEditing() {
+    if (!panelUser.value || !avatarFile.value) {
+        return;
+    }
+    avatarUploading.value = true;
+    try {
+        const updated = await uploadUserAvatar(panelUser.value.id, avatarFile.value);
+        formAvatarUrl.value = updated.avatar_url ?? null;
+        avatarFile.value = null;
+        if (avatarPreview.value?.startsWith('blob:')) {
+            URL.revokeObjectURL(avatarPreview.value);
+        }
+        avatarPreview.value = null;
+        await load();
+    } catch (e) {
+        toast.error((e as Error).message);
+    } finally {
+        avatarUploading.value = false;
+    }
+}
 
 function toggleExtra(slug: string, checked: boolean) {
     const set = new Set(formExtraPermissions.value);
@@ -124,6 +216,7 @@ async function load() {
 function openCreate() {
     isCreate.value = true;
     panelUser.value = null;
+    resetAvatarState();
     formEmail.value = '';
     formName.value = '';
     formRole.value = 'technician';
@@ -135,6 +228,7 @@ function openCreate() {
 function openEdit(user: UserRow) {
     isCreate.value = false;
     panelUser.value = user;
+    resetAvatarState(user.avatar_url ?? null);
     formEmail.value = user.email;
     formName.value = user.name;
     formRole.value = user.role;
@@ -145,6 +239,7 @@ function openEdit(user: UserRow) {
 
 function closePanel() {
     showPanel.value = false;
+    resetAvatarState();
 }
 
 function visibleModuleCount(user: UserRow) {
@@ -169,10 +264,13 @@ async function save() {
                 : { is_active: formActive.value }),
         };
         if (isCreate.value) {
-            await api('/company/users', {
+            const created = await api<{ data: UserRow }>('/company/users', {
                 method: 'POST',
                 body: JSON.stringify(payload),
             });
+            if (avatarFile.value) {
+                await uploadUserAvatar(created.data.id, avatarFile.value);
+            }
         } else if (panelUser.value) {
             await api(`/company/users/${panelUser.value.id}`, {
                 method: 'PUT',
@@ -204,58 +302,92 @@ onMounted(load);
             <AppButton type="button" class="shrink-0" @click="openCreate">Agregar usuario</AppButton>
         </div>
 
-        <MaterialField v-model="search" label="Buscar por nombre o correo" class="max-w-md" />
-
         <p v-if="loading" class="text-portal-muted">Cargando…</p>
 
-        <div v-else class="portal-table-wrap">
-            <table class="portal-data-table min-w-[32rem]">
-                <thead>
-                    <tr class="border-b">
-                        <th class="py-2 pr-4 font-medium">Nombre</th>
-                        <th class="py-2 pr-4 font-medium">Correo</th>
-                        <th class="py-2 pr-4 font-medium">Rol</th>
-                        <th class="py-2 pr-4 font-medium">Extras</th>
-                        <th class="py-2 pr-4 font-medium">Módulos visibles</th>
-                        <th class="py-2 pr-4 font-medium">Estado</th>
-                        <th class="py-2 font-medium" />
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr
-                        v-for="u in filteredUsers"
-                        :key="u.membership_id"
-                        class="border-b last:border-0"
-                    >
-                        <td class="text-portal-heading py-3 pr-4 font-medium">{{ u.name }}</td>
-                        <td class="text-portal-muted py-3 pr-4">{{ u.email }}</td>
-                        <td class="text-portal-heading py-3 pr-4">{{ u.role_label }}</td>
-                        <td class="text-portal-muted py-3 pr-4">{{ extraCount(u) }}</td>
-                        <td class="text-portal-muted py-3 pr-4">{{ visibleModuleCount(u) }}</td>
-                        <td class="py-3 pr-4">
-                            <span
-                                class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
-                                :class="u.is_active ? 'portal-status-active' : 'portal-status-inactive'"
-                            >
-                                {{ u.is_active ? 'Activo' : 'Inactivo' }}
-                            </span>
-                        </td>
-                        <td class="py-3 text-right">
-                            <button
-                                type="button"
-                                class="text-portal-link text-sm font-medium underline"
-                                @click="openEdit(u)"
-                            >
-                                Editar
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <ConfigurableDataTable
+            v-else
+            table-id="company-users"
+            table-class="min-w-[32rem]"
+            :columns="companyUserTableColumns"
+            :rows="users"
+            :row-key="(row) => (row as UserRow).membership_id"
+            :row-class="companyUserRowClass"
+        >
+            <template #avatar="{ row }">
+                <UserAvatar :name="(row as UserRow).name" :avatar-url="(row as UserRow).avatar_url" size="sm" />
+            </template>
+            <template #name="{ row }">{{ (row as UserRow).name }}</template>
+            <template #email="{ row }">{{ (row as UserRow).email }}</template>
+            <template #role="{ row }">{{ (row as UserRow).role_label }}</template>
+            <template #extras="{ row }">{{ extraCount(row as UserRow) }}</template>
+            <template #modules="{ row }">{{ visibleModuleCount(row as UserRow) }}</template>
+            <template #status="{ row }">
+                <span
+                    class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
+                    :class="(row as UserRow).is_active ? 'portal-status-active' : 'portal-status-inactive'"
+                >
+                    {{ (row as UserRow).is_active ? 'Activo' : 'Inactivo' }}
+                </span>
+            </template>
+            <template #actions="{ row }">
+                <div class="table-row-actions justify-end">
+                    <IconActionButton icon="pencil" label="Editar usuario" @click="openEdit(row as UserRow)" />
+                </div>
+            </template>
+        </ConfigurableDataTable>
 
-        <AppModal :open="showPanel" :title="isCreate ? 'Agregar usuario' : 'Editar usuario'" @close="closePanel">
+        <AppModal
+            :open="showPanel"
+            :title="isCreate ? 'Agregar usuario' : 'Editar usuario'"
+            size="sm"
+            @close="closePanel"
+        >
             <form id="company-user-form" class="space-y-4" @submit.prevent="save">
+                <div class="portal-media-upload">
+                <p class="text-portal-heading text-sm font-medium">Foto del usuario</p>
+                <p class="text-portal-muted mt-0.5 text-xs">Avatar visible en el menú y listados. JPG, PNG o WebP · máx. 2 MB.</p>
+                <div class="mt-3 flex flex-wrap items-center gap-4">
+                    <button
+                        type="button"
+                        class="overflow-hidden rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                        :disabled="avatarUploading"
+                        @click="openAvatarPicker"
+                    >
+                        <UserAvatar
+                            :name="formName || formEmail || 'Usuario'"
+                            :avatar-url="displayAvatarUrl"
+                            size="lg"
+                        />
+                    </button>
+                    <div class="flex flex-col gap-2">
+                        <input
+                            ref="avatarInput"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            class="hidden"
+                            :disabled="avatarUploading"
+                            @change="onAvatarSelected"
+                        />
+                        <AppButton
+                            type="button"
+                            variant="secondary"
+                            :disabled="avatarUploading"
+                            @click="openAvatarPicker"
+                        >
+                            {{ avatarUploading ? 'Subiendo…' : 'Elegir imagen' }}
+                        </AppButton>
+                        <p v-if="isCreate && avatarFile" class="text-portal-muted text-xs">
+                            Se subirá al guardar el usuario.
+                        </p>
+                        <p v-else-if="isCreate" class="text-portal-muted text-xs">
+                            Opcional: puedes elegir la foto antes de guardar.
+                        </p>
+                        <p v-else class="text-portal-muted text-xs">
+                            También puedes hacer clic en el círculo para cambiar la imagen.
+                        </p>
+                    </div>
+                </div>
+                </div>
                 <MaterialField
                     v-if="isCreate"
                     v-model="formEmail"

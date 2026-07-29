@@ -2,14 +2,14 @@
 
 ## Problema
 
-Usuarios nuevos en Noah no tienen un recorrido guiado por catálogos, rutinas, diseño y facturación. Un tour solo con texto es fácil de ignorar; la voz mejora retención pero **no** debe invocar ElevenLabs en cada visita (costo y latencia).
+Usuarios nuevos en Phoenix no tienen un recorrido guiado por catálogos, rutinas, diseño y facturación. Un tour solo con texto es fácil de ignorar; la voz mejora retención pero **no** debe invocar ElevenLabs en cada visita (costo y latencia).
 
 ## Objetivo
 
 1. Tour interactivo en la app web (post-login): **spotlight** sobre UI + tarjeta de paso.
 2. **Narración en español** reproducida desde archivos **MP3 estáticos** en `public/audio/onboarding/`.
 3. Guion y audio generados **una vez** con script local `scripts/generate-onboarding-audio.mjs` (ElevenLabs); la app **nunca** llama a la API en runtime.
-4. Estado en `localStorage` (`noah_product_tour_v1_completed`); reinicio manual desde Inicio.
+4. Estado en `localStorage` (`phoenix_product_tour_v1_completed`); reinicio manual desde Inicio.
 
 ## Alcance v1
 

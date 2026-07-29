@@ -29,7 +29,7 @@
 
 **Por qué no quedarse solo en el enum:** válido para el MVP inicial, pero el producto ya define **más de cinco roles** y **~12 permisos**; el mantenedor pedido implica mostrar y eventualmente ajustar qué puede hacer cada rol. Spatie evita reinventar pivotes, caché, y convenciones que el equipo ya conoce en Laravel.
 
-**Por qué no un RBAC 100 % custom sin paquete:** Noah es monolito modular con prioridad en dominio correcto; Spatie no acopla bounded contexts si se limita al módulo **Identity** (servicio `CompanyAuthorization`, middleware propio). El paquete es infraestructura, no dominio de rutinas/facturación.
+**Por qué no un RBAC 100 % custom sin paquete:** Phoenix es monolito modular con prioridad en dominio correcto; Spatie no acopla bounded contexts si se limita al módulo **Identity** (servicio `CompanyAuthorization`, middleware propio). El paquete es infraestructura, no dominio de rutinas/facturación.
 
 ### Modelo conceptual (por empresa)
 
@@ -62,7 +62,7 @@ Migración: script que, por cada `company_memberships` activa, asigna el rol Spa
 
 - **Solo policies Laravel sin tabla de permisos:** no escala al mantenedor “ver/editar permisos por rol”.
 - **Casbin / políticas ABAC:** potente para reglas dinámicas por metadatos; sobredimensionado para v1; reconsiderar si el rule engine exige ABAC por campo de formulario.
-- **Permisos embebidos en JWT:** tokens largos y revocación lenta; Noah ya usa Sanctum + servidor como fuente de verdad.
+- **Permisos embebidos en JWT:** tokens largos y revocación lenta; Phoenix ya usa Sanctum + servidor como fuente de verdad.
 
 ## Alcance v1 (mantenedor)
 

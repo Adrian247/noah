@@ -183,7 +183,7 @@ class WorkflowDefinitionFactory
                 'email' => [
                     'roles' => ['supervisor', 'administrator'],
                     'template' => 'routine_pending_validation',
-                    'subject' => 'Noah — Rutina pendiente de validación',
+                    'subject' => 'Phoenix — Rutina pendiente de validación',
                     'message' => 'Un técnico envió una rutina para tu revisión.',
                 ],
             ];
@@ -305,7 +305,7 @@ class WorkflowDefinitionFactory
             'email' => [
                 'roles' => ['supervisor', 'administrator'],
                 'template' => 'routine_pending_validation',
-                'subject' => 'Noah — Notificación de rutina',
+                'subject' => 'Phoenix — Notificación de rutina',
                 'message' => 'Hay una rutina que requiere tu atención.',
             ],
         ];

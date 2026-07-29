@@ -1,6 +1,6 @@
-# Contexto del sistema — Noah
+# Contexto del sistema — Phoenix
 
-Vista C4 **nivel 1**: actores y sistema Noah.
+Vista C4 **nivel 1**: actores y sistema Phoenix.
 
 ```mermaid
 flowchart TB
@@ -12,8 +12,8 @@ flowchart TB
     CLI[Cliente final - futuro]
   end
 
-  subgraph noah [Sistema Noah]
-    NP[Plataforma Noah]
+  subgraph phoenix [Sistema Phoenix]
+    NP[Plataforma Phoenix]
   end
 
   subgraph external [Sistemas externos - opcionales]

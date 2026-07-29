@@ -8,12 +8,26 @@ import PageHeader from '@/components/ui/PageHeader.vue';
 import AppModal from '@/components/ui/AppModal.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
 import AppButton from '@/components/ui/AppButton.vue';
+import IconActionButton from '@/components/ui/IconActionButton.vue';
+import ConfigurableDataTable from '@/components/ui/ConfigurableDataTable.vue';
+import { tableActionsColumn, type TableColumnDef } from '@/lib/tableColumns';
 
 type Site = { id: number; name: string; address?: string | null };
 
 const { canWriteModule } = useModuleAccess();
 const toast = useToast();
 const canWrite = computed(() => canWriteModule('sites'));
+
+const siteTableColumns = computed((): TableColumnDef[] => {
+    const cols: TableColumnDef[] = [
+        { id: 'name', label: 'Nombre', cellClass: 'text-portal-heading py-3' },
+        { id: 'address', label: 'Dirección', cellClass: 'text-portal-muted py-3' },
+    ];
+    if (canWrite.value) {
+        cols.push(tableActionsColumn({ headerClass: 'py-3', cellClass: 'table-row-actions py-3' }));
+    }
+    return cols;
+});
 
 const sites = ref<Site[]>([]);
 const loading = ref(true);
@@ -103,31 +117,27 @@ onMounted(load);
             </AppButton>
         </div>
         <p v-if="loading" class="text-portal-muted text-sm">Cargando…</p>
-        <div v-else class="portal-table-wrap">
-            <table class="portal-data-table">
-                <thead>
-                    <tr class="border-b">
-                        <th class="py-3">Nombre</th>
-                        <th class="py-3">Dirección</th>
-                        <th v-if="canWrite" class="py-3" />
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="s in sites" :key="s.id" class="border-b">
-                        <td class="text-portal-heading py-3">{{ s.name }}</td>
-                        <td class="text-portal-muted py-3">{{ s.address ?? '—' }}</td>
-                        <td v-if="canWrite" class="space-x-2 py-3 text-right">
-                            <button type="button" class="text-portal-link text-sm underline" @click="openEdit(s)">
-                                Editar
-                            </button>
-                            <button type="button" class="text-sm text-red-400" @click="remove(s.id)">Borrar</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <p v-if="!loading && sites.length === 0" class="text-portal-muted text-sm">No hay sitios registrados.</p>
-        <ReadOnlyNotice v-if="!canWrite" module-label="Sitios" />
+        <ConfigurableDataTable
+            v-else
+            table-id="sites"
+            :columns="siteTableColumns"
+            :rows="sites"
+            row-key="id"
+            empty-text="No hay sitios registrados."
+        >
+            <template #name="{ row }">{{ (row as Site).name }}</template>
+            <template #address="{ row }">{{ (row as Site).address ?? '—' }}</template>
+            <template #actions="{ row }">
+                <IconActionButton icon="pencil" label="Editar sitio" @click="openEdit(row as Site)" />
+                <IconActionButton
+                    icon="trash"
+                    label="Borrar sitio"
+                    variant="danger"
+                    @click="remove((row as Site).id)"
+                />
+            </template>
+        </ConfigurableDataTable>
+        <ReadOnlyNotice v-if="!loading && !canWrite" module-label="Sitios" />
 
         <AppModal
             :open="showForm && canWrite"

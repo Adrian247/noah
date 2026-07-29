@@ -1,10 +1,10 @@
-# Diagrama — Sync móvil (Noah)
+# Diagrama — Sync móvil (Phoenix)
 
 ```mermaid
 sequenceDiagram
   participant App as Flutter App
   participant DB as SQLite
-  participant API as Noah API
+  participant API as Phoenix API
   participant S3 as Object Storage
 
   App->>DB: Guardar ejecución + outbox event

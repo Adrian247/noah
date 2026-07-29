@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import { RouterLink, useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { api } from '@/api/client';
 import { useCompanyStore } from '@/stores/company';
 import { useModuleAccess } from '@/composables/useModuleAccess';
@@ -11,13 +11,21 @@ import AppButton from '@/components/ui/AppButton.vue';
 import AppModal from '@/components/ui/AppModal.vue';
 import MaterialSelect from '@/components/ui/MaterialSelect.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
+import StatusBadge from '@/components/ui/StatusBadge.vue';
+import IconActionButton from '@/components/ui/IconActionButton.vue';
+import ConfigurableDataTable from '@/components/ui/ConfigurableDataTable.vue';
+import { tableActionsColumn, type TableColumnDef } from '@/lib/tableColumns';
 import { routinesSectionNav } from '@/lib/sectionNav';
 
 type Routine = {
     id: number;
     status: string;
+    is_demo?: boolean;
+    scheduled_at?: string | null;
     asset?: { tag: string };
+    site?: { name: string };
     routine_type?: { name: string };
+    assignee?: { name: string } | null;
 };
 
 type Site = { id: number; name: string };
@@ -26,12 +34,17 @@ type RoutineType = { id: number; name: string };
 type UserRow = { id: number; name: string; email: string };
 
 const route = useRoute();
+const router = useRouter();
 const company = useCompanyStore();
 const toast = useToast();
 const { canWriteModule } = useModuleAccess();
 const routines = ref<Routine[]>([]);
 const loading = ref(true);
 const statusFilter = ref((route.query.status as string) ?? '');
+
+function openRoutine(id: number) {
+    void router.push(`/app/routines/${id}`);
+}
 
 const showCreate = ref(false);
 const sites = ref<Site[]>([]);
@@ -48,6 +61,15 @@ const createForm = ref({
 
 const canCreate = computed(() => canWriteModule('routines'));
 const isAdmin = computed(() => company.current?.role === 'administrator');
+
+const routineTableColumns = computed((): TableColumnDef[] => [
+    { id: 'routine', label: 'Rutina', cellClass: 'py-3' },
+    { id: 'asset', label: 'Activo' },
+    { id: 'site', label: 'Sitio' },
+    { id: 'assignee', label: 'Asignado' },
+    { id: 'status', label: 'Estado' },
+    tableActionsColumn({ cellClass: 'py-3 text-right' }),
+]);
 
 const statusChips = [
     { value: '', label: 'Todas' },
@@ -152,6 +174,27 @@ async function createRoutine() {
 }
 
 const creatingDemo = ref(false);
+const deletingId = ref<number | null>(null);
+
+async function deleteRoutine(r: Routine) {
+    if (
+        !window.confirm(
+            `¿Eliminar la rutina #${r.id} (${r.routine_type?.name ?? 'Rutina'})? Esta acción no se puede deshacer.`,
+        )
+    ) {
+        return;
+    }
+    deletingId.value = r.id;
+    try {
+        await api(`/routines/${r.id}`, { method: 'DELETE' });
+        toast.success('Rutina eliminada.');
+        await load();
+    } catch (e) {
+        toast.error((e as Error).message);
+    } finally {
+        deletingId.value = null;
+    }
+}
 
 async function createDemoRoutine() {
     creatingDemo.value = true;
@@ -219,31 +262,58 @@ onMounted(async () => {
             </button>
         </div>
         <p v-if="loading" class="text-portal-muted">Cargando…</p>
-        <p v-else-if="routines.length === 0" class="text-portal-muted">Sin rutinas.</p>
-        <div v-else class="portal-table-wrap">
-            <table class="portal-data-table">
-            <thead>
-                <tr class="border-b">
-                    <th class="py-2">ID</th>
-                    <th>Tipo</th>
-                    <th>Activo</th>
-                    <th>Estado</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="r in routines" :key="r.id" class="border-b">
-                    <td class="py-2">
-                        <RouterLink class="text-portal-link underline" :to="`/app/routines/${r.id}`">
-                            {{ r.id }}
-                        </RouterLink>
-                    </td>
-                    <td class="text-portal-heading">{{ r.routine_type?.name ?? '—' }}</td>
-                    <td class="text-portal-muted">{{ r.asset?.tag ?? '—' }}</td>
-                    <td class="text-portal-muted">{{ r.status }}</td>
-                </tr>
-            </tbody>
-        </table>
-        </div>
+        <ConfigurableDataTable
+            v-else
+            table-id="routines"
+            :columns="routineTableColumns"
+            :rows="routines"
+            row-key="id"
+            clickable
+            empty-text="Sin rutinas."
+            @row-click="(row) => openRoutine((row as Routine).id)"
+        >
+            <template #routine="{ row }">
+                <p class="text-portal-heading font-medium">
+                    {{ (row as Routine).routine_type?.name ?? 'Rutina' }}
+                    <span
+                        v-if="(row as Routine).is_demo"
+                        class="ml-1.5 inline-flex rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-200"
+                    >
+                        Demo
+                    </span>
+                </p>
+                <p class="text-portal-muted text-xs">#{{ (row as Routine).id }}</p>
+            </template>
+            <template #asset="{ row }">
+                <span class="text-portal-heading">{{ (row as Routine).asset?.tag ?? '—' }}</span>
+            </template>
+            <template #site="{ row }">
+                <span class="text-portal-muted">{{ (row as Routine).site?.name ?? '—' }}</span>
+            </template>
+            <template #assignee="{ row }">
+                <span class="text-portal-muted">{{ (row as Routine).assignee?.name ?? 'Sin asignar' }}</span>
+            </template>
+            <template #status="{ row }">
+                <StatusBadge :status="(row as Routine).status" />
+            </template>
+            <template #actions="{ row }">
+                <div class="table-row-actions justify-end">
+                    <IconActionButton
+                        v-if="isAdmin"
+                        icon="trash"
+                        label="Eliminar rutina"
+                        variant="danger"
+                        :disabled="deletingId === (row as Routine).id"
+                        @click="deleteRoutine(row as Routine)"
+                    />
+                    <IconActionButton
+                        icon="chevron-right"
+                        label="Abrir rutina"
+                        @click="openRoutine((row as Routine).id)"
+                    />
+                </div>
+            </template>
+        </ConfigurableDataTable>
 
         <AppModal
             :open="showCreate && canCreate"

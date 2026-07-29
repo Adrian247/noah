@@ -4,13 +4,15 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\InvoiceStatus;
 use App\Http\Controllers\Controller;
+use App\Models\GeneratedReport;
 use App\Models\Invoice;
 use App\Models\Routine;
 use App\Services\Audit\AuditLogger;
-use App\Services\Billing\InvoicePdfExporter;
+use App\Services\Billing\InvoiceDeliveryPackageBuilder;
 use App\Support\AuditCorrelation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
 
 class ClientPortalController extends Controller
@@ -24,7 +26,7 @@ class ClientPortalController extends Controller
             ->where('status', InvoiceStatus::Issued)
             ->where('client_portal_visible', true)
             ->orderByDesc('issued_at')
-            ->get(['id', 'number', 'status', 'total', 'currency', 'issued_at', 'routine_id']);
+            ->get(['id', 'number', 'custom_reference', 'status', 'total', 'currency', 'issued_at', 'routine_id']);
 
         return response()->json(['data' => $items]);
     }
@@ -41,16 +43,14 @@ class ClientPortalController extends Controller
     public function downloadInvoice(
         Request $request,
         Invoice $invoice,
-        InvoicePdfExporter $exporter,
+        InvoiceDeliveryPackageBuilder $package,
         AuditLogger $audit,
     ): Response {
         $this->authorizeInvoice($request, $invoice);
 
-        $pdf = $exporter->stream($invoice);
-
         $audit->fromRequest($request, 'portal.invoice_downloaded', Invoice::class, $invoice->id);
 
-        return $pdf;
+        return $package->downloadResponse($invoice->load(['evidences.generatedReport']));
     }
 
     public function assets(Request $request): JsonResponse
@@ -99,6 +99,37 @@ class ClientPortalController extends Controller
                 'workflowInstance.transitions',
             ]),
         ]);
+    }
+
+    public function downloadRoutineReport(
+        Request $request,
+        Routine $routine,
+        GeneratedReport $report,
+        AuditLogger $audit,
+    ): Response {
+        $this->authorizeRoutine($request, $routine);
+
+        if ((int) $report->routine_id !== (int) $routine->id) {
+            abort(404);
+        }
+
+        if ($report->status !== 'ready' || $report->path === null) {
+            abort(404, 'Informe no disponible.');
+        }
+
+        if (! Storage::disk($report->disk)->exists($report->path)) {
+            abort(404, 'Archivo no encontrado.');
+        }
+
+        $audit->fromRequest($request, 'portal.report_downloaded', GeneratedReport::class, $report->id, [
+            'routine_id' => $routine->id,
+        ]);
+
+        return Storage::disk($report->disk)->download(
+            $report->path,
+            'informe-rutina-'.$routine->id.'-'.$report->id.'.pdf',
+            ['Cache-Control' => 'no-store, no-cache, must-revalidate'],
+        );
     }
 
     private function clientId(Request $request): int

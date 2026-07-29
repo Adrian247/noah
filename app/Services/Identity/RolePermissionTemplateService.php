@@ -3,8 +3,9 @@
 namespace App\Services\Identity;
 
 use App\Enums\MembershipRole;
-use App\Enums\NoahPermission;
+use App\Enums\PhoenixPermission;
 use App\Models\PlatformSetting;
+use App\Support\TenantAdministratorPermissions;
 use Illuminate\Validation\ValidationException;
 
 class RolePermissionTemplateService
@@ -16,34 +17,35 @@ class RolePermissionTemplateService
      */
     public function builtInMap(): array
     {
-        $all = NoahPermission::values();
-
         return [
-            MembershipRole::Administrator->value => $all,
+            MembershipRole::Administrator->value => TenantAdministratorPermissions::slugs(),
             MembershipRole::Supervisor->value => [
-                NoahPermission::RoutinesAssign->value,
-                NoahPermission::RoutinesValidate->value,
-                NoahPermission::CostsView->value,
-                NoahPermission::CatalogSuppliersManage->value,
+                PhoenixPermission::RoutinesAssign->value,
+                PhoenixPermission::RoutinesValidate->value,
+                PhoenixPermission::CostsView->value,
+                PhoenixPermission::CatalogSuppliersManage->value,
+                PhoenixPermission::InventoryView->value,
+                PhoenixPermission::InventoryManage->value,
             ],
             MembershipRole::Technician->value => [
-                NoahPermission::RoutinesExecute->value,
+                PhoenixPermission::RoutinesExecute->value,
+                PhoenixPermission::InventoryView->value,
             ],
             MembershipRole::Billing->value => [
-                NoahPermission::BillingDraft->value,
-                NoahPermission::BillingDraftEdit->value,
-                NoahPermission::BillingIssue->value,
-                NoahPermission::BillingSettings->value,
-                NoahPermission::CostsView->value,
-                NoahPermission::ClientsView->value,
+                PhoenixPermission::BillingDraft->value,
+                PhoenixPermission::BillingDraftEdit->value,
+                PhoenixPermission::BillingIssue->value,
+                PhoenixPermission::BillingSettings->value,
+                PhoenixPermission::CostsView->value,
+                PhoenixPermission::ClientsView->value,
             ],
             MembershipRole::Auditor->value => [
-                NoahPermission::AuditView->value,
+                PhoenixPermission::AuditView->value,
             ],
             MembershipRole::Client->value => [
-                NoahPermission::PortalInvoicesView->value,
-                NoahPermission::PortalInvoicesDownload->value,
-                NoahPermission::PortalRoutinesView->value,
+                PhoenixPermission::PortalInvoicesView->value,
+                PhoenixPermission::PortalInvoicesDownload->value,
+                PhoenixPermission::PortalRoutinesView->value,
             ],
         ];
     }
@@ -86,7 +88,7 @@ class RolePermissionTemplateService
      */
     public function saveMap(array $roles): array
     {
-        $catalog = NoahPermission::values();
+        $catalog = PhoenixPermission::values();
         $defaults = $this->defaultMap();
         $normalized = [];
 
@@ -122,10 +124,10 @@ class RolePermissionTemplateService
      */
     private function normalizePermissionList(mixed $raw, string $roleName, ?array $catalog = null): array
     {
-        $catalog ??= NoahPermission::values();
+        $catalog ??= PhoenixPermission::values();
 
         if ($roleName === MembershipRole::Administrator->value) {
-            return $catalog;
+            return TenantAdministratorPermissions::slugs();
         }
 
         if (! is_array($raw)) {

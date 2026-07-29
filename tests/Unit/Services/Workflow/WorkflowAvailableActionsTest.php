@@ -17,7 +17,7 @@ class WorkflowAvailableActionsTest extends TestCase
     {
         $this->seed();
         $company = Company::query()->first();
-        $technician = User::query()->where('email', 'tecnico@noah.local')->first();
+        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
         $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
         $routine->load('workflowInstance.definition');
         $instance = $routine->workflowInstance;

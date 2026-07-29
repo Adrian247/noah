@@ -7,7 +7,7 @@ Tras ADR-012, la plantilla rol→permiso vivía solo en código; el dueño de si
 ## Objetivo
 
 - Persistir plantilla en `platform_settings` (`role_permission_map`).
-- API `GET/PUT /platform/role-permissions` solo para **admin de plataforma** (`NOAH_PLATFORM_ADMIN_EMAILS`).
+- API `GET/PUT /platform/role-permissions` solo para **admin de plataforma** (`PHOENIX_PLATFORM_ADMIN_EMAILS`).
 - Tras guardar: `bootstrapAllCompanies()` sincroniza Spatie en todas las empresas.
 - UI **Plataforma → Roles y permisos** visible si `user.is_platform_admin`.
 - Admin de empresa sigue sin editar plantilla; solo usuarios con rol + extras.

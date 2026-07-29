@@ -1,11 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
-const props = defineProps<{
-    name: string;
-    avatarUrl?: string | null;
-    size?: 'sm' | 'md' | 'lg';
-}>();
+const props = withDefaults(
+    defineProps<{
+        name: string;
+        avatarUrl?: string | null;
+        size?: 'sm' | 'md' | 'lg';
+        /** Logos de cliente: evita recortar bordes con object-contain */
+        imageFit?: 'cover' | 'contain';
+    }>(),
+    { size: 'md', imageFit: 'cover' },
+);
 
 const sizeClass = computed(() => {
     switch (props.size ?? 'md') {
@@ -29,10 +34,25 @@ const initials = computed(() => {
 
 <template>
     <div
-        class="relative shrink-0 overflow-hidden rounded-full bg-primary-600 font-semibold text-white ring-2 ring-white/80"
+        class="user-avatar relative shrink-0 overflow-hidden rounded-full bg-primary-600 font-semibold text-white"
         :class="sizeClass"
     >
-        <img v-if="avatarUrl" :src="avatarUrl" :alt="name" class="h-full w-full object-cover" />
+        <div
+            v-if="avatarUrl"
+            class="user-avatar__media absolute inset-0 overflow-hidden rounded-full"
+            :class="imageFit === 'contain' ? 'flex items-center justify-center bg-white/10 p-1' : ''"
+        >
+            <img
+                :src="avatarUrl"
+                :alt="name"
+                class="user-avatar__img"
+                :class="
+                    imageFit === 'contain'
+                        ? 'max-h-full max-w-full object-contain'
+                        : 'h-full w-full object-cover'
+                "
+            />
+        </div>
         <span v-else class="flex h-full w-full items-center justify-center">{{ initials }}</span>
     </div>
 </template>

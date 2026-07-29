@@ -21,7 +21,7 @@ class RoutineInvoiceClientResolverTest extends TestCase
         $this->seed();
         $company = Company::query()->firstOrFail();
         $client = Client::query()->where('company_id', $company->id)->firstOrFail();
-        $technician = User::query()->where('email', 'tecnico@noah.local')->firstOrFail();
+        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
         $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
         $asset = $routine->asset;
         $this->assertNotNull($asset);

@@ -3,6 +3,7 @@
 namespace App\Services\Reports;
 
 use App\Models\Client;
+use App\Models\Company;
 use App\Models\FormOptionCatalog;
 use App\Models\FormVersion;
 use App\Models\ReportSectionTemplate;
@@ -10,10 +11,14 @@ use App\Models\ReportTemplate;
 use App\Models\Routine;
 use App\Models\RoutineExecution;
 use App\Services\Forms\PhotoResponseNormalizer;
+use App\Services\Platform\PlatformTenantService;
 use Illuminate\Support\Facades\Storage;
 
 class ReportHtmlBuilder
 {
+    /** @var array<string, mixed>|null */
+    private ?array $documentTheme = null;
+
     /**
      * @param  array<int, array<string, mixed>>  $components
      * @param  array<string, mixed>  $pageSettings
@@ -45,15 +50,22 @@ class ReportHtmlBuilder
             'id' => 0,
             'company_id' => 0,
         ]);
-        $routine->setRelation('company', (object) ['name' => 'Empresa demo']);
-        $routine->setRelation('asset', (object) ['tag' => 'DEMO-001']);
+        $company = null;
 
         if ($reportTemplateId !== null) {
             $template = ReportTemplate::query()->find($reportTemplateId);
             if ($template !== null) {
                 $routine->company_id = $template->company_id;
+                $company = Company::query()->find($template->company_id);
             }
         }
+
+        if ($company === null) {
+            $company = new Company(['name' => 'Empresa demo']);
+        }
+
+        $routine->setRelation('company', $company);
+        $routine->setRelation('asset', (object) ['tag' => 'DEMO-001']);
 
         $execution = new RoutineExecution([
             'responses' => $sampleResponses,
@@ -78,6 +90,7 @@ class ReportHtmlBuilder
         ?int $reportTemplateId = null,
     ): string {
         $company = $routine->company;
+        $companyForLogo = $company instanceof Company ? $company : null;
         $asset = $routine->asset;
         $body = '';
 
@@ -94,13 +107,24 @@ class ReportHtmlBuilder
         $subtitlePt = (int) ($typography['subtitle_pt'] ?? 16);
 
         $font = $this->fontFamily($pageSettings['font_family'] ?? 'roboto');
+        $this->documentTheme = is_array($pageSettings['theme'] ?? null) ? $pageSettings['theme'] : null;
         $routineId = (int) ($routine->id ?? 0);
         $fieldContext = $this->resolveFieldContext($routine, $reportTemplateId);
 
-        $coverHtml = $this->renderCoverPage($pageSettings['cover_page'] ?? null, $company?->name ?? 'Noah', $asset?->tag ?? 'DEMO-001', $routineId, $font, $titlePt, $subtitlePt);
+        $coverHtml = $this->renderCoverPage(
+            $pageSettings['cover_page'] ?? null,
+            $company?->name ?? 'Phoenix',
+            $asset?->tag ?? 'DEMO-001',
+            $routineId,
+            $font,
+            $titlePt,
+            $subtitlePt,
+            $pageSettings,
+            $companyForLogo,
+        );
 
         foreach ($components as $component) {
-            $body .= $this->renderComponent($component, $routine, $execution, $company?->name ?? 'Noah', $asset?->tag ?? null, $pageSettings, $fieldContext);
+            $body .= $this->renderComponent($component, $routine, $execution, $company?->name ?? 'Phoenix', $asset?->tag ?? null, $pageSettings, $fieldContext);
         }
 
         $coverSettings = $pageSettings['cover_page'] ?? [];
@@ -108,8 +132,8 @@ class ReportHtmlBuilder
         $omitHeaderOnCover = (bool) ($coverSettings['omit_header_footer'] ?? true);
         $useDompdfScriptChrome = ! $isPreview && $this->shouldUsePdfChrome($pageSettings);
 
-        $headerHtml = $this->renderHeaderFooter($pageSettings['header'] ?? null, $company?->name ?? 'Noah', $routineId, 'header', $asset?->tag ?? '', $isPreview);
-        $footerHtml = $this->renderHeaderFooter($pageSettings['footer'] ?? null, $company?->name ?? 'Noah', $routineId, 'footer', $asset?->tag ?? '', $isPreview);
+        $headerHtml = $this->renderHeaderFooter($pageSettings['header'] ?? null, $company?->name ?? 'Phoenix', $routineId, 'header', $asset?->tag ?? '', $isPreview);
+        $footerHtml = $this->renderHeaderFooter($pageSettings['footer'] ?? null, $company?->name ?? 'Phoenix', $routineId, 'footer', $asset?->tag ?? '', $isPreview);
         $pageNumber = $pageSettings['page_number'] ?? ['enabled' => false, 'start_at' => 1];
         $skipCoverPageForChrome = $coverEnabled && $omitHeaderOnCover;
 
@@ -117,7 +141,7 @@ class ReportHtmlBuilder
             ? '<div class="report-preview-banner">Vista previa — datos de ejemplo</div>'
             : '';
 
-        $metaLine = 'Noah · '.$this->e($company?->name ?? 'Noah').' · Rutina #'.$routineId;
+        $metaLine = 'Phoenix · '.$this->e($company?->name ?? 'Phoenix').' · Rutina #'.$routineId;
 
         if ($isPreview) {
             return $this->wrapHtmlDocument(
@@ -135,6 +159,7 @@ class ReportHtmlBuilder
                     $metaLine,
                     $body,
                     $thumbnail,
+                    $pageSettings,
                 ),
                 true,
                 $thumbnail,
@@ -157,7 +182,7 @@ class ReportHtmlBuilder
                 $pageSettings,
                 $pageNumber,
                 $skipCoverPageForChrome,
-                $company?->name ?? 'Noah',
+                $company?->name ?? 'Phoenix',
                 $routineId,
                 $asset?->tag ?? '',
                 $useDompdfScriptChrome,
@@ -368,23 +393,27 @@ HTML;
         string $metaLine,
         string $body,
         bool $thumbnail,
+        array $pageSettings,
     ): string {
         if ($thumbnail) {
-            $sheet = '<div class="report-page report-thumb-sheet">';
-            if ($coverEnabled && $coverHtml !== '') {
-                $sheet .= $coverHtml;
-            } else {
-                $sheet .= $headerHtml.'<div class="meta">'.$metaLine.'</div>'.$body;
-            }
-            $sheet .= '</div>';
+            $firstPage = $this->assembleFirstPreviewPage(
+                $coverHtml,
+                $coverEnabled,
+                $omitHeaderOnCover,
+                $headerHtml,
+                $footerHtml,
+                $metaLine,
+                $body,
+                $pageSettings,
+            );
 
-            return '<body class="report-thumb-body">'.$sheet.'</body>';
+            return '<body class="report-thumb-body"><div class="report-thumb-fit">'.$firstPage.'</div></body>';
         }
 
         $html = '<body class="report-preview"><div class="report-preview-fit">'.$previewBanner;
 
         if ($coverEnabled && $coverHtml !== '') {
-            $html .= '<div class="report-page report-page--cover">';
+            $html .= $this->themedCoverPageOpeningTag($pageSettings);
             if (! $omitHeaderOnCover) {
                 $html .= $headerHtml;
             }
@@ -401,6 +430,35 @@ HTML;
         return $html;
     }
 
+    private function assembleFirstPreviewPage(
+        string $coverHtml,
+        bool $coverEnabled,
+        bool $omitHeaderOnCover,
+        string $headerHtml,
+        string $footerHtml,
+        string $metaLine,
+        string $body,
+        array $pageSettings,
+    ): string {
+        if ($coverEnabled && $coverHtml !== '') {
+            $html = $this->themedCoverPageOpeningTag($pageSettings);
+            if (! $omitHeaderOnCover) {
+                $html .= $headerHtml;
+            }
+            $html .= $coverHtml;
+            if (! $omitHeaderOnCover) {
+                $html .= $footerHtml;
+            }
+
+            return $html.'</div>';
+        }
+
+        $html = '<div class="report-page report-page--content">';
+        $html .= $headerHtml.'<div class="meta">'.$metaLine.'</div>'.$body.$footerHtml;
+
+        return $html.'</div>';
+    }
+
     private function wrapHtmlDocument(
         string $font,
         int $bodyPt,
@@ -411,6 +469,18 @@ HTML;
         bool $thumbnail,
     ): string {
         $previewCss = $isPreview ? $this->previewStyles($thumbnail) : '';
+        $themedCoverPdfCss = (! $isPreview && $this->hasThemedCoverBackground())
+            ? '
+@page :first { margin: 0; }
+body.report-pdf.report-pdf--with-cover .report-cover.report-cover--themed {
+  min-height: 297mm;
+  width: 100%;
+  margin: 0;
+  padding: 22mm 18mm 20mm;
+  box-sizing: border-box;
+}
+'
+            : '';
         $pdfCss = $isPreview ? '' : '
 @page { margin: 18mm 14mm 22mm 14mm; }
 body.report-pdf { margin: 0; padding: 0; font-family: DejaVu Sans, sans-serif; }
@@ -432,7 +502,7 @@ body.report-pdf .report-cover.report-cover--sheet {
 body.report-pdf .report-cover-body { font-size: 10pt; line-height: 1.4; text-align: left; margin-top: 16px; max-width: 100%; }
 body.report-pdf .report-cover-image { max-width: 120px; max-height: 120px; margin-bottom: 16px; }
 body.report-pdf .report-pdf-main { margin: 0; padding: 0; }
-';
+'.$themedCoverPdfCss;
 
         $previewHeaderCss = $isPreview ? '
 .report-preview .report-header,
@@ -446,6 +516,14 @@ body.report-pdf .report-pdf-main { margin: 0; padding: 0; }
             ? '<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Source+Sans+3:wght@400;700&display=swap" rel="stylesheet">'
             : '';
 
+        $themeCss = $this->themeStyles();
+        $textColor = $this->themeColor('text', '#111827');
+        $mutedColor = $this->themeColor('muted', '#64748b');
+        $headingColor = $this->themeColor('secondary', '#0f172a');
+        $subtitleColor = $this->themeColor('primary', '#d97706');
+        $accentColor = $this->themeColor('accent', '#f59e0b');
+        $borderColor = $this->themeColor('border', '#e2e8f0');
+
         return <<<HTML
 <!DOCTYPE html>
 <html lang="es">
@@ -453,10 +531,10 @@ body.report-pdf .report-pdf-main { margin: 0; padding: 0; }
 <meta charset="utf-8">
 {$fontLink}
 <style>
-body { font-family: {$font}; font-size: {$bodyPt}pt; color: #111; }
-h1 { font-size: {$titlePt}pt; margin-bottom: 12px; }
-h2.report-subtitle { font-size: {$subtitlePt}pt; margin-bottom: 10px; font-weight: 600; }
-.meta { color: #555; font-size: 9pt; margin-bottom: 16px; }
+body { font-family: {$font}; font-size: {$bodyPt}pt; color: {$textColor}; }
+h1 { font-size: {$titlePt}pt; margin-bottom: 12px; color: {$headingColor}; }
+h2.report-subtitle { font-size: {$subtitlePt}pt; margin-bottom: 10px; font-weight: 600; color: {$subtitleColor}; border-bottom: 2px solid {$accentColor}; padding-bottom: 4px; }
+.meta { color: {$mutedColor}; font-size: 9pt; margin-bottom: 16px; }
 p { line-height: 1.5; margin: 0 0 10px; }
 .report-cover { display: flex; flex-direction: column; justify-content: center; text-align: center; min-height: 240mm; padding: 48px; }
 .report-cover-image { display: block; max-width: 160px; max-height: 160px; width: auto; height: auto; object-fit: contain; margin: 0 auto 28px; }
@@ -464,7 +542,7 @@ p { line-height: 1.5; margin: 0 0 10px; }
 .report-image-caption { font-size: 9pt; color: #555; margin-top: 4px; }
 .report-gallery { margin: 12px 0; }
 .report-header, .report-footer { font-size: 9pt; color: #444; width: 100%; }
-.report-divider { border: 0; border-top: 1px solid #ccc; margin: 16px 0; }
+.report-divider { border: 0; border-top: 1px solid {$borderColor}; margin: 16px 0; }
 .report-rich table { width: 100%; border-collapse: collapse; margin: 8px 0; }
 .report-rich th, .report-rich td { border: 1px solid #ddd; padding: 4px 8px; font-size: 0.95em; }
 .report-rich pre { background: #1e293b; color: #e2e8f0; padding: 10px 12px; border-radius: 6px; overflow-x: auto; font-size: 8.5pt; margin: 10px 0; }
@@ -480,6 +558,7 @@ p { line-height: 1.5; margin: 0 0 10px; }
 .report-rich pre code.language-bash::before,
 .report-rich pre code.language-shell::before { content: "Shell"; }
 img.report-image { max-width: 100%; max-height: 280px; margin: 8px 0; }
+{$themeCss}
 {$pdfCss}
 {$previewCss}
 {$previewHeaderCss}
@@ -496,15 +575,30 @@ HTML;
     {
         if ($thumbnail) {
             return '
-html, body { margin: 0 !important; padding: 0 !important; overflow: hidden !important; width: 100% !important; height: 200px !important; background: #f1f5f9 !important; }
-body.report-thumb-body { display: block; }
-.report-thumb-sheet { width: 100%; max-width: 100%; min-height: 100%; padding: 10px 12px; box-sizing: border-box; background: #fff; box-shadow: none; font-size: 7pt; line-height: 1.35; }
-.report-thumb-sheet h1 { font-size: 11pt; margin: 0 0 6px; }
-.report-thumb-sheet h2.report-subtitle { font-size: 9pt; margin: 0 0 4px; }
-.report-thumb-sheet img.report-image { max-height: 48px; margin: 4px 0; }
-.report-thumb-sheet .report-cover-image { max-height: 36px; max-width: 70%; margin: 0 auto 6px; }
-.report-preview-banner, .report-thumb-body .meta { display: none; }
-.report-cover { min-height: 0; padding: 8px 0; }
+html, body.report-thumb-body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #e8edf3; }
+.report-thumb-fit { width: 210mm; margin: 0 auto; transform-origin: top center; zoom: calc(100vw / 210mm); }
+@supports not (zoom: 1) {
+  .report-thumb-fit { zoom: normal; transform: scale(calc(100vw / 210mm)); }
+}
+.report-thumb-fit .report-page {
+  width: 210mm;
+  height: 297mm;
+  min-height: 297mm;
+  max-height: 297mm;
+  margin: 0;
+  padding: 48px;
+  background: #fff;
+  box-sizing: border-box;
+  overflow: hidden;
+  box-shadow: 0 2px 16px rgb(15 23 42 / 0.1);
+}
+.report-thumb-fit .report-page--cover .report-cover { min-height: 0 !important; height: 100%; padding: 48px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; }
+.report-thumb-fit .report-page--cover-themed { padding: 0; }
+.report-thumb-fit .report-page--cover-themed .report-cover { padding: 48px; }
+.report-thumb-fit .report-header,
+.report-thumb-fit .report-footer { position: static; margin: 0 0 12px; border: 0; border-bottom: 1px solid #ddd; padding-bottom: 8px; }
+.report-thumb-fit .report-footer { border-bottom: 0; border-top: 1px solid #ddd; padding-top: 8px; margin-top: 16px; margin-bottom: 0; }
+.report-thumb-fit .meta { font-size: 9pt; color: #64748b; margin-bottom: 16px; }
 ';
         }
 
@@ -517,6 +611,8 @@ body.report-preview { margin: 0; padding: 12px 0 28px; background: #e5e7eb; over
 }
 .report-preview-banner { background: #f59e0b; color: #1c1917; padding: 8px 12px; font-size: 10pt; margin: 0 auto 12px; max-width: 210mm; box-sizing: border-box; }
 .report-page { width: 210mm; min-height: 297mm; margin: 0 auto 20px; padding: 48px; background: #fff; box-shadow: 0 4px 24px rgb(0 0 0 / 0.12); box-sizing: border-box; }
+.report-page--cover-themed { padding: 0; }
+.report-page--cover-themed .report-cover { min-height: 297mm; margin: 0; box-sizing: border-box; }
 .report-page--cover .report-cover { min-height: 200mm; page-break-after: always; }
 ';
     }
@@ -538,12 +634,12 @@ body.report-preview { margin: 0; padding: 12px 0 28px; background: #e5e7eb; over
 
         return match ($type) {
             'title' => $this->wrapBlock(
-                '<h1>'.$this->formatText($this->componentText($component, $companyName ?? 'Noah', $assetTag ?? '', (int) ($routine->id ?? 0), 'Reporte')).'</h1>',
+                '<h1>'.$this->formatText($this->componentText($component, $companyName ?? 'Phoenix', $assetTag ?? '', (int) ($routine->id ?? 0), 'Reporte')).'</h1>',
                 $component,
                 (int) ($typography['title_pt'] ?? 22),
             ),
             'subtitle' => $this->wrapBlock(
-                '<h2 class="report-subtitle">'.$this->formatText($this->componentText($component, $companyName ?? 'Noah', $assetTag ?? '', (int) ($routine->id ?? 0), '')).'</h2>',
+                '<h2 class="report-subtitle">'.$this->formatText($this->componentText($component, $companyName ?? 'Phoenix', $assetTag ?? '', (int) ($routine->id ?? 0), '')).'</h2>',
                 $component,
                 (int) ($typography['subtitle_pt'] ?? 16),
             ),
@@ -553,7 +649,7 @@ body.report-preview { margin: 0; padding: 12px 0 28px; background: #e5e7eb; over
                 (int) ($typography['body_pt'] ?? 11),
             ),
             'text' => $this->wrapBlock(
-                '<div class="report-rich">'.$this->formatText($this->componentText($component, $companyName ?? 'Noah', $assetTag ?? '', (int) ($routine->id ?? 0), '')).'</div>',
+                '<div class="report-rich">'.$this->formatText($this->componentText($component, $companyName ?? 'Phoenix', $assetTag ?? '', (int) ($routine->id ?? 0), '')).'</div>',
                 $component,
                 (int) ($typography['body_pt'] ?? 11),
             ),
@@ -615,11 +711,25 @@ body.report-preview { margin: 0; padding: 12px 0 28px; background: #e5e7eb; over
     /**
      * @param  array<string, mixed>|null  $cover
      */
-    private function renderCoverPage(?array $cover, string $companyName, string $assetTag, int $routineId, string $font, int $titlePt, int $subtitlePt): string
-    {
+    private function renderCoverPage(
+        ?array $cover,
+        string $companyName,
+        string $assetTag,
+        int $routineId,
+        string $font,
+        int $titlePt,
+        int $subtitlePt,
+        array $pageSettings = [],
+        ?Company $company = null,
+    ): string {
         if ($cover === null || empty($cover['enabled'])) {
             return '';
         }
+
+        $colors = is_array($pageSettings['theme']['colors'] ?? null) ? $pageSettings['theme']['colors'] : [];
+        $coverBg = is_string($colors['cover_bg'] ?? null) ? $colors['cover_bg'] : '';
+        $coverText = is_string($colors['cover_text'] ?? null) ? $colors['cover_text'] : '';
+        $accent = is_string($colors['accent'] ?? null) ? $colors['accent'] : '#f59e0b';
 
         $title = $this->replacePlaceholders((string) ($cover['title'] ?? ''), $companyName, $assetTag, $routineId);
         $subtitle = $this->replacePlaceholders((string) ($cover['subtitle'] ?? ''), $companyName, $assetTag, $routineId);
@@ -627,12 +737,22 @@ body.report-preview { margin: 0; padding: 12px 0 28px; background: #e5e7eb; over
         $dateLine = ! empty($cover['show_date'])
             ? '<p class="meta">'.e(now()->format('d/m/Y')).'</p>'
             : '';
-        $imageHtml = $this->resolveCoverImageHtml($cover);
+        $imageHtml = $this->resolveCoverImageHtml($cover, $company);
 
-        return '<div class="report-cover report-cover--sheet" style="font-family: '.$font.'">'
+        $shellStyle = 'font-family: '.$font.';';
+        if ($coverBg !== '') {
+            $shellStyle .= 'background:'.$coverBg.';color:'.$coverText.';';
+        }
+        $titleStyle = 'font-size: '.$titlePt.'pt;';
+        if ($coverText !== '') {
+            $titleStyle .= 'color:'.$coverText.';';
+        }
+
+        return '<div class="report-cover report-cover--sheet report-cover--themed" style="'.$shellStyle.'">'
             .$imageHtml
-            .'<h1 style="font-size: '.$titlePt.'pt;">'.$this->formatText($title).'</h1>'
-            .($subtitle !== '' ? '<h2 class="report-subtitle" style="font-size: '.$subtitlePt.'pt;">'.$this->formatText($subtitle).'</h2>' : '')
+            .'<div style="width:48px;height:4px;background:'.$accent.';margin:0 auto 20px;border-radius:2px;"></div>'
+            .'<h1 style="'.$titleStyle.'">'.$this->formatText($title).'</h1>'
+            .($subtitle !== '' ? '<h2 class="report-subtitle" style="font-size: '.$subtitlePt.'pt;border:0;">'.$this->formatText($subtitle).'</h2>' : '')
             .$dateLine
             .($body !== '' ? '<div class="report-cover-body">'.$body.'</div>' : '')
             .'</div>';
@@ -641,16 +761,35 @@ body.report-preview { margin: 0; padding: 12px 0 28px; background: #e5e7eb; over
     /**
      * @param  array<string, mixed>  $cover
      */
-    private function resolveCoverImageHtml(array $cover): string
+    private function resolveCoverImageHtml(array $cover, ?Company $company = null): string
     {
-        if (! empty($cover['use_client_logo']) && ! empty($cover['client_id'])) {
+        $source = $cover['logo_source'] ?? null;
+        if (! is_string($source) || $source === '') {
+            if (! empty($cover['use_client_logo']) && ! empty($cover['client_id'])) {
+                $source = 'client';
+            } elseif (! empty($cover['image_path'])) {
+                $source = 'custom';
+            } else {
+                $source = 'none';
+            }
+        }
+
+        if ($source === 'client' && ! empty($cover['client_id'])) {
             $client = Client::query()->find((int) $cover['client_id']);
             if ($client?->logo_path) {
                 return $this->renderStoredPublicImage($client->logo_path, 'report-cover-image');
             }
         }
 
-        return $this->renderStoredPublicImage((string) ($cover['image_path'] ?? ''), 'report-cover-image');
+        if ($source === 'company' && $company !== null && $company->logo_path) {
+            return $this->renderStoredPublicImage($company->logo_path, 'report-cover-image');
+        }
+
+        if ($source === 'custom') {
+            return $this->renderStoredPublicImage((string) ($cover['image_path'] ?? ''), 'report-cover-image');
+        }
+
+        return '';
     }
 
     /**
@@ -706,10 +845,10 @@ body.report-preview { margin: 0; padding: 12px 0 28px; background: #e5e7eb; over
 
         $labelCell = $this->e($humanLabel).' ('.$this->e($fieldKey).')';
 
-        return '<table width="100%" cellpadding="5" cellspacing="0" style="margin:0 0 10px 0;font-family:DejaVu Sans,sans-serif;font-size:11pt;border-collapse:collapse;">'
+        return '<table width="100%" cellpadding="5" cellspacing="0" class="report-field-table" style="margin:0 0 10px 0;font-family:DejaVu Sans,sans-serif;font-size:11pt;border-collapse:collapse;">'
             .'<tr>'
-            .'<td width="58%" style="font-weight:bold;vertical-align:top;border-bottom:1px solid #e5e5e5;">'.$labelCell.'</td>'
-            .'<td style="vertical-align:top;border-bottom:1px solid #e5e5e5;">'.$this->e($valueText).'</td>'
+            .'<td width="58%" style="font-weight:bold;vertical-align:top;border-bottom:1px solid '.$this->themeColor('border', '#e5e5e5').';">'.$labelCell.'</td>'
+            .'<td style="vertical-align:top;border-bottom:1px solid '.$this->themeColor('border', '#e5e5e5').';">'.$this->e($valueText).'</td>'
             .'</tr></table>';
     }
 
@@ -866,7 +1005,7 @@ body.report-preview { margin: 0; padding: 12px 0 28px; background: #e5e7eb; over
                 .($caption ? '<p class="report-image-caption">'.e($caption).'</p>' : '');
         }
 
-        $diskName = config('noah.evidence.disk', 'evidence');
+        $diskName = config('phoenix.evidence.disk', 'evidence');
         $disk = Storage::disk($diskName);
         if (! $disk->exists($path)) {
             return '<p class="meta">[Imagen no disponible]</p>';
@@ -973,5 +1112,59 @@ body.report-preview { margin: 0; padding: 12px 0 28px; background: #e5e7eb; over
     private function e(?string $value): string
     {
         return e($value ?? '');
+    }
+
+    private function themeColor(string $key, string $default): string
+    {
+        $colors = is_array($this->documentTheme['colors'] ?? null) ? $this->documentTheme['colors'] : [];
+        $value = $colors[$key] ?? $default;
+
+        return is_string($value) && preg_match('/^#[0-9A-Fa-f]{6}$/', $value) ? $value : $default;
+    }
+
+    /**
+     * @param  array<string, mixed>  $pageSettings
+     */
+    private function themedCoverPageOpeningTag(array $pageSettings): string
+    {
+        $colors = is_array($pageSettings['theme']['colors'] ?? null) ? $pageSettings['theme']['colors'] : [];
+        $coverBg = is_string($colors['cover_bg'] ?? null) ? $colors['cover_bg'] : '';
+        if ($coverBg === '' || ! preg_match('/^#[0-9A-Fa-f]{6}$/', $coverBg)) {
+            return '<div class="report-page report-page--cover">';
+        }
+
+        $coverText = is_string($colors['cover_text'] ?? null) ? $colors['cover_text'] : '#f8fafc';
+        if (! preg_match('/^#[0-9A-Fa-f]{6}$/', $coverText)) {
+            $coverText = '#f8fafc';
+        }
+
+        return '<div class="report-page report-page--cover report-page--cover-themed" style="background:'
+            .$coverBg.';color:'.$coverText.';">';
+    }
+
+    private function hasThemedCoverBackground(): bool
+    {
+        $colors = is_array($this->documentTheme['colors'] ?? null) ? $this->documentTheme['colors'] : [];
+        $coverBg = $colors['cover_bg'] ?? null;
+
+        return is_string($coverBg) && preg_match('/^#[0-9A-Fa-f]{6}$/', $coverBg);
+    }
+
+    private function themeStyles(): string
+    {
+        if ($this->documentTheme === null) {
+            return '';
+        }
+
+        $primary = $this->themeColor('primary', '#d97706');
+        $accent = $this->themeColor('accent', '#f59e0b');
+        $headerBg = $this->themeColor('header_bg', '#f8fafc');
+
+        return <<<CSS
+.report-preview-banner { background: {$accent}; color: #1c1917; }
+.report-header, .report-footer { color: {$this->themeColor('muted', '#475569')}; }
+.report-rich th { background: {$headerBg}; color: {$this->themeColor('secondary', '#0f172a')}; }
+.report-field-table td:first-child { color: {$this->themeColor('secondary', '#0f172a')}; }
+CSS;
     }
 }

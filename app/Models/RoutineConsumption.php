@@ -10,6 +10,8 @@ class RoutineConsumption extends Model
     protected $fillable = [
         'routine_execution_id',
         'supply_item_id',
+        'usage_type',
+        'inventory_movement_id',
         'quantity',
         'unit_cost',
     ];

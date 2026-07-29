@@ -14,7 +14,7 @@ class FormDesignerApiTest extends TestCase
     public function test_admin_can_create_and_publish_form(): void
     {
         $this->seed();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
         $company = Company::query()->first();
         $token = $admin->createToken('test')->plainTextToken;
 
@@ -57,7 +57,7 @@ class FormDesignerApiTest extends TestCase
     public function test_technician_cannot_create_form(): void
     {
         $this->seed();
-        $user = User::query()->where('email', 'tecnico@noah.local')->first();
+        $user = User::query()->where('email', 'misael.palos@mein-company.com')->first();
         $company = Company::query()->first();
         $token = $user->createToken('test')->plainTextToken;
 

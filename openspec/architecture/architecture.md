@@ -1,4 +1,4 @@
-# Arquitectura — Noah
+# Arquitectura — Phoenix
 
 ## Estilo
 
@@ -16,7 +16,7 @@ flowchart LR
     M[App Flutter]
   end
 
-  subgraph noah [Noah]
+  subgraph phoenix [Phoenix]
     API[Laravel API]
     W[Workers Horizon]
   end

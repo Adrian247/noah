@@ -26,11 +26,11 @@ class AsyncReportQueueTest extends TestCase
 
     public function test_validate_dispatches_report_job_when_async_enabled(): void
     {
-        config(['noah.reports.async' => true]);
+        config(['phoenix.reports.async' => true]);
         Queue::fake();
         $this->seed();
-        $technician = User::query()->where('email', 'tecnico@noah.local')->first();
-        $supervisor = User::query()->where('email', 'supervisor@noah.local')->first();
+        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
+        $supervisor = User::query()->where('email', 'claudio.rodriguez@mein-company.com')->first();
         $company = Company::query()->first();
         $routine = $this->demoRoutine($technician);
 

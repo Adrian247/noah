@@ -9,10 +9,13 @@ export const catalogEquipmentSectionNav: SectionSubnavItem[] = [
     { to: '/app/catalog/items/types', label: 'Tipos de equipo', moduleId: 'catalog_items' },
 ];
 
-export const catalogSuppliesSectionNav: SectionSubnavItem[] = [
-    { to: '/app/catalog/supplies', label: 'Insumos', moduleId: 'catalog_supplies' },
-    { to: '/app/catalog/supplies/types', label: 'Tipos de insumo', moduleId: 'catalog_supplies' },
+export const inventorySectionNav: SectionSubnavItem[] = [
+    { to: '/app/inventory', label: 'Artículos', moduleId: 'inventory' },
+    { to: '/app/inventory/types', label: 'Tipos de insumo', moduleId: 'inventory' },
 ];
+
+/** @deprecated use inventorySectionNav */
+export const catalogSuppliesSectionNav: SectionSubnavItem[] = inventorySectionNav;
 
 export const routinesSectionNav: SectionSubnavItem[] = [
     { to: '/app/routines', label: 'Rutinas', moduleId: 'routines' },

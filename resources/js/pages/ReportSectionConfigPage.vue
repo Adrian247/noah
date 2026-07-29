@@ -7,6 +7,7 @@ import PageHeader from '@/components/ui/PageHeader.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
 import RichTextEditor from '@/components/ui/RichTextEditor.vue';
 import AppButton from '@/components/ui/AppButton.vue';
+import IconActionButton from '@/components/ui/IconActionButton.vue';
 import ReportDesignNav from '@/components/reports/ReportDesignNav.vue';
 import { RouterLink } from 'vue-router';
 
@@ -121,20 +122,22 @@ onMounted(load);
 </script>
 
 <template>
-    <div class="portal-page space-y-4">
-        <ReportDesignNav />
-        <PageHeader
-            title="Secciones de reporte"
-            subtitle="Bloques de texto enriquecido (alcance, garantía, procedimientos) para insertar en cualquier plantilla."
-        />
-        <RouterLink to="/app/design/reports">
-            <AppButton type="button" variant="secondary">← Ver plantillas de reporte</AppButton>
-        </RouterLink>
+    <div class="portal-page report-enter-stagger space-y-4">
+        <div class="report-module-chrome space-y-4">
+            <ReportDesignNav />
+            <PageHeader
+                title="Secciones de reporte"
+                subtitle="Bloques de texto enriquecido (alcance, garantía, procedimientos) para insertar en cualquier plantilla."
+            />
+            <RouterLink to="/app/design/reports">
+                <AppButton type="button" variant="secondary">← Ver plantillas de reporte</AppButton>
+            </RouterLink>
+        </div>
 
-        <p v-if="loading" class="text-portal-muted">Cargando…</p>
+        <p v-if="loading" class="text-portal-muted report-enter-item">Cargando…</p>
 
         <template v-else>
-            <section class="space-y-4">
+            <section class="report-enter-item space-y-4">
                 <h3 class="text-portal-heading font-medium">Secciones</h3>
                 <p class="text-portal-muted max-w-3xl text-sm">
                     Define bloques como alcance del servicio, garantías o procedimientos. En el diseñador de cada plantilla
@@ -153,13 +156,19 @@ onMounted(load);
                             <p class="text-portal-muted font-mono text-xs">{{ s.slug }}</p>
                             <p v-if="s.description" class="text-portal-muted mt-1 text-sm">{{ s.description }}</p>
                         </div>
-                        <div class="flex gap-2">
-                            <AppButton v-if="canWrite && editingId !== s.id" type="button" variant="secondary" @click="startEdit(s)">
-                                Editar
-                            </AppButton>
-                            <button v-if="canWrite" type="button" class="text-sm text-red-400" @click="removeSection(s.id)">
-                                Eliminar
-                            </button>
+                        <div v-if="canWrite" class="table-row-actions">
+                            <IconActionButton
+                                v-if="editingId !== s.id"
+                                icon="pencil"
+                                label="Editar sección"
+                                @click="startEdit(s)"
+                            />
+                            <IconActionButton
+                                icon="trash"
+                                label="Eliminar sección"
+                                variant="danger"
+                                @click="removeSection(s.id)"
+                            />
                         </div>
                     </div>
 

@@ -16,7 +16,7 @@ class ReportHtmlBuilderProductionTest extends TestCase
 
     private function routineWithExecution(): Routine
     {
-        $technician = \App\Models\User::query()->where('email', 'tecnico@noah.local')->firstOrFail();
+        $technician = \App\Models\User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
         $routine = $this->demoRoutine($technician)->load(['routineType.formVersion', 'company', 'asset']);
         $execution = $routine->latestExecution ?? $routine->executions()->create([
             'performed_by' => $technician->id,

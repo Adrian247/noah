@@ -9,12 +9,20 @@ import SectionSubnav from '@/components/ui/SectionSubnav.vue';
 import MaterialSelect from '@/components/ui/MaterialSelect.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
 import AppButton from '@/components/ui/AppButton.vue';
+import IconActionButton from '@/components/ui/IconActionButton.vue';
+import ConfigurableDataTable from '@/components/ui/ConfigurableDataTable.vue';
+import { tableActionsColumn, type TableColumnDef } from '@/lib/tableColumns';
 import { routinesSectionNav } from '@/lib/sectionNav';
 
 type WorkflowDef = { id: number; name: string; status?: string };
 type VersionOption = { id: number; version: number };
 type FormCatalog = { id: number; name: string; published_version?: VersionOption | null };
-type ReportCatalog = { id: number; name: string; published_version?: VersionOption | null };
+type ReportCatalog = {
+    id: number;
+    name: string;
+    published_version?: VersionOption | null;
+    draft_version?: VersionOption | null;
+};
 
 type RoutineType = {
     id: number;
@@ -27,11 +35,38 @@ type RoutineType = {
     form_version?: { id: number; version: number; definition?: { name: string } } | null;
     report_template_version?: { id: number; version: number; template?: { name: string } } | null;
     workflow_definition?: WorkflowDef | null;
+    field_alignment?: {
+        aligned: boolean;
+        missing: string[];
+        missing_images: string[];
+        checked: boolean;
+    };
 };
 
 const { canWriteModule } = useModuleAccess();
 const toast = useToast();
 const canWrite = computed(() => canWriteModule('design_routine_types'));
+const canLinkForm = computed(
+    () => canWriteModule('design_forms') || canWriteModule('design_routine_types'),
+);
+const canLinkReport = computed(
+    () => canWriteModule('design_reports') || canWriteModule('design_routine_types'),
+);
+const canAssignWorkflow = computed(() => canWriteModule('design_workflows'));
+
+const routineTypeTableColumns = computed((): TableColumnDef[] => {
+    const cols: TableColumnDef[] = [
+        { id: 'name', label: 'Nombre', cellClass: 'py-3 pr-2' },
+        { id: 'status', label: 'Estado', cellClass: 'py-3' },
+        { id: 'form', label: 'Formulario (publicado)', cellClass: 'max-w-xs py-3 pr-2' },
+        { id: 'report', label: 'Reporte (publicado)', cellClass: 'max-w-xs py-3 pr-2' },
+        { id: 'workflow', label: 'Workflow', cellClass: 'max-w-[10rem] py-3' },
+    ];
+    if (canWrite.value) {
+        cols.push(tableActionsColumn({ label: 'Acciones', headerClass: 'py-2', cellClass: 'py-3' }));
+    }
+    return cols;
+});
 
 const types = ref<RoutineType[]>([]);
 const workflows = ref<WorkflowDef[]>([]);
@@ -65,6 +100,12 @@ const reportOptions = computed(() =>
         })),
 );
 
+const unpublishedReportNames = computed(() =>
+    reportCatalog.value
+        .filter((r) => !r.published_version && r.draft_version)
+        .map((r) => r.name),
+);
+
 const workflowOptions = computed(() =>
     workflows.value.map((w) => ({
         value: String(w.id),
@@ -87,16 +128,21 @@ function workflowSelectOptions() {
 async function load() {
     loading.value = true;
     try {
-        const [typesRes, wfRes, formsRes, reportsRes] = await Promise.all([
-            api<{ data: RoutineType[] }>('/routine-types?all=1'),
-            api<{ data: WorkflowDef[] }>('/design/workflows'),
+        const typesRes = await api<{ data: RoutineType[] }>('/routine-types?all=1');
+        const [formsRes, reportsRes] = await Promise.all([
             api<{ data: FormCatalog[] }>('/design/forms?usage=routine'),
             api<{ data: ReportCatalog[] }>('/design/reports'),
         ]);
         types.value = typesRes.data;
-        workflows.value = wfRes.data.filter((w) => w.status === 'published');
         formCatalog.value = formsRes.data;
         reportCatalog.value = reportsRes.data;
+
+        if (canAssignWorkflow.value) {
+            const wfRes = await api<{ data: WorkflowDef[] }>('/design/workflows');
+            workflows.value = wfRes.data.filter((w) => w.status === 'published');
+        } else {
+            workflows.value = [];
+        }
     } catch (e) {
         toast.error((e as Error).message);
     } finally {
@@ -224,7 +270,7 @@ onMounted(load);
         <SectionSubnav :items="routinesSectionNav" />
         <PageHeader
             title="Tipos de rutina"
-            subtitle="Crea tipos y define qué versión publicada de formulario y reporte usa cada uno."
+            subtitle="Crea tipos y enlaza formulario e informe publicados (se valida la alineación de campos). Solo se pueden elegir versiones publicadas del informe."
         />
         <div v-if="canWrite" class="mb-4 flex flex-wrap items-end gap-3">
             <AppButton v-if="!showCreate" variant="secondary" @click="showCreate = true">
@@ -244,93 +290,105 @@ onMounted(load);
         </div>
         <p v-if="loading" class="text-portal-muted">Cargando…</p>
         <ReadOnlyNotice v-if="!loading && !canWrite" module-label="Tipos de rutina" />
-        <div v-if="!loading" class="portal-table-wrap">
-        <table class="portal-data-table">
-            <thead>
-                <tr class="border-b">
-                    <th class="py-2">Nombre</th>
-                    <th>Estado</th>
-                    <th>Formulario (publicado)</th>
-                    <th>Reporte (publicado)</th>
-                    <th>Workflow</th>
-                    <th v-if="canWrite" class="py-2">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="t in types" :key="t.id" class="border-b align-top">
-                    <td class="py-3 pr-2">
-                        <input
-                            v-if="canWrite"
-                            :value="t.name"
-                            class="w-full min-w-[10rem] rounded-md border border-white/15 bg-transparent px-2 py-1.5 text-sm text-portal-heading"
-                            @change="(e) => renameType(t, (e.target as HTMLInputElement).value)"
-                        />
-                        <span v-else class="text-portal-heading font-medium">{{ t.name }}</span>
-                        <p class="text-portal-muted mt-1 font-mono text-xs">{{ t.slug }}</p>
-                    </td>
-                    <td class="py-3">
-                        <span
-                            class="text-xs font-medium"
-                            :class="t.is_active ? 'text-emerald-600' : 'text-slate-500'"
-                        >
-                            {{ t.is_active ? 'Activo' : 'Inactivo' }}
-                        </span>
-                    </td>
-                    <td class="max-w-xs py-3 pr-2">
-                        <MaterialSelect
-                            compact
-                            :disabled="!canWrite"
-                            :model-value="String(t.form_version_id ?? '')"
-                            label="Formulario"
-                            :options="formSelectOptions()"
-                            @update:model-value="(v) => saveFormVersion(t, String(v))"
-                        />
-                        <p v-if="!formOptions.length" class="mt-1 text-xs text-amber-600">
-                            Publica un formulario en D1.
-                        </p>
-                    </td>
-                    <td class="max-w-xs py-3 pr-2">
-                        <MaterialSelect
-                            compact
-                            :disabled="!canWrite"
-                            :model-value="String(t.report_template_version_id ?? '')"
-                            label="Reporte"
-                            :options="reportSelectOptions()"
-                            @update:model-value="(v) => saveReportVersion(t, String(v))"
-                        />
-                        <p v-if="!reportOptions.length" class="mt-1 text-xs text-amber-600">
-                            Publica un reporte en D2.
-                        </p>
-                    </td>
-                    <td class="max-w-[10rem] py-3">
-                        <MaterialSelect
-                            compact
-                            :disabled="!canWrite"
-                            :model-value="String(t.workflow_definition_id ?? '')"
-                            label="Workflow"
-                            :options="workflowSelectOptions()"
-                            @update:model-value="(v) => saveWorkflow(t, String(v))"
-                        />
-                    </td>
-                    <td v-if="canWrite" class="space-y-2 py-3">
-                        <button
-                            type="button"
-                            class="block text-sm text-amber-700 underline"
-                            @click="toggleActive(t)"
-                        >
-                            {{ t.is_active ? 'Desactivar' : 'Activar' }}
-                        </button>
-                        <button
-                            type="button"
-                            class="block text-sm text-red-500 underline"
-                            @click="deleteType(t)"
-                        >
-                            Eliminar
-                        </button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-        </div>
+        <ConfigurableDataTable
+            v-if="!loading"
+            table-id="routine-types"
+            :columns="routineTypeTableColumns"
+            :rows="types"
+            row-key="id"
+        >
+            <template #name="{ row }">
+                <template v-if="canWrite">
+                    <input
+                        :value="(row as RoutineType).name"
+                        class="w-full min-w-[10rem] rounded-md border border-white/15 bg-transparent px-2 py-1.5 text-sm text-portal-heading"
+                        @change="(e) => renameType(row as RoutineType, (e.target as HTMLInputElement).value)"
+                    />
+                </template>
+                <span v-else class="text-portal-heading font-medium">{{ (row as RoutineType).name }}</span>
+                <p class="text-portal-muted mt-1 font-mono text-xs">{{ (row as RoutineType).slug }}</p>
+            </template>
+            <template #status="{ row }">
+                <span
+                    class="text-xs font-medium"
+                    :class="(row as RoutineType).is_active ? 'text-emerald-600' : 'text-slate-500'"
+                >
+                    {{ (row as RoutineType).is_active ? 'Activo' : 'Inactivo' }}
+                </span>
+            </template>
+            <template #form="{ row }">
+                <MaterialSelect
+                    compact
+                    :disabled="!canLinkForm"
+                    :model-value="String((row as RoutineType).form_version_id ?? '')"
+                    label="Formulario"
+                    :options="formSelectOptions()"
+                    @update:model-value="(v) => saveFormVersion(row as RoutineType, String(v))"
+                />
+                <p v-if="!formOptions.length" class="mt-1 text-xs text-amber-600">Publica un formulario en D1.</p>
+            </template>
+            <template #report="{ row }">
+                <MaterialSelect
+                    compact
+                    :disabled="!canLinkReport"
+                    :model-value="String((row as RoutineType).report_template_version_id ?? '')"
+                    label="Reporte"
+                    :options="reportSelectOptions()"
+                    @update:model-value="(v) => saveReportVersion(row as RoutineType, String(v))"
+                />
+                <p v-if="!reportOptions.length && !unpublishedReportNames.length" class="mt-1 text-xs text-amber-600">
+                    Publica un reporte en Diseño → Reportes.
+                </p>
+                <p v-else-if="!reportOptions.length && unpublishedReportNames.length" class="mt-1 text-xs text-amber-600">
+                    Tienes borradores sin publicar ({{ unpublishedReportNames.join(', ') }}). Abre cada plantilla en
+                    Diseño → Reportes y pulsa <strong class="text-portal-heading">Publicar</strong> para poder enlazarla aquí.
+                </p>
+                <p
+                    v-if="(row as RoutineType).field_alignment?.checked && !(row as RoutineType).field_alignment?.aligned"
+                    class="portal-msg-warning mt-2 text-xs"
+                >
+                    Desalineado: {{ (row as RoutineType).field_alignment?.missing?.join(', ') }}
+                </p>
+                <p
+                    v-else-if="(row as RoutineType).field_alignment?.checked && (row as RoutineType).field_alignment?.aligned"
+                    class="portal-msg-success mt-2 text-xs"
+                >
+                    Formulario e informe alineados
+                </p>
+            </template>
+            <template #workflow="{ row }">
+                <MaterialSelect
+                    v-if="canAssignWorkflow"
+                    compact
+                    :disabled="!canWrite"
+                    :model-value="String((row as RoutineType).workflow_definition_id ?? '')"
+                    label="Workflow"
+                    :options="workflowSelectOptions()"
+                    @update:model-value="(v) => saveWorkflow(row as RoutineType, String(v))"
+                />
+                <div v-else class="space-y-1">
+                    <p class="text-portal-muted text-xs font-medium uppercase tracking-wide">Workflow</p>
+                    <p class="text-portal-heading text-sm">
+                        {{ (row as RoutineType).workflow_definition?.name ?? '— Sin asignar —' }}
+                    </p>
+                    <p class="text-portal-muted text-xs">Solo el administrador de plataforma puede cambiarlo.</p>
+                </div>
+            </template>
+            <template #actions="{ row }">
+                <div class="table-row-actions">
+                    <IconActionButton
+                        icon="power"
+                        :label="(row as RoutineType).is_active ? 'Desactivar tipo de rutina' : 'Activar tipo de rutina'"
+                        @click="toggleActive(row as RoutineType)"
+                    />
+                    <IconActionButton
+                        icon="trash"
+                        label="Eliminar tipo de rutina"
+                        variant="danger"
+                        @click="deleteType(row as RoutineType)"
+                    />
+                </div>
+            </template>
+        </ConfigurableDataTable>
     </div>
 </template>

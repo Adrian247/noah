@@ -8,6 +8,7 @@ import ReadOnlyNotice from '@/components/ui/ReadOnlyNotice.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
 import AppButton from '@/components/ui/AppButton.vue';
+import IconActionButton from '@/components/ui/IconActionButton.vue';
 import ReportDesignNav from '@/components/reports/ReportDesignNav.vue';
 
 type ReportRow = {
@@ -29,6 +30,7 @@ const loading = ref(true);
 const name = ref('');
 const showCreate = ref(false);
 const previewUrls = ref<Record<number, string>>({});
+const deletingId = ref<number | null>(null);
 
 async function load() {
     loading.value = true;
@@ -88,30 +90,57 @@ function openCreate() {
     showCreate.value = !showCreate.value;
 }
 
+async function removeReport(row: ReportRow) {
+    if (
+        !window.confirm(
+            `¿Eliminar la plantilla «${row.name}»? Se borrarán todas sus versiones. Esta acción no se puede deshacer.`,
+        )
+    ) {
+        return;
+    }
+    deletingId.value = row.id;
+    try {
+        await api(`/design/reports/${row.id}`, { method: 'DELETE' });
+        if (previewUrls.value[row.id]) {
+            URL.revokeObjectURL(previewUrls.value[row.id]);
+            delete previewUrls.value[row.id];
+        }
+        toast.success('Plantilla de reporte eliminada.');
+        await load();
+    } catch (e) {
+        toast.error((e as Error).message);
+    } finally {
+        deletingId.value = null;
+    }
+}
+
 onMounted(load);
 </script>
 
 <template>
-    <div class="portal-page space-y-4" data-tour="page-design-reports">
-        <ReportDesignNav />
-        <div class="flex flex-wrap items-start justify-between gap-3">
-            <PageHeader
-                class="flex-1"
-                title="Plantillas de reporte"
-                subtitle="Publicar deja una versión en producción y abre un borrador nuevo. El enlace al tipo de rutina se hace en Tipos de rutina."
-            />
-            <div class="flex shrink-0 flex-wrap items-center gap-3">
-                <AppButton v-if="canWrite" type="button" @click="openCreate">
-                    Nueva plantilla
-                </AppButton>
-                <RouterLink v-if="canReadSettings" to="/app/design/reports/settings">
-                    <AppButton type="button" variant="secondary">Secciones reutilizables</AppButton>
-                </RouterLink>
+    <div class="portal-page space-y-4 report-enter-stagger" data-tour="page-design-reports">
+        <div class="report-module-chrome space-y-4">
+            <ReportDesignNav />
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <PageHeader
+                    class="flex-1"
+                    title="Plantillas de reporte"
+                    subtitle="Publicar deja una versión en producción y abre un borrador nuevo. El enlace al tipo de rutina se hace en Tipos de rutina."
+                />
+                <div class="flex shrink-0 flex-wrap items-center gap-3">
+                    <AppButton v-if="canWrite" type="button" @click="openCreate">
+                        Nueva plantilla
+                    </AppButton>
+                    <RouterLink v-if="canReadSettings" to="/app/design/reports/settings">
+                        <AppButton type="button" variant="secondary">Secciones reutilizables</AppButton>
+                    </RouterLink>
+                </div>
             </div>
         </div>
+
         <form
             v-if="showCreate && canWrite"
-            class="portal-form-panel flex max-w-xl flex-wrap items-end gap-4"
+            class="portal-form-panel report-enter-item flex max-w-xl flex-wrap items-end gap-4"
             @submit.prevent="createReport"
         >
             <MaterialField v-model="name" label="Nombre de plantilla" class="min-w-[14rem] flex-1" required />
@@ -120,26 +149,31 @@ onMounted(load);
                 Cancelar
             </button>
         </form>
-        <ReadOnlyNotice v-if="!canWrite" module-label="Reportes" />
-        <p v-if="loading" class="text-portal-muted">Cargando…</p>
+        <ReadOnlyNotice v-if="!canWrite" class="report-enter-item" module-label="Reportes" />
+        <p v-if="loading" class="text-portal-muted report-enter-item">Cargando…</p>
         <div
             v-else-if="!reports.length"
-            class="portal-form-panel max-w-xl space-y-2 text-sm"
+            class="portal-form-panel report-enter-item max-w-xl space-y-2 text-sm"
         >
             <p class="text-portal-heading font-medium">Aún no hay plantillas de reporte</p>
             <p class="text-portal-muted">
                 Crea una plantilla con <strong class="text-portal-heading">Nueva plantilla</strong> o ejecuta el seed demo
-                (<code class="text-xs">php artisan db:seed --class=NoahDemoSeeder</code>) para cargar el informe de revisión
+                (<code class="text-xs">php artisan db:seed --class=PhoenixDemoSeeder</code>) para cargar el informe de revisión
                 mayor vehículo.
             </p>
         </div>
-        <div v-else class="report-card-grid">
-            <RouterLink
-                v-for="r in reports"
-                :key="r.id"
-                :to="`/app/design/reports/${r.id}`"
-                class="report-card group"
-            >
+        <div v-else class="report-card-grid report-card-enter-stagger report-enter-item">
+            <div v-for="r in reports" :key="r.id" class="report-card group relative">
+                <div v-if="canWrite" class="absolute right-2 top-2 z-20">
+                    <IconActionButton
+                        icon="trash"
+                        label="Eliminar plantilla de reporte"
+                        variant="danger"
+                        :disabled="deletingId === r.id"
+                        @click="removeReport(r)"
+                    />
+                </div>
+                <RouterLink :to="`/app/design/reports/${r.id}`" class="report-card group block h-full">
                 <div class="report-card-preview overflow-hidden">
                     <iframe
                         v-if="previewUrls[r.id]"
@@ -162,7 +196,8 @@ onMounted(load);
                 <div v-if="r.description" class="report-card-overlay">
                     <p class="text-sm leading-snug">{{ r.description }}</p>
                 </div>
-            </RouterLink>
+                </RouterLink>
+            </div>
         </div>
     </div>
 </template>

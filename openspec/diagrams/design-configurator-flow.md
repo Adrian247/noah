@@ -1,4 +1,4 @@
-# Flujo estudio de configuración — Noah
+# Flujo estudio de configuración — Phoenix
 
 Cómo el **administrador** arma un tipo de rutina (diseño UX).
 

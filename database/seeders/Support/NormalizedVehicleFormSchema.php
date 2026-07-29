@@ -2,7 +2,7 @@
 
 namespace Database\Seeders\Support;
 
-/** Esquema publicado para `inspeccion-vehiculo-v1` (change 037). */
+/** Esquema publicado para `inspeccion-vehiculo-v1` (uso Rutina; change 037). */
 final class NormalizedVehicleFormSchema
 {
     /**

@@ -1,8 +1,8 @@
-# Mapa de contexto — Noah
+# Mapa de contexto — Phoenix
 
 ```mermaid
 flowchart TB
-  subgraph noah [Noah Platform]
+  subgraph phoenix [Phoenix Platform]
     ID[Identity]
     CO[Companies]
     AS[Assets]
@@ -46,13 +46,13 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-  Noah[Noah]
+  Phoenix[Phoenix]
   PAC[Proveedor fiscal PAC]
   Email[SMTP / Email API]
   LLM[Proveedores LLM]
 
-  Noah --> PAC
-  Noah --> Email
+  Phoenix --> PAC
+  Phoenix --> Email
   AI[AI Gateway] --> LLM
 ```
 

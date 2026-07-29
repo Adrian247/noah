@@ -1,10 +1,10 @@
-# Roadmap — Noah
+# Roadmap — Phoenix
 
 Roadmap orientativo; las fechas se fijan al iniciar implementación.
 
 ## Fase 0 — Fundación documental
 
-- [x] Estructura `openspec/` y nombre Noah
+- [x] Estructura `openspec/` y nombre Phoenix
 - [x] Visión, alcance, concepto, roadmap, negocio, NFR
 - [x] Dominio por contexto, arquitectura, motores, API
 - [x] Diseño UX, frontend, móvil, infra, prompts, diagramas

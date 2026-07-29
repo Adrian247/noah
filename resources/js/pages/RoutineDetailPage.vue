@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, nextTick, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, RouterLink, useRouter } from 'vue-router';
 import DynamicFormRenderer from '@/components/domain/DynamicFormRenderer.vue';
 import { validateRequiredFields } from '@/composables/validateFormResponses';
 import { useToast } from '@/composables/useToast';
 import { api, getToken, getCompanyId } from '@/api/client';
 import { useCompanyStore } from '@/stores/company';
 import { usePermissions } from '@/composables/usePermissions';
+import AppButton from '@/components/ui/AppButton.vue';
+import IconActionButton from '@/components/ui/IconActionButton.vue';
+import { auditActionLabel } from '@/lib/auditLabels';
 
 type FormVersion = {
     id: number;
@@ -71,19 +74,23 @@ type AuditEntry = {
     id: number;
     action: string;
     subject_type?: string | null;
+    subject_type_label?: string | null;
     subject_id?: number | null;
     metadata?: Record<string, unknown> | null;
+    ip?: string | null;
     occurred_at: string;
     actor?: { id: number; name: string; email: string } | null;
 };
 
 const route = useRoute();
+const router = useRouter();
 const toast = useToast();
 const companyStore = useCompanyStore();
 const { can } = usePermissions();
 const routine = ref<Routine | null>(null);
 const auditEntries = ref<AuditEntry[]>([]);
 const auditLoading = ref(false);
+const expandedAuditIds = ref<Set<number>>(new Set());
 const supplies = ref<SupplyItem[]>([]);
 const loading = ref(true);
 const missingFieldKeys = ref<string[]>([]);
@@ -107,6 +114,8 @@ const canValidateReject = computed(() => {
     const role = companyStore.current?.role;
     return role === 'supervisor' || role === 'administrator';
 });
+const isAdmin = computed(() => companyStore.current?.role === 'administrator');
+const deletingRoutine = ref(false);
 const isPendingValidation = computed(() => routine.value?.status === 'pending_validation');
 const showRejectionNotice = computed(
     () =>
@@ -203,6 +212,7 @@ async function loadAuditTimeline() {
         return;
     }
     auditLoading.value = true;
+    expandedAuditIds.value = new Set();
     try {
         const res = await api<{ data: AuditEntry[] }>(
             `/audit/entries?correlation_id=${encodeURIComponent(correlationId)}&per_page=50`,
@@ -213,6 +223,16 @@ async function loadAuditTimeline() {
     } finally {
         auditLoading.value = false;
     }
+}
+
+function toggleAuditEntry(id: number) {
+    const next = new Set(expandedAuditIds.value);
+    if (next.has(id)) {
+        next.delete(id);
+    } else {
+        next.add(id);
+    }
+    expandedAuditIds.value = next;
 }
 
 async function loadSupplies() {
@@ -383,23 +403,58 @@ watch(
 onUnmounted(() => {
     stopReportPoll();
 });
+
+async function deleteRoutine() {
+    if (!routine.value) {
+        return;
+    }
+    if (
+        !window.confirm(
+            `¿Eliminar la rutina #${routine.value.id}? Esta acción no se puede deshacer.`,
+        )
+    ) {
+        return;
+    }
+    deletingRoutine.value = true;
+    try {
+        await api(`/routines/${routine.value.id}`, { method: 'DELETE' });
+        toast.success('Rutina eliminada.');
+        await router.push('/app/routines');
+    } catch (e) {
+        toast.error((e as Error).message);
+    } finally {
+        deletingRoutine.value = false;
+    }
+}
 </script>
 
 <template>
-    <div v-if="loading" class="text-slate-500">Cargando…</div>
-    <div v-else-if="routine" class="w-full max-w-[1600px] space-y-4">
-        <h2 class="text-xl font-semibold">Rutina #{{ routine.id }}</h2>
-        <p class="text-sm text-slate-600">
-            {{ routine.routine_type?.name }} · {{ routine.asset?.tag }} ·
-            <span class="font-medium">{{ routine.status }}</span>
-            <span v-if="routine.workflow_instance" class="text-slate-500">
-                · paso {{ routine.workflow_instance.current_step_key }}
-            </span>
-        </p>
+    <div v-if="loading" class="text-portal-muted">Cargando…</div>
+    <div v-else-if="routine" class="portal-page w-full max-w-[1600px] space-y-4">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="min-w-0">
+                <h2 class="text-portal-heading text-xl font-semibold">Rutina #{{ routine.id }}</h2>
+                <p class="text-portal-muted text-sm">
+                    {{ routine.routine_type?.name }} · {{ routine.asset?.tag }} ·
+                    <span class="text-portal-heading font-medium">{{ routine.status }}</span>
+                    <span v-if="routine.workflow_instance">
+                        · paso {{ routine.workflow_instance.current_step_key }}
+                    </span>
+                </p>
+            </div>
+            <IconActionButton
+                v-if="isAdmin"
+                icon="trash"
+                label="Eliminar rutina"
+                variant="danger"
+                :disabled="deletingRoutine"
+                @click="deleteRoutine"
+            />
+        </div>
 
         <ul
             v-if="routine.workflow_instance?.transitions?.length"
-            class="portal-form-panel p-4 text-xs text-slate-600"
+            class="portal-form-panel text-portal-muted p-4 text-xs"
         >
             <li
                 v-for="(t, i) in routine.workflow_instance.transitions"
@@ -409,43 +464,13 @@ onUnmounted(() => {
             </li>
         </ul>
 
-        <section
-            v-if="showAuditTimeline"
-            class="portal-form-panel space-y-3 p-4 text-sm"
-        >
-            <div class="flex flex-wrap items-baseline justify-between gap-2">
-                <h3 class="font-medium text-slate-800">Trazabilidad (auditoría)</h3>
-                <span class="font-mono text-xs text-slate-500">{{ workflowCorrelationId }}</span>
-            </div>
-            <p v-if="auditLoading" class="text-xs text-slate-500">Cargando eventos…</p>
-            <p v-else-if="!auditEntries.length" class="text-xs text-slate-500">
-                Sin eventos de auditoría para este ciclo.
-            </p>
-            <ul v-else class="divide-y text-xs">
-                <li
-                    v-for="entry in auditEntries"
-                    :key="entry.id"
-                    class="flex flex-wrap gap-x-3 gap-y-1 py-2 first:pt-0"
-                >
-                    <span class="whitespace-nowrap text-slate-500">
-                        {{ new Date(entry.occurred_at).toLocaleString() }}
-                    </span>
-                    <span class="font-mono text-slate-800">{{ entry.action }}</span>
-                    <span class="text-slate-600">{{ entry.actor?.name ?? '—' }}</span>
-                    <span v-if="entry.subject_type" class="text-slate-500">
-                        {{ entry.subject_type }} #{{ entry.subject_id }}
-                    </span>
-                </li>
-            </ul>
-        </section>
-
         <div
             v-if="showRejectionNotice"
-            class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-950"
+            class="portal-callout portal-callout--danger"
         >
             <p class="font-medium">Devuelta para corrección</p>
-            <p class="mt-1">{{ routine.latest_execution?.rejection_reason }}</p>
-            <p v-if="routine.latest_execution?.rejected_at" class="mt-2 text-xs text-red-800">
+            <p class="mt-1 opacity-90">{{ routine.latest_execution?.rejection_reason }}</p>
+            <p v-if="routine.latest_execution?.rejected_at" class="mt-2 text-xs opacity-80">
                 {{ routine.latest_execution.rejected_at }}
             </p>
         </div>
@@ -459,34 +484,34 @@ onUnmounted(() => {
                 :option-catalogs="formOptionCatalogs"
                 :highlight-keys="missingFieldKeys"
             />
-            <div class="portal-form-panel p-4 space-y-3 text-sm">
-                <label class="block">
+            <div class="portal-form-panel space-y-3 p-4 text-sm">
+                <label class="text-portal-heading block">
                     Comentario técnico (resumen)
                     <textarea
                         v-model="technicianComments"
                         rows="2"
-                        class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5"
+                        class="field-input mt-1 w-full"
                         placeholder="Ej. se reemplazó filtro y se verificó presión"
                     />
                 </label>
-                <label class="block">
+                <label class="text-portal-heading block">
                     Duración (minutos)
                     <input
                         v-model.number="durationMinutes"
                         type="number"
                         min="0"
-                        class="mt-1 w-32 rounded-md border border-slate-300 px-2 py-1.5"
+                        class="field-input mt-1 w-32"
                     />
                 </label>
                 <div v-if="supplies.length" class="space-y-3">
-                    <p class="font-medium text-slate-800">Insumos utilizados</p>
+                    <p class="text-portal-heading font-medium">Insumos utilizados</p>
                     <div
                         v-for="(line, idx) in consumptionLines"
                         :key="idx"
                         class="grid gap-2 sm:grid-cols-[1fr_8rem_auto]"
                     >
                         <label class="block">
-                            <span class="text-xs text-slate-600">Insumo</span>
+                            <span class="text-portal-muted text-xs">Insumo</span>
                             <select
                                 v-model="line.supply_item_id"
                                 class="field-input mt-1 w-full"
@@ -502,65 +527,137 @@ onUnmounted(() => {
                             </select>
                         </label>
                         <label class="block">
-                            <span class="text-xs text-slate-600">Cantidad</span>
+                            <span class="text-portal-muted text-xs">Cantidad</span>
                             <input
                                 v-model="line.quantity"
                                 type="number"
                                 min="0"
                                 step="0.01"
-                                class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5"
+                                class="field-input mt-1 w-full"
                             />
                         </label>
                         <div class="flex items-end pb-0.5">
-                            <button
-                                type="button"
-                                class="rounded-md border border-slate-300 px-2 py-1.5 text-xs text-slate-700"
+                            <IconActionButton
+                                icon="trash"
+                                label="Quitar línea de consumo"
+                                variant="danger"
                                 @click="removeConsumptionLine(idx)"
-                            >
-                                Quitar
-                            </button>
+                            />
                         </div>
                     </div>
                     <button
                         type="button"
-                        class="text-sm text-slate-700 underline"
+                        class="text-portal-link text-sm underline"
                         @click="addConsumptionLine"
                     >
                         + Agregar otro insumo
                     </button>
                 </div>
             </div>
-            <button
+            <AppButton
                 type="button"
-                class="rounded-md bg-slate-900 px-3 py-2 text-sm text-white disabled:opacity-50"
                 :disabled="submitting"
                 @click="submitExecution"
             >
                 {{ submitting ? 'Enviando…' : submitActionLabel }}
-            </button>
+            </AppButton>
         </div>
 
-        <div v-if="routine.latest_execution" class="portal-form-panel p-4 text-sm space-y-3">
-            <p class="font-medium">Última ejecución</p>
-            <div v-if="routine.latest_execution.responses && Object.keys(routine.latest_execution.responses).length">
-                <p class="text-slate-500">Respuestas del formulario</p>
-                <ul class="mt-1 list-inside list-disc text-slate-700">
-                    <li v-for="(val, key) in routine.latest_execution.responses" :key="key">
-                        <span class="font-mono text-xs">{{ key }}</span>: {{ val }}
-                    </li>
-                </ul>
+        <details
+            v-if="showAuditTimeline"
+            class="portal-form-panel group space-y-3 p-4 text-sm"
+            :open="!canExecute"
+        >
+            <summary
+                class="text-portal-heading flex cursor-pointer list-none items-center justify-between gap-2 font-medium marker:content-none"
+            >
+                <span>Trazabilidad (auditoría)</span>
+                <span class="text-portal-muted text-xs font-normal group-open:hidden">Mostrar</span>
+            </summary>
+            <div class="flex flex-wrap items-baseline justify-between gap-2 pt-2">
+                <div class="flex flex-wrap items-center gap-3">
+                    <RouterLink
+                        v-if="workflowCorrelationId"
+                        class="text-portal-link text-xs underline"
+                        :to="{ name: 'audit', query: { correlation: workflowCorrelationId } }"
+                    >
+                        Ver en Auditoría
+                    </RouterLink>
+                    <span class="text-portal-muted font-mono text-xs">{{ workflowCorrelationId }}</span>
+                </div>
             </div>
+            <p v-if="auditLoading" class="text-portal-muted text-xs">Cargando eventos…</p>
+            <p v-else-if="!auditEntries.length" class="text-portal-muted text-xs">
+                Sin eventos de auditoría para este ciclo.
+            </p>
+            <ol v-else class="relative space-y-0 border-l border-white/15 pl-4 text-xs">
+                <li
+                    v-for="entry in auditEntries"
+                    :key="entry.id"
+                    class="relative pb-3 last:pb-0"
+                >
+                    <span class="absolute -left-[1.3rem] top-1.5 h-2 w-2 rounded-full bg-sky-400" />
+                    <button
+                        type="button"
+                        class="w-full rounded-lg px-1 py-0.5 text-left hover:bg-white/5"
+                        @click="toggleAuditEntry(entry.id)"
+                    >
+                        <div class="flex flex-wrap gap-x-3 gap-y-1">
+                            <span class="text-portal-muted whitespace-nowrap">
+                                {{ new Date(entry.occurred_at).toLocaleString() }}
+                            </span>
+                            <span class="text-portal-heading font-medium">
+                                {{ auditActionLabel(entry.action) }}
+                            </span>
+                            <span class="text-portal-heading">{{ entry.actor?.name ?? '—' }}</span>
+                        </div>
+                        <p class="text-portal-muted mt-0.5 font-mono opacity-70">{{ entry.action }}</p>
+                    </button>
+                    <div
+                        v-if="expandedAuditIds.has(entry.id)"
+                        class="mt-2 space-y-1 rounded-lg border border-white/10 bg-black/20 p-2"
+                    >
+                        <p v-if="entry.subject_type" class="text-portal-muted">
+                            {{ entry.subject_type_label ?? entry.subject_type }} #{{ entry.subject_id }}
+                        </p>
+                        <pre
+                            v-if="entry.metadata && Object.keys(entry.metadata).length"
+                            class="text-portal-heading overflow-x-auto whitespace-pre-wrap font-mono"
+                        >{{ JSON.stringify(entry.metadata, null, 2) }}</pre>
+                        <p v-else class="text-portal-muted">Sin metadata.</p>
+                    </div>
+                </li>
+            </ol>
+        </details>
+
+        <div
+            v-else-if="formSchema && Object.keys(formResponses).length"
+            class="space-y-2"
+        >
+            <p class="text-portal-muted text-sm">Formulario capturado (solo lectura)</p>
+            <DynamicFormRenderer
+                v-model="formResponses"
+                :schema="formSchema"
+                :routine-id="routine.id"
+                :form-settings="formDesignSettings"
+                :option-catalogs="formOptionCatalogs"
+                disabled
+            />
+        </div>
+
+        <div v-if="routine.latest_execution" class="portal-form-panel space-y-3 p-4 text-sm">
+            <p class="text-portal-heading font-medium">Última ejecución</p>
             <p v-if="routine.latest_execution.technician_comments">
-                <span class="text-slate-500">Comentario técnico</span><br />
-                {{ routine.latest_execution.technician_comments }}
+                <span class="text-portal-muted">Comentario técnico</span><br />
+                <span class="text-portal-heading">{{ routine.latest_execution.technician_comments }}</span>
             </p>
             <p v-if="routine.latest_execution.corrected_comments">
-                <span class="text-slate-500">Texto corregido</span><br />
-                {{ routine.latest_execution.corrected_comments }}
+                <span class="text-portal-muted">Texto corregido</span><br />
+                <span class="text-portal-heading">{{ routine.latest_execution.corrected_comments }}</span>
             </p>
             <ul
                 v-if="routine.latest_execution.consumptions?.length"
-                class="list-inside list-disc text-slate-700"
+                class="text-portal-heading list-inside list-disc"
             >
                 <li v-for="c in routine.latest_execution.consumptions" :key="c.supply_item_id">
                     {{ c.supply_item?.name ?? 'Insumo' }} × {{ c.quantity }}
@@ -570,88 +667,80 @@ onUnmounted(() => {
 
         <div
             v-if="isPendingValidation && canValidateReject"
-            class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
+            class="portal-callout portal-callout--warning"
         >
             Esta rutina espera tu validación como supervisor o administrador.
         </div>
         <div
             v-else-if="isPendingValidation"
-            class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700"
+            class="portal-callout portal-callout--info"
         >
             Enviada a validación. Un supervisor o administrador debe aprobarla (revisa Mailpit en
-            <span class="font-mono text-xs">http://localhost:8025</span> si eres supervisor).
+            <span class="font-mono text-xs opacity-80">http://localhost:8025</span> si eres supervisor).
         </div>
 
         <div
             v-if="isPendingValidation && canValidateReject && showRejectPanel"
-            class="portal-form-panel border-red-500/30 text-sm space-y-3"
+            class="portal-form-panel space-y-3 border-red-500/30 text-sm"
         >
-            <p class="font-medium text-red-900">{{ rejectActionLabel }}</p>
-            <label class="block">
+            <p class="portal-msg-danger">{{ rejectActionLabel }}</p>
+            <label class="text-portal-heading block">
                 Motivo (visible para el técnico)
                 <textarea
                     v-model="rejectReason"
                     rows="3"
-                    class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5"
+                    class="field-input mt-1 w-full"
                     placeholder="Ej. Falta evidencia fotográfica del filtro nuevo"
                 />
             </label>
-            <div class="flex gap-2">
-                <button
-                    type="button"
-                    class="rounded-md bg-red-700 px-3 py-2 text-sm text-white disabled:opacity-50"
-                    :disabled="rejecting"
-                    @click="rejectRoutine"
-                >
+            <div class="flex flex-wrap gap-2">
+                <AppButton type="button" variant="danger" :disabled="rejecting" @click="rejectRoutine">
                     Confirmar {{ rejectActionLabel.toLowerCase() }}
-                </button>
-                <button type="button" class="rounded-md border px-3 py-2 text-sm" @click="cancelReject">
-                    Cancelar
-                </button>
+                </AppButton>
+                <AppButton type="button" variant="ghost" @click="cancelReject">Cancelar</AppButton>
             </div>
         </div>
 
         <div class="flex flex-wrap gap-2">
-            <button
+            <AppButton
                 v-if="isPendingValidation && canValidateReject && !showRejectPanel"
                 type="button"
-                class="rounded-md bg-emerald-700 px-3 py-2 text-sm text-white"
                 @click="validateRoutine"
             >
                 {{ approveActionLabel }}
-            </button>
-            <button
+            </AppButton>
+            <AppButton
                 v-if="isPendingValidation && canValidateReject && !showRejectPanel"
                 type="button"
-                class="rounded-md border border-red-300 px-3 py-2 text-sm text-red-800"
+                variant="danger"
                 @click="openRejectPanel"
             >
                 {{ rejectActionLabel }}
-            </button>
-            <button
+            </AppButton>
+            <AppButton
                 v-for="r in routine.generated_reports?.filter((x) => x.status === 'ready')"
                 :key="r.id"
                 type="button"
-                class="rounded-md border px-3 py-2 text-sm"
+                variant="secondary"
                 @click="downloadReport(r.id)"
             >
                 Descargar PDF
-            </button>
+            </AppButton>
         </div>
         <p
             v-if="routine.generated_reports?.some((x) => ['queued', 'processing'].includes(x.status))"
-            class="text-sm text-amber-800"
+            class="portal-msg-warning"
         >
             Generando PDF en segundo plano… se actualizará automáticamente.
         </p>
         <p
             v-for="r in routine.generated_reports?.filter((x) => x.status === 'failed')"
             :key="'err-' + r.id"
-            class="text-sm text-red-700"
+            class="portal-msg-danger"
         >
             Error al generar PDF: {{ r.error_message ?? 'desconocido' }}
         </p>
-        <p v-if="routine.invoice" class="text-sm">
+        <p v-if="routine.invoice" class="text-portal-heading text-sm">
             Factura borrador #{{ routine.invoice.id }} — {{ routine.invoice.status }} — ${{
                 routine.invoice.total
             }}

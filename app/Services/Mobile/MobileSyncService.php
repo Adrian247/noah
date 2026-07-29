@@ -5,17 +5,23 @@ namespace App\Services\Mobile;
 use App\Enums\RoutineStatus;
 use App\Models\Routine;
 use App\Models\RoutineType;
+use App\Models\SupplyItem;
 use App\Models\SyncEvent;
 use App\Models\User;
+use App\Services\Inventory\InventoryStockService;
 use App\Services\Workflow\WorkflowRuntime;
 use App\Support\CurrentCompany;
+use App\Support\InventoryTaxonomy;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class MobileSyncService
 {
-    public function __construct(private WorkflowRuntime $workflow) {}
+    public function __construct(
+        private WorkflowRuntime $workflow,
+        private InventoryStockService $stock,
+    ) {}
 
     /**
      * @param  array<int, array<string, mixed>>  $events
@@ -134,8 +140,25 @@ class MobileSyncService
             ]);
 
             foreach (Arr::get($payload, 'consumptions', []) as $line) {
+                $supply = SupplyItem::query()->findOrFail($line['supply_item_id']);
+                $usageType = $line['usage_type'] ?? 'out';
+                if (! in_array($usageType, InventoryTaxonomy::consumptionUsageTypeValues(), true)) {
+                    $usageType = 'out';
+                }
+
+                $movement = $this->stock->recordMovement($supply, [
+                    'movement_type' => $usageType,
+                    'quantity' => (float) $line['quantity'],
+                    'routine_id' => $routine->id,
+                    'routine_execution_id' => $execution->id,
+                    'reference' => 'mobile-sync',
+                    'recorded_by' => $user->id,
+                ]);
+
                 $execution->consumptions()->create([
-                    'supply_item_id' => $line['supply_item_id'],
+                    'supply_item_id' => $supply->id,
+                    'usage_type' => $usageType,
+                    'inventory_movement_id' => $movement->id,
                     'quantity' => $line['quantity'],
                     'unit_cost' => $line['unit_cost'] ?? 0,
                 ]);

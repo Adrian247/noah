@@ -10,6 +10,7 @@ class Company extends Model
     protected $fillable = [
         'name',
         'legal_name',
+        'logo_path',
         'tax_id',
         'currency',
         'timezone',

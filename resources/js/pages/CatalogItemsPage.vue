@@ -11,6 +11,9 @@ import AppModal from '@/components/ui/AppModal.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
 import MaterialSelect from '@/components/ui/MaterialSelect.vue';
 import AppButton from '@/components/ui/AppButton.vue';
+import IconActionButton from '@/components/ui/IconActionButton.vue';
+import ConfigurableDataTable from '@/components/ui/ConfigurableDataTable.vue';
+import { tableActionsColumn, type TableColumnDef } from '@/lib/tableColumns';
 import DynamicFormRenderer from '@/components/domain/DynamicFormRenderer.vue';
 import { catalogEquipmentSectionNav } from '@/lib/sectionNav';
 
@@ -29,6 +32,19 @@ type CatalogItem = {
 const { canWriteModule } = useModuleAccess();
 const toast = useToast();
 const canWrite = computed(() => canWriteModule('catalog_items'));
+
+const catalogTableColumns = computed((): TableColumnDef[] => {
+    const cols: TableColumnDef[] = [
+        { id: 'code', label: 'Código' },
+        { id: 'name', label: 'Nombre' },
+        { id: 'type', label: 'Tipo' },
+        { id: 'manufacturer', label: 'Fabricante' },
+    ];
+    if (canWrite.value) {
+        cols.push(tableActionsColumn({ cellClass: 'table-row-actions' }));
+    }
+    return cols;
+});
 
 const { capture, loadForType, reset: resetCapture } = useCatalogTypeFormCapture(
     (typeId) => `/catalog/equipment-types/${typeId}/form-capture`,
@@ -57,6 +73,8 @@ const typeFilterOptions = computed(() => [
     { value: '', label: 'Todos los tipos' },
     ...equipmentTypes.value.map((t) => ({ value: String(t.id), label: t.name })),
 ]);
+
+const equipmentFiltersActive = computed(() => Boolean(filterTypeId.value));
 
 const typeFormOptions = computed(() =>
     equipmentTypes.value.map((t) => ({ value: String(t.id), label: `${t.name} (${t.code})` })),
@@ -190,43 +208,51 @@ onMounted(load);
         </div>
         <ReadOnlyNotice v-if="!canWrite" module-label="Equipos" />
 
-        <div v-if="!loading" class="mb-4 max-w-xs">
-            <MaterialSelect v-model="filterTypeId" label="Filtrar por tipo" :options="typeFilterOptions" />
-        </div>
-
         <p v-if="loading" class="text-portal-muted">Cargando…</p>
-        <div v-else class="portal-table-wrap">
-            <table class="portal-data-table">
-                <thead>
-                    <tr class="border-b">
-                        <th class="py-2">Código</th>
-                        <th>Nombre</th>
-                        <th>Tipo</th>
-                        <th>Fabricante</th>
-                        <th v-if="canWrite" class="w-32" />
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="item in filteredItems" :key="item.id" class="border-b">
-                        <td class="text-portal-heading py-2 font-mono text-xs">{{ item.code }}</td>
-                        <td class="text-portal-heading">{{ item.name }}</td>
-                        <td class="text-portal-muted text-sm">{{ item.equipment_type?.name ?? '—' }}</td>
-                        <td class="text-portal-muted">{{ item.manufacturer ?? '—' }}</td>
-                        <td v-if="canWrite" class="space-x-2 text-xs">
-                            <button type="button" class="text-portal-link underline" @click="openEdit(item)">
-                                Editar
-                            </button>
-                            <button type="button" class="text-red-400" @click="remove(item.id)">Borrar</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <ConfigurableDataTable
+            v-else
+            table-id="catalog-items"
+            :columns="catalogTableColumns"
+            :rows="filteredItems"
+            row-key="id"
+            :filters-active="equipmentFiltersActive"
+            filters-title="Filtros de equipos"
+            export-file-name="equipos"
+        >
+            <template #filters>
+                <MaterialSelect
+                    v-model="filterTypeId"
+                    label="Tipo de equipo"
+                    :options="typeFilterOptions"
+                />
+            </template>
+            <template #code="{ row }">
+                <span class="text-portal-heading font-mono text-xs">{{ (row as CatalogItem).code }}</span>
+            </template>
+            <template #name="{ row }">
+                <span class="text-portal-heading">{{ (row as CatalogItem).name }}</span>
+            </template>
+            <template #type="{ row }">
+                <span class="text-portal-muted text-sm">{{ (row as CatalogItem).equipment_type?.name ?? '—' }}</span>
+            </template>
+            <template #manufacturer="{ row }">
+                <span class="text-portal-muted">{{ (row as CatalogItem).manufacturer ?? '—' }}</span>
+            </template>
+            <template #actions="{ row }">
+                <IconActionButton icon="pencil" label="Editar equipo" @click="openEdit(row as CatalogItem)" />
+                <IconActionButton
+                    icon="trash"
+                    label="Borrar equipo"
+                    variant="danger"
+                    @click="remove((row as CatalogItem).id)"
+                />
+            </template>
+        </ConfigurableDataTable>
 
         <AppModal
             :open="showForm && canWrite"
             :title="editingId ? 'Editar equipo' : 'Nuevo equipo'"
-            size="lg"
+            size="xl"
             @close="showForm = false"
         >
             <form id="catalog-item-form" class="space-y-4" @submit.prevent="save">
@@ -243,7 +269,7 @@ onMounted(load);
                 <p v-if="capture.loading" class="text-portal-muted text-sm">Cargando formulario del tipo…</p>
                 <div
                     v-else-if="!capture.configured"
-                    class="rounded-xl border border-amber-500/35 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-100"
+                    class="portal-callout portal-callout--warning"
                     role="alert"
                 >
                     {{ capture.message || 'Este tipo no tiene formulario asignado o publicado.' }}

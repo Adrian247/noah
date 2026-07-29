@@ -9,6 +9,9 @@ import AppModal from '@/components/ui/AppModal.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
 import MaterialSelect from '@/components/ui/MaterialSelect.vue';
 import AppButton from '@/components/ui/AppButton.vue';
+import IconActionButton from '@/components/ui/IconActionButton.vue';
+import ConfigurableDataTable from '@/components/ui/ConfigurableDataTable.vue';
+import { tableActionsColumn, type TableColumnDef } from '@/lib/tableColumns';
 
 type Site = { id: number; name: string };
 type CatalogItem = { id: number; code: string; name: string };
@@ -24,6 +27,19 @@ type Asset = {
 const { canWriteModule } = useModuleAccess();
 const toast = useToast();
 const canWrite = computed(() => canWriteModule('assets'));
+
+const assetTableColumns = computed((): TableColumnDef[] => {
+    const cols: TableColumnDef[] = [
+        { id: 'tag', label: 'Tag' },
+        { id: 'site', label: 'Sitio' },
+        { id: 'catalog', label: 'Catálogo' },
+        { id: 'location', label: 'Ubicación' },
+    ];
+    if (canWrite.value) {
+        cols.push(tableActionsColumn({ cellClass: 'table-row-actions' }));
+    }
+    return cols;
+});
 
 const assets = ref<Asset[]>([]);
 const sites = ref<Site[]>([]);
@@ -211,36 +227,36 @@ onMounted(load);
         <ReadOnlyNotice v-if="!canWrite" module-label="Activos" />
 
         <p v-if="loading" class="text-portal-muted">Cargando…</p>
-        <div v-else class="portal-table-wrap">
-            <table class="portal-data-table">
-                <thead>
-                    <tr class="border-b">
-                        <th class="py-2">Tag</th>
-                        <th>Sitio</th>
-                        <th>Catálogo</th>
-                        <th>Ubicación</th>
-                        <th v-if="canWrite" />
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="asset in assets" :key="asset.id" class="border-b">
-                        <td class="text-portal-heading py-2 font-medium">{{ asset.tag }}</td>
-                        <td class="text-portal-muted">{{ asset.site?.name ?? '—' }}</td>
-                        <td class="text-portal-muted">{{ asset.catalog_item?.code ?? '—' }}</td>
-                        <td class="text-portal-muted">{{ asset.location_label ?? '—' }}</td>
-                        <td v-if="canWrite" class="space-x-2 text-xs">
-                            <button type="button" class="text-portal-link underline" @click="openLinkClient(asset)">
-                                Cliente
-                            </button>
-                            <button type="button" class="text-portal-link underline" @click="openEdit(asset)">
-                                Editar
-                            </button>
-                            <button type="button" class="text-red-400" @click="remove(asset.id)">Borrar</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <ConfigurableDataTable
+            v-else
+            table-id="assets"
+            :columns="assetTableColumns"
+            :rows="assets"
+            row-key="id"
+        >
+            <template #tag="{ row }">
+                <span class="text-portal-heading font-medium">{{ (row as Asset).tag }}</span>
+            </template>
+            <template #site="{ row }">
+                <span class="text-portal-muted">{{ (row as Asset).site?.name ?? '—' }}</span>
+            </template>
+            <template #catalog="{ row }">
+                <span class="text-portal-muted">{{ (row as Asset).catalog_item?.code ?? '—' }}</span>
+            </template>
+            <template #location="{ row }">
+                <span class="text-portal-muted">{{ (row as Asset).location_label ?? '—' }}</span>
+            </template>
+            <template #actions="{ row }">
+                <IconActionButton icon="building" label="Vincular cliente" @click="openLinkClient(row as Asset)" />
+                <IconActionButton icon="pencil" label="Editar activo" @click="openEdit(row as Asset)" />
+                <IconActionButton
+                    icon="trash"
+                    label="Borrar activo"
+                    variant="danger"
+                    @click="remove((row as Asset).id)"
+                />
+            </template>
+        </ConfigurableDataTable>
 
         <AppModal
             :open="showForm && canWrite"

@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum NoahPermission: string
+enum PhoenixPermission: string
 {
     case CatalogManage = 'catalog.manage';
     case CatalogView = 'catalog.view';
@@ -33,6 +33,9 @@ enum NoahPermission: string
     case PortalInvoicesView = 'portal.invoices.view';
     case PortalInvoicesDownload = 'portal.invoices.download';
     case PortalRoutinesView = 'portal.routines.view';
+
+    case InventoryView = 'inventory.view';
+    case InventoryManage = 'inventory.manage';
 
     /**
      * @return list<string>

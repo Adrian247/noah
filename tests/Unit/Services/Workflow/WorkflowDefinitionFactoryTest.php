@@ -39,5 +39,9 @@ class WorkflowDefinitionFactoryTest extends TestCase
             fn (array $t) => ($t['trigger'] ?? '') === 'execution_submitted',
         );
         $this->assertNotEmpty($submit['notify']['enabled'] ?? false);
+        $assignment = $definition['steps']['field_execution']['assignment_notify'] ?? null;
+        $this->assertIsArray($assignment);
+        $this->assertTrue((bool) ($assignment['enabled'] ?? false));
+        $this->assertContains('executing_technician', $assignment['recipients'] ?? []);
     }
 }

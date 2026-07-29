@@ -80,7 +80,7 @@ class CatalogItemController extends Controller
     /**
      * @param  array<string, mixed>  $specifications
      */
-    private function validateSpecificationsForType(int $equipmentTypeId, array $specifications, Request $request): void
+    private function validateSpecificationsForType(int $equipmentTypeId, array $specifications): void
     {
         $type = EquipmentType::query()->findOrFail($equipmentTypeId);
         $capture = app(CatalogTypeFormCapture::class);

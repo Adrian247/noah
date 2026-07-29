@@ -25,9 +25,9 @@ class ExecutionEvidenceController extends Controller
             'file' => ['required', 'file', 'max:10240', 'mimes:jpg,jpeg,png,webp'],
         ]);
 
-        $diskName = config('noah.evidence.disk', 'evidence');
+        $diskName = config('phoenix.evidence.disk', 'evidence');
         $file = $request->file('file');
-        $path = config('noah.evidence.path_prefix').'/'.$routine->id.'/'.Str::uuid().'.'.$file->getClientOriginalExtension();
+        $path = config('phoenix.evidence.path_prefix').'/'.$routine->id.'/'.Str::uuid().'.'.$file->getClientOriginalExtension();
 
         $disk = Storage::disk($diskName);
         $prefix = dirname($path);

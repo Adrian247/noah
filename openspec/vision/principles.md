@@ -1,4 +1,4 @@
-# Principios — Noah
+# Principios — Phoenix
 
 ## Plataforma
 
@@ -15,7 +15,7 @@
 
 ## Producto
 
-8. **Noah es greenfield** — Sin asumir datos ni código de otros sistemas.
+8. **Phoenix es greenfield** — Sin asumir datos ni código de otros sistemas.
 9. **Mantenimiento es el primer dominio**, no el límite del producto.
 10. **Offline-first en móvil** — La red mejora la experiencia; no es requisito para guardar trabajo.
 

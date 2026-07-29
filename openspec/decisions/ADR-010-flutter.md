@@ -10,7 +10,7 @@ Android e iOS con una sola base de código; offline con SQLite.
 
 ## Decisión
 
-Flutter para app de campo; API REST + sync de Noah.
+Flutter para app de campo; API REST + sync de Phoenix.
 
 ## Alternativas
 

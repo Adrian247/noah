@@ -1,7 +1,7 @@
 # Ficha Técnica y Cotización de Refacciones: Mitsubishi L200 2018 (México)
 
 > Copia de referencia para change **037** (origen: ficha compartida por producto).  
-> Uso en Noah: `CatalogItem.specifications` (JSON), insumos demo (`supply_items`) y texto de ayuda en catálogo.
+> Uso en Phoenix: `CatalogItem.specifications` (JSON), insumos demo (`supply_items`) y texto de ayuda en catálogo.
 
 ## 1. Especificaciones Técnicas
 
@@ -41,7 +41,7 @@ La Mitsubishi L200 2018 comercializada en México es una pickup mediana sumament
 
 ## 2. Lista de Refacciones y Precios en México
 
-Estimación de precios para repuestos comunes de mantenimiento en el mercado mexicano (MXN). En Noah: `supply_items.standard_cost` (valor medio o mínimo del rango).
+Estimación de precios para repuestos comunes de mantenimiento en el mercado mexicano (MXN). En Phoenix: `supply_items.standard_cost` (valor medio o mínimo del rango).
 
 | Refacción | Marca / Modelo Recomendado | Precio Estimado (MXN) | SKU sugerido (demo) |
 | :--- | :--- | :--- | :--- |
@@ -54,7 +54,7 @@ Estimación de precios para repuestos comunes de mantenimiento en el mercado mex
 
 ---
 
-## 3. Mapeo a entidades Noah (037)
+## 3. Mapeo a entidades Phoenix (037)
 
 ### CatalogItem (equipo plantilla)
 

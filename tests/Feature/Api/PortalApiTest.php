@@ -16,23 +16,23 @@ class PortalApiTest extends TestCase
     public function test_admin_can_update_portal_settings(): void
     {
         $this->seed();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
         $company = Company::query()->first();
 
         Sanctum::actingAs($admin);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
             ->putJson('/api/v1/portal/settings', [
-                'contact_email' => 'nuevo@noah.local',
+                'contact_email' => 'nuevo@pyro-systems.com',
                 'help_title' => 'Soporte',
             ])
             ->assertOk()
-            ->assertJsonPath('data.contact_email', 'nuevo@noah.local')
+            ->assertJsonPath('data.contact_email', 'nuevo@pyro-systems.com')
             ->assertJsonPath('data.help_title', 'Soporte');
 
         $this->assertDatabaseHas('portal_settings', [
             'id' => 1,
-            'contact_email' => 'nuevo@noah.local',
+            'contact_email' => 'nuevo@pyro-systems.com',
             'help_title' => 'Soporte',
         ]);
     }
@@ -49,13 +49,13 @@ class PortalApiTest extends TestCase
                     'contact_email',
                 ],
             ])
-            ->assertJsonPath('data.service_title', 'Mantenimiento que no se detiene');
+            ->assertJsonPath('data.service_title', 'Gestión técnica clara para operaciones industriales');
     }
 
     public function test_non_admin_cannot_update_portal_settings(): void
     {
         $this->seed();
-        $tech = User::query()->where('email', 'tecnico@noah.local')->first();
+        $tech = User::query()->where('email', 'misael.palos@mein-company.com')->first();
         $company = Company::query()->first();
 
         Sanctum::actingAs($tech);

@@ -25,19 +25,19 @@ class CompanyUsersApiTest extends TestCase
     public function test_admin_can_list_company_users(): void
     {
         $company = Company::query()->first();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
         Sanctum::actingAs($admin);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
             ->getJson('/api/v1/company/users')
             ->assertOk()
-            ->assertJsonStructure(['data' => [['id', 'email', 'role', 'is_active']]]);
+            ->assertJsonStructure(['data' => [['id', 'email', 'role', 'is_active', 'avatar_url']]]);
     }
 
     public function test_technician_without_clients_permission_cannot_list_clients(): void
     {
         $company = Company::query()->first();
-        $technician = User::query()->where('email', 'tecnico@noah.local')->first();
+        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
         Sanctum::actingAs($technician);
 
         $me = $this->withHeader('X-Company-Id', (string) $company->id)
@@ -55,8 +55,8 @@ class CompanyUsersApiTest extends TestCase
     public function test_modules_payload_is_rejected(): void
     {
         $company = Company::query()->first();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
-        $technician = User::query()->where('email', 'tecnico@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
+        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
         Sanctum::actingAs($admin);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
@@ -70,7 +70,7 @@ class CompanyUsersApiTest extends TestCase
     public function test_supervisor_cannot_manage_users(): void
     {
         $company = Company::query()->first();
-        $supervisor = User::query()->where('email', 'supervisor@noah.local')->first();
+        $supervisor = User::query()->where('email', 'claudio.rodriguez@mein-company.com')->first();
         Sanctum::actingAs($supervisor);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
@@ -81,8 +81,8 @@ class CompanyUsersApiTest extends TestCase
     public function test_admin_can_grant_extra_permission_to_technician(): void
     {
         $company = Company::query()->first();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
-        $technician = User::query()->where('email', 'tecnico@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
+        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
         Sanctum::actingAs($admin);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
@@ -102,8 +102,8 @@ class CompanyUsersApiTest extends TestCase
     public function test_cannot_grant_users_manage_to_non_administrator(): void
     {
         $company = Company::query()->first();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
-        $technician = User::query()->where('email', 'tecnico@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
+        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
         Sanctum::actingAs($admin);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
@@ -116,8 +116,8 @@ class CompanyUsersApiTest extends TestCase
     public function test_admin_can_change_user_role(): void
     {
         $company = Company::query()->first();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
-        $technician = User::query()->where('email', 'tecnico@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
+        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
         Sanctum::actingAs($admin);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
@@ -137,19 +137,19 @@ class CompanyUsersApiTest extends TestCase
     public function test_admin_can_add_user_by_email(): void
     {
         $company = Company::query()->first();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
         Sanctum::actingAs($admin);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
             ->postJson('/api/v1/company/users', [
-                'email' => 'nuevo@noah.local',
+                'email' => 'nuevo@pyro-systems.com',
                 'name' => 'Usuario Nuevo',
                 'role' => MembershipRole::Technician->value,
             ])
             ->assertCreated()
-            ->assertJsonPath('data.email', 'nuevo@noah.local');
+            ->assertJsonPath('data.email', 'nuevo@pyro-systems.com');
 
-        $user = User::query()->where('email', 'nuevo@noah.local')->first();
+        $user = User::query()->where('email', 'nuevo@pyro-systems.com')->first();
         $this->assertNotNull($user);
         $this->assertDatabaseHas('company_memberships', [
             'company_id' => $company->id,
@@ -162,8 +162,8 @@ class CompanyUsersApiTest extends TestCase
     public function test_login_includes_permissions_for_company(): void
     {
         $this->postJson('/api/v1/auth/login', [
-            'email' => 'admin@noah.local',
-            'password' => config('noah.demo_password'),
+            'email' => 'admin@pyro-systems.com',
+            'password' => config('phoenix.demo_root_password'),
         ])
             ->assertOk()
             ->assertJsonStructure(['companies' => [['permissions']]]);

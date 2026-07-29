@@ -3,12 +3,15 @@ import { onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { api } from '@/api/client';
 import { useToast } from '@/composables/useToast';
+import PageHeader from '@/components/ui/PageHeader.vue';
+import GlassCard from '@/components/ui/GlassCard.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
+import ClientPortalEmptyState from '@/components/portal/ClientPortalEmptyState.vue';
 
 type RoutineRow = {
     id: number;
     status: string;
-    asset?: { tag: string; serial_number?: string };
+    asset?: { tag: string; serial_number?: string | null };
     routine_type?: { name: string };
     invoice?: { id: number; status: string } | null;
 };
@@ -20,13 +23,9 @@ const loading = ref(true);
 async function load() {
     loading.value = true;
     try {
-        const res = await api<{ data: RoutineRow[] } | { data: { data: RoutineRow[] } }>('/portal/routines');
-        const payload = res as { data?: RoutineRow[] | { data: RoutineRow[] } };
-        if (Array.isArray(payload.data)) {
-            items.value = payload.data;
-        } else if (payload.data && Array.isArray((payload.data as { data: RoutineRow[] }).data)) {
-            items.value = (payload.data as { data: RoutineRow[] }).data;
-        }
+        const res = await api<{ data: RoutineRow[] }>('/portal/routines');
+        const payload = res as { data?: RoutineRow[] };
+        items.value = Array.isArray(payload.data) ? payload.data : [];
     } catch (e) {
         toast.error((e as Error).message);
     } finally {
@@ -38,21 +37,55 @@ onMounted(load);
 </script>
 
 <template>
-    <div class="space-y-4">
-        <h2 class="text-xl font-semibold">Rutinas de mis equipos</h2>
-        <p class="text-sm text-slate-600">Historial según equipos vinculados a tu cuenta por número de serie.</p>
-        <p v-if="loading" class="text-slate-500">Cargando…</p>
-        <ul v-else class="divide-y rounded-xl border border-slate-200 bg-white">
-            <li v-for="r in items" :key="r.id" class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
-                <div>
-                    <RouterLink class="font-medium text-amber-800 underline" :to="`/portal/routines/${r.id}`">
-                        Rutina #{{ r.id }} — {{ r.routine_type?.name }}
-                    </RouterLink>
-                    <p class="text-slate-500">Activo {{ r.asset?.tag }} · Serie {{ r.asset?.serial_number }}</p>
-                </div>
-                <StatusBadge :status="r.status" />
-            </li>
-            <li v-if="!items.length" class="px-4 py-6 text-center text-slate-500">Sin rutinas visibles.</li>
-        </ul>
+    <div class="client-portal-page">
+        <PageHeader
+            title="Servicios en tus equipos"
+            subtitle="Historial de rutinas de mantenimiento e inspección en activos vinculados a tu cuenta. Abre cada servicio para ver trazabilidad, informes y facturación."
+        />
+
+        <GlassCard v-if="loading" padding="lg">
+            <p class="text-portal-muted animate-pulse text-sm">Cargando servicios…</p>
+        </GlassCard>
+
+        <div v-else-if="items.length" class="client-portal-routine-grid">
+            <RouterLink
+                v-for="r in items"
+                :key="r.id"
+                :to="`/portal/routines/${r.id}`"
+                class="client-portal-routine-card md-ripple-hover"
+            >
+                <GlassCard padding="lg" hover class="h-full">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <span class="client-portal-id-badge">Rutina #{{ r.id }}</span>
+                            <p class="text-portal-heading mt-2 text-lg font-semibold tracking-tight">
+                                {{ r.routine_type?.name ?? 'Servicio técnico' }}
+                            </p>
+                            <p class="text-portal-muted mt-1 text-sm">
+                                Activo <strong class="text-portal-heading">{{ r.asset?.tag ?? '—' }}</strong>
+                                <span v-if="r.asset?.serial_number">
+                                    · Serie {{ r.asset.serial_number }}
+                                </span>
+                            </p>
+                        </div>
+                        <StatusBadge :status="r.status" />
+                    </div>
+                    <p
+                        v-if="r.invoice"
+                        class="text-portal-muted mt-4 text-xs"
+                    >
+                        Factura disponible en portal
+                    </p>
+                    <p class="text-portal-link mt-4 text-sm font-medium">Ver detalle y documentos →</p>
+                </GlassCard>
+            </RouterLink>
+        </div>
+
+        <GlassCard v-else padding="lg">
+            <ClientPortalEmptyState
+                title="Sin servicios visibles"
+                description="No hay rutinas asociadas a equipos de tu organización. Si esperabas ver historial, confirma con tu proveedor la asignación por número de serie."
+            />
+        </GlassCard>
     </div>
 </template>

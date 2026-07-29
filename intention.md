@@ -1,6 +1,6 @@
 # Intención del proyecto
 
-La definición vigente de **Noah** está en **[openspec/](openspec/README.md)**.
+La definición vigente de **Phoenix** está en **[openspec/](openspec/README.md)**.
 
 | Tema | Documento |
 |------|-----------|

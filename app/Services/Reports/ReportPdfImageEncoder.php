@@ -87,7 +87,7 @@ final class ReportPdfImageEncoder
 
     private static function writeTemp(string $binary): string
     {
-        $path = tempnam(sys_get_temp_dir(), 'noah_img_');
+        $path = tempnam(sys_get_temp_dir(), 'phoenix_img_');
         if ($path === false) {
             throw new \RuntimeException('No temp file for image conversion.');
         }

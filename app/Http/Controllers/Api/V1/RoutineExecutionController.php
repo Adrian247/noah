@@ -9,9 +9,12 @@ use App\Models\SupplyItem;
 use App\Services\AI\AiGateway;
 use App\Services\Audit\AuditLogger;
 use App\Services\Forms\FormResponseValidator;
+use App\Services\Inventory\InventoryStockService;
 use App\Services\Workflow\WorkflowRuntime;
+use App\Support\InventoryTaxonomy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class RoutineExecutionController extends Controller
 {
@@ -22,6 +25,7 @@ class RoutineExecutionController extends Controller
         WorkflowRuntime $workflow,
         AuditLogger $audit,
         FormResponseValidator $formValidator,
+        InventoryStockService $stock,
     ): JsonResponse {
         $data = $request->validate([
             'responses' => ['nullable', 'array'],
@@ -31,6 +35,7 @@ class RoutineExecutionController extends Controller
             'consumptions.*.supply_item_id' => ['required', 'integer', 'exists:supply_items,id'],
             'consumptions.*.quantity' => ['required', 'numeric', 'min:0.0001'],
             'consumptions.*.unit_cost' => ['nullable', 'numeric', 'min:0'],
+            'consumptions.*.usage_type' => ['nullable', 'string', Rule::in(InventoryTaxonomy::consumptionUsageTypeValues())],
         ]);
 
         $routine->load('routineType.formVersion');
@@ -54,8 +59,21 @@ class RoutineExecutionController extends Controller
 
         foreach ($data['consumptions'] ?? [] as $line) {
             $supply = SupplyItem::query()->findOrFail($line['supply_item_id']);
+            $usageType = $line['usage_type'] ?? 'out';
+
+            $movement = $stock->recordMovement($supply, [
+                'movement_type' => $usageType,
+                'quantity' => (float) $line['quantity'],
+                'routine_id' => $routine->id,
+                'routine_execution_id' => $execution->id,
+                'reference' => 'routine-execution',
+                'recorded_by' => $request->user()->id,
+            ]);
+
             $execution->consumptions()->create([
                 'supply_item_id' => $supply->id,
+                'usage_type' => $usageType,
+                'inventory_movement_id' => $movement->id,
                 'quantity' => $line['quantity'],
                 'unit_cost' => $line['unit_cost'] ?? $supply->standard_cost ?? 0,
             ]);

@@ -3,6 +3,7 @@ export type StepMeta = {
     label: string;
     assigned_role?: string;
     task?: string;
+    assignment_notify?: Record<string, unknown>;
     email?: {
         roles?: string[];
         template?: string;
@@ -144,7 +145,7 @@ export function createEmailStep(): { id: string; meta: StepMeta } {
             email: {
                 roles: ['supervisor', 'administrator'],
                 template: 'routine_pending_validation',
-                subject: 'Noah — Notificación de rutina',
+                subject: 'Phoenix — Notificación de rutina',
                 message: 'Hay una rutina que requiere tu atención.',
             },
         },

@@ -95,7 +95,38 @@ class WorkflowRuntime
 
         AuditCorrelation::set($correlationId);
 
+        $this->notifyAssignmentIfConfigured($routine, $definition->definition ?? []);
+
         return $instance;
+    }
+
+    /**
+     * @param  array<string, mixed>  $definitionPayload
+     */
+    private function notifyAssignmentIfConfigured(Routine $routine, array $definitionPayload): void
+    {
+        $routine->loadMissing(['assignee', 'creator']);
+        if ($routine->assigned_to === null || $routine->assignee === null) {
+            return;
+        }
+
+        $notify = Arr::get($definitionPayload, 'steps.'.WorkflowBlockCompiler::ROUTINE_STEP.'.assignment_notify');
+        if (! is_array($notify) || empty($notify['enabled'])) {
+            $graphNode = collect(Arr::get($definitionPayload, 'meta.block_graph.nodes', []))
+                ->first(fn ($node) => is_array($node) && ($node['id'] ?? null) === WorkflowBlockCompiler::ROUTINE_STEP);
+            $notify = is_array($graphNode['assignment_notify'] ?? null) ? $graphNode['assignment_notify'] : null;
+        }
+
+        if (! is_array($notify) || empty($notify['enabled'])) {
+            return;
+        }
+
+        $actor = $routine->creator ?? $routine->assignee;
+        if ($actor === null) {
+            return;
+        }
+
+        app(WorkflowStepEmailNotifier::class)->sendForTransitionNotify($routine, $notify, $actor);
     }
 
     public function onExecutionSubmitted(Routine $routine, User $actor, ?AuditLogger $audit = null): void

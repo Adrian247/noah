@@ -1,5 +1,5 @@
-const TOKEN_KEY = 'noah_token';
-const COMPANY_KEY = 'noah_company_id';
+const TOKEN_KEY = 'phoenix_token';
+const COMPANY_KEY = 'phoenix_company_id';
 
 export function getToken(): string | null {
     return localStorage.getItem(TOKEN_KEY);
@@ -61,7 +61,24 @@ export async function api<T>(
     const res = await fetch(`/api/v1${path}`, { ...options, headers });
 
     const text = await res.text();
-    const data = text ? JSON.parse(text) : null;
+    let data: unknown = null;
+    if (text) {
+        const trimmed = text.trim();
+        if (trimmed.startsWith('<')) {
+            const hint =
+                res.status === 404
+                    ? 'El servidor devolvió HTML (ruta no encontrada). Revisa la URL de la API.'
+                    : 'El servidor devolvió HTML en lugar de JSON. ¿Sesión expirada o error del servidor?';
+            throw new ApiError(hint, res.status, { raw: trimmed.slice(0, 200) });
+        }
+        try {
+            data = JSON.parse(text) as unknown;
+        } catch {
+            throw new ApiError('Respuesta no válida del servidor (JSON corrupto).', res.status, {
+                raw: trimmed.slice(0, 200),
+            });
+        }
+    }
 
     if (!res.ok) {
         const message = formatApiErrorMessage(data, res.statusText);

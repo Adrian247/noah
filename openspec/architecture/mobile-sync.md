@@ -1,4 +1,4 @@
-# Mobile Sync — Noah
+# Mobile Sync — Phoenix
 
 La aplicación móvil será offline-first (ADR-004).
 

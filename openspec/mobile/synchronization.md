@@ -1,4 +1,4 @@
-# Sincronización — Noah (móvil)
+# Sincronización — Phoenix (móvil)
 
 Arquitectura servidor: [mobile-sync.md](../architecture/mobile-sync.md). Offline: [offline.md](offline.md).
 

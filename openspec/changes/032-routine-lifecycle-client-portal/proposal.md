@@ -139,7 +139,7 @@ La emisión (`POST …/issue`) debe persistir flags elegidos en UI de prefactura
 
 ### Fase E — Rutina demo bajo demanda
 
-- Eliminar creación de `Routine` en `NoahDemoSeeder` (mantener tipos, activo, workflow).
+- Eliminar creación de `Routine` en `PhoenixDemoSeeder` (mantener tipos, activo, workflow).
 - `POST /routines/demo` (admin): rutina nueva con respuestas fake, consumos opcionales, imágenes placeholder (generadas en storage local).
 - UI «Generar rutina demo» en `RoutinesPage` solo si administrador.
 
@@ -153,7 +153,7 @@ La emisión (`POST …/issue`) debe persistir flags elegidos en UI de prefactura
 | **Email** | Si `notify_client_on_issue` y sin `billing_email`, bloquear emisión o warning explícito |
 | **PDF cliente** | Misma regla que factura: solo si `client_portal_visible` o envío explícito |
 | **Demo** | Marcar rutinas demo (`routines.is_demo`) para excluir de métricas dashboard opcional |
-| **Migración** | Comando `noah:migrate-workflow-definitions-v2` para empresas con definición v1 |
+| **Migración** | Comando `phoenix:migrate-workflow-definitions-v2` para empresas con definición v1 |
 
 ## Fuera de alcance (esta propuesta)
 

@@ -26,16 +26,22 @@ class WorkflowStepMail extends Mailable
 
     public function content(): Content
     {
+        $this->routine->loadMissing(['asset', 'routineType']);
+
         $url = rtrim(config('app.url'), '/').'/app/routines/'.$this->routine->id;
+        $bodyText = trim(html_entity_decode(strip_tags($this->mailMessage), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
 
         return new Content(
+            html: 'mail.workflow-step-html',
             text: 'mail.workflow-step',
             with: [
                 'routineId' => $this->routine->id,
                 'typeName' => $this->routine->routineType?->name ?? 'Rutina',
                 'assetTag' => $this->routine->asset?->tag ?? '—',
                 'body' => $this->mailMessage,
+                'bodyText' => $bodyText,
                 'url' => $url,
+                'mailSubject' => $this->mailSubject,
             ],
         );
     }

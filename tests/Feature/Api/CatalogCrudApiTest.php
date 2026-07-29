@@ -16,7 +16,7 @@ class CatalogCrudApiTest extends TestCase
     public function test_update_catalog_item(): void
     {
         $this->seed();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
         $company = Company::query()->first();
         $item = CatalogItem::query()->first();
         $token = $admin->createToken('test')->plainTextToken;

@@ -1,8 +1,8 @@
 [
     {
         "id": "01-welcome",
-        "title": "Bienvenido a Noah",
-        "text": "Bienvenido a Noah. Este recorrido se adapta a los módulos que tu perfil puede usar. Avanza con Siguiente, silencia la voz si lo prefieres u omite cuando quieras."
+        "title": "Bienvenido a Phoenix",
+        "text": "Bienvenido a Phoenix, de Pyro Systems. Este recorrido se adapta a los módulos que tu perfil puede usar. Avanza con Siguiente, silencia la voz si lo prefieres u omite cuando quieras."
     },
     {
         "id": "02-dashboard",
@@ -12,7 +12,12 @@
     {
         "id": "03-navigation",
         "title": "Menú principal",
-        "text": "El menú lateral agrupa operación, catálogos, diseño, facturación y administración. Solo aparecen las herramientas autorizadas para tu usuario."
+        "text": "El menú lateral agrupa operación, catálogos, diseño, facturación y administración. Solo ves los módulos autorizados para tu rol en la empresa activa."
+    },
+    {
+        "id": "04-workspace",
+        "title": "Empresa activa",
+        "text": "Cambia de tenant desde aquí. Si eres administrador de plataforma, las empresas sin membresía aparecen como «plataforma» y cada selección queda registrada en auditoría."
     },
     {
         "id": "10-routines",
@@ -67,7 +72,7 @@
     {
         "id": "23-design-workflows",
         "title": "Workflows",
-        "text": "Workflows modelan validación, rechazo, notificaciones y pasos de facturación después de la ejecución en campo."
+        "text": "Solo el administrador de plataforma edita workflows aquí. Modelan validación, rechazo, correos y pasos de facturación tras la ejecución en campo."
     },
     {
         "id": "30-billing",
@@ -82,16 +87,21 @@
     {
         "id": "41-company-users",
         "title": "Usuarios",
-        "text": "Usuarios de empresa: roles, permisos extra y acceso a módulos derivado del perfil de cada persona."
+        "text": "Invita personas a la empresa, asigna rol y permisos extra. Los nuevos usuarios pueden recibir correo de invitación con acceso inicial."
     },
     {
         "id": "42-platform-roles",
         "title": "Roles de plataforma",
-        "text": "Como administrador de plataforma puedes revisar la plantilla global de permisos por rol antes de desplegarla en empresas."
+        "text": "Plantilla global de permisos por rol operativo. Los cambios aplican al desplegar permisos en cada tenant."
+    },
+    {
+        "id": "43-platform-tenants",
+        "title": "Clientes de plataforma",
+        "text": "Alta y administración de empresas tenant: activar o desactivar clientes, usuarios iniciales y aislamiento de datos entre organizaciones."
     },
     {
         "id": "99-finish",
         "title": "Listo",
-        "text": "Recorrido completado para tu perfil. Repite el tour desde el inicio cuando quieras; solo verás los módulos que tienes habilitados."
+        "text": "Recorrido completado para tu perfil en Phoenix. Repite el tour desde el inicio cuando quieras; verás solo los módulos y pasos de plataforma que te correspondan."
     }
 ]

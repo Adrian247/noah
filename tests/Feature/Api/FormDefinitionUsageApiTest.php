@@ -19,7 +19,7 @@ class FormDefinitionUsageApiTest extends TestCase
     public function test_create_form_requires_usage_and_index_can_filter(): void
     {
         $this->seed();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
         $company = Company::query()->first();
         $headers = ['X-Company-Id' => (string) $company->id];
         $token = $admin->createToken('test')->plainTextToken;
@@ -45,7 +45,7 @@ class FormDefinitionUsageApiTest extends TestCase
     public function test_delete_form_blocked_when_linked_to_equipment_type(): void
     {
         $this->seed();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
         $company = Company::query()->first();
         $headers = ['X-Company-Id' => (string) $company->id];
         $token = $admin->createToken('test')->plainTextToken;
@@ -88,7 +88,7 @@ class FormDefinitionUsageApiTest extends TestCase
     public function test_equipment_type_rejects_routine_form(): void
     {
         $this->seed();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
         $company = Company::query()->first();
         $headers = ['X-Company-Id' => (string) $company->id];
         $token = $admin->createToken('test')->plainTextToken;
@@ -111,7 +111,7 @@ class FormDefinitionUsageApiTest extends TestCase
     public function test_routine_type_rejects_equipment_form_version(): void
     {
         $this->seed();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
         $company = Company::query()->first();
         $headers = ['X-Company-Id' => (string) $company->id];
         $token = $admin->createToken('test')->plainTextToken;

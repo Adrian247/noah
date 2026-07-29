@@ -22,6 +22,7 @@ import {
     TRIGGER_OPTIONS,
     triggerLabel,
 } from '@/lib/workflowFlowMapper';
+import IconActionButton from '@/components/ui/IconActionButton.vue';
 
 const props = defineProps<{
     definition: WorkflowDefinition;
@@ -315,14 +316,14 @@ function nodeClass(kind: string): string {
                     />
                     <p class="text-portal-muted text-xs">Destinatarios: supervisores y administradores.</p>
                 </template>
-                <button
+                <IconActionButton
                     v-if="editable && selectedNodeId !== definition.initial_step && selectedNodeId !== 'complete'"
-                    type="button"
-                    class="mt-3 text-xs text-red-500 underline"
+                    icon="trash"
+                    label="Eliminar paso"
+                    variant="danger"
+                    class="mt-3"
                     @click="removeSelectedNode"
-                >
-                    Eliminar paso
-                </button>
+                />
             </template>
             <p v-else class="text-portal-muted text-xs">Selecciona un nodo o una flecha del diagrama.</p>
         </aside>

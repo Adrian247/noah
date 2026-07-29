@@ -12,7 +12,11 @@ class PlatformAdmin
             return false;
         }
 
-        $allowed = config('noah.platform_admin_emails', []);
+        if ($user->is_platform_admin) {
+            return true;
+        }
+
+        $allowed = config('phoenix.platform_admin_emails', []);
 
         if (! is_array($allowed) || $allowed === []) {
             return false;
@@ -27,5 +31,16 @@ class PlatformAdmin
         }
 
         return false;
+    }
+
+    public static function syncFlagFromConfig(User $user): void
+    {
+        if (! self::isPlatformAdmin($user)) {
+            return;
+        }
+
+        if (! $user->is_platform_admin) {
+            $user->forceFill(['is_platform_admin' => true])->save();
+        }
     }
 }

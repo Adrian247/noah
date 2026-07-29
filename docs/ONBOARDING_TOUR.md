@@ -1,41 +1,49 @@
 # Tour de producto (voz precargada)
 
-El tour reproduce archivos en `public/audio/onboarding/*.mp3`. La aplicación **no** llama a ElevenLabs en runtime.
+El tour reproduce archivos en `public/audio/onboarding/` (`.mp3` con ElevenLabs o `.m4a` con voz local en macOS). La aplicación **no** llama a ElevenLabs en runtime.
 
 ## Regenerar audio (solo al cambiar el guion)
 
 1. Edita `resources/onboarding/narration.es.json`.
-2. Define la clave en `.env` (gitignored) o exporta en el shell:
+2. En `.env` (gitignored), define tu clave de [ElevenLabs](https://elevenlabs.io/):
 
 ```bash
-# .env
 ELEVENLABS_API_KEY=tu_clave
+# opcional: otra voz / modelo
+# ELEVENLABS_VOICE_ID=pFZP5JQG7iQjIQuC4Bku
+# ELEVENLABS_MODEL_ID=eleven_multilingual_v2
 ```
 
-El script `generate-onboarding-audio.mjs` lee automáticamente variables `ELEVENLABS_*` desde `.env`.
+El script lee automáticamente variables `ELEVENLABS_*` desde `.env`.
+
+3. Genera **todos** los MP3 con ElevenLabs (sobrescribe archivos existentes):
 
 ```bash
-# opcional: export ELEVENLABS_VOICE_ID="..."
-# forzar reemplazo: ONBOARDING_AUDIO_FORCE=1
-npm run onboarding:audio
+npm run onboarding:audio:elevenlabs
 ```
 
-3. Verifica los MP3 y commitea `public/audio/onboarding/` junto con el JSON.
+Alternativa manual: `ONBOARDING_AUDIO_FORCE=1 npm run onboarding:audio` (usa ElevenLabs si hay clave; en macOS sin clave cae en `say`).
+
+4. Verifica `public/audio/onboarding/*.mp3` y commitea junto con el JSON.
 
 Variables opcionales:
 
 | Variable | Uso |
 |----------|-----|
-| `ELEVENLABS_API_KEY` | Obligatoria para el script |
+| `ELEVENLABS_API_KEY` | Obligatoria en Linux/CI; en macOS opcional (`say` + `afconvert`) |
 | `ELEVENLABS_VOICE_ID` | Voz (default: voz multilingüe en el script) |
 | `ELEVENLABS_MODEL_ID` | Default `eleven_multilingual_v2` |
-| `ONBOARDING_AUDIO_FORCE` | `1` para sobrescribir MP3 existentes |
+| `ONBOARDING_AUDIO_FORCE` | `1` para sobrescribir audio existente |
+| `ONBOARDING_AUDIO_PROVIDER` | `elevenlabs` (script `onboarding:audio:elevenlabs`) o `local` (`say` en macOS) |
 
 ## Uso en la app
 
 - Primera visita al **Inicio**: invitación a iniciar el tour.
 - Botón **Ver tour guiado** en el dashboard.
-El tour filtra pasos según `company.modules` (misma proyección que el menú). Clave `localStorage`: `noah_product_tour_v2_completed`.
+El tour filtra pasos según `company.modules` y si eres administrador de plataforma (workflows, tenants, selector de empresa). Clave `localStorage`: `phoenix_product_tour_v3_completed`.
+
+- Sin `ELEVENLABS_API_KEY` en macOS, el script usa `say` y escribe `.m4a` (o `.mp3` si tienes `ffmpeg`). Incluye narración para todos los pasos del guion v3, p. ej. `04-workspace` y `43-platform-tenants`.
+- El reproductor intenta `.mp3` y luego `.m4a`; si faltan ambos, usa **síntesis de voz del navegador** (mismo texto del guion).
 
 ## Seguridad
 

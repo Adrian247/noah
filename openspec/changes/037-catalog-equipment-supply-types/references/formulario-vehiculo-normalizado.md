@@ -5,7 +5,7 @@
 Definir un **único** `FormDefinition` (slug sugerido: `inspeccion-vehiculo-v1`) asociado al tipo de equipo `vehiculo`, usable en tipos de rutina de mantenimiento vehicular. Se **normaliza** a partir de:
 
 - Ficha L200 2018: sistemas relevantes (motorización, frenos disco/tambor, suspensión, capacidades, tanque).
-- Formulario demo existente (`revision-mayor-vehiculo-premium`): patrones Noah (secciones, `options` con catálogo estado, fotos, campos numéricos).
+- Formulario demo existente (`revision-mayor-vehiculo-premium`): patrones Phoenix (secciones, `options` con catálogo estado, fotos, campos numéricos).
 
 **No** es copia 1:1 del demo premium ni del MD; es un subconjunto **mantenible** para el tipo Vehículo.
 

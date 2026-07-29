@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class RoutineFormFieldUploadController extends Controller
 {
@@ -26,9 +27,9 @@ class RoutineFormFieldUploadController extends Controller
             'file' => ['required', 'file', 'max:'.$maxKb, 'mimes:'.$mimes],
         ]);
 
-        $diskName = config('noah.evidence.disk', 'evidence');
+        $diskName = config('phoenix.evidence.disk', 'evidence');
         $file = $request->file('file');
-        $path = config('noah.evidence.path_prefix').'/'.$routine->id.'/fields/'.Str::uuid().'.'.$file->getClientOriginalExtension();
+        $path = config('phoenix.evidence.path_prefix').'/'.$routine->id.'/fields/'.Str::uuid().'.'.$file->getClientOriginalExtension();
 
         $disk = Storage::disk($diskName);
         $dir = dirname($path);
@@ -50,5 +51,41 @@ class RoutineFormFieldUploadController extends Controller
                 'original_name' => $file->getClientOriginalName(),
             ],
         ], 201);
+    }
+
+    /**
+     * Sirve una imagen de campo de formulario asociada a la rutina (vista previa en SPA).
+     */
+    public function show(Request $request, Routine $routine): StreamedResponse|JsonResponse
+    {
+        $validated = $request->validate([
+            'path' => ['required', 'string', 'max:512'],
+        ]);
+
+        $path = str_replace('\\', '/', $validated['path']);
+        if (str_contains($path, '..') || str_starts_with($path, '/')) {
+            return response()->json(['message' => 'Ruta de imagen inválida.'], 422);
+        }
+
+        $prefix = trim((string) config('phoenix.evidence.path_prefix'), '/').'/'.$routine->id.'/';
+        if (! str_starts_with($path, $prefix)) {
+            return response()->json(['message' => 'La imagen no pertenece a esta rutina.'], 403);
+        }
+
+        $diskName = config('phoenix.evidence.disk', 'evidence');
+        $disk = Storage::disk($diskName);
+        if (! $disk->exists($path)) {
+            return response()->json(['message' => 'Archivo no encontrado.'], 404);
+        }
+
+        $mime = $disk->mimeType($path) ?: 'image/jpeg';
+
+        return response()->stream(function () use ($disk, $path): void {
+            echo $disk->get($path);
+        }, 200, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="'.basename($path).'"',
+            'Cache-Control' => 'private, max-age=300',
+        ]);
     }
 }

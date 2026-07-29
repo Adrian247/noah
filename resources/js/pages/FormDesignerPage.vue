@@ -7,6 +7,7 @@ import { useToast } from '@/composables/useToast';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
 import MaterialSelect from '@/components/ui/MaterialSelect.vue';
+import IconActionButton from '@/components/ui/IconActionButton.vue';
 import { formUsageLabel } from '@/lib/formUsage';
 
 type Field = {
@@ -302,14 +303,15 @@ onMounted(load);
                             </label>
                         </template>
                     </div>
-                    <button
-                        type="button"
-                        class="text-sm text-red-400"
-                        :disabled="!canWrite"
-                        @click="removeField(si, fi)"
-                    >
-                        Quitar campo
-                    </button>
+                    <div class="mt-2 flex justify-end">
+                        <IconActionButton
+                            icon="trash"
+                            label="Quitar campo"
+                            variant="danger"
+                            :disabled="!canWrite"
+                            @click="removeField(si, fi)"
+                        />
+                    </div>
                 </div>
                 <button type="button" class="text-portal-link text-sm underline" :disabled="!canWrite" @click="addField(si)">
                     + Campo

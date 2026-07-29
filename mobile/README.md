@@ -1,4 +1,4 @@
-# Noah — App de campo (Fase 3)
+# Phoenix — App de campo (Fase 3)
 
 El cliente móvil **Flutter offline-first** está planificado en `openspec/mobile/` y `openspec/design/mobile-field-app.md`.
 

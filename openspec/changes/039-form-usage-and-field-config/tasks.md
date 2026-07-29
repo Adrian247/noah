@@ -48,7 +48,7 @@
 
 ## Fase 7 — Demo y cierre
 
-- [x] Ajustar `NoahDemoSeeder` (usos correctos en formularios demo).
-- [x] `php artisan noah:refresh-demo` y verificar tipos L200 / rutina demo.
+- [x] Ajustar `PhoenixDemoSeeder` (usos correctos en formularios demo).
+- [x] `php artisan phoenix:refresh-demo` y verificar tipos L200 / rutina demo.
 - [ ] Actualizar `docs/IMPLEMENTATION.md` o `PRUEBAS_MANUALES.md` (crear con uso, eliminar, tipos).
 - [ ] Revisar copy del tour 038 si menciona creación de formularios (opcional).

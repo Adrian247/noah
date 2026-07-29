@@ -1,4 +1,4 @@
-# Multitenancy — Noah
+# Multitenancy — Phoenix
 
 ADR: [ADR-009](../decisions/ADR-009-multitenancy.md).
 
@@ -17,7 +17,7 @@ ADR: [ADR-009](../decisions/ADR-009-multitenancy.md).
 | Fase | Mecanismo |
 |------|-----------|
 | Piloto | Subdominio opcional o solo selector post-login |
-| SaaS | `{tenant}.noah.app` o dominio custom CNAME |
+| SaaS | `{tenant}.phoenix.app` o dominio custom CNAME |
 
 ## Límites por plan (futuro)
 

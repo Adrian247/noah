@@ -6,8 +6,11 @@ import { useToast } from '@/composables/useToast';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import AppModal from '@/components/ui/AppModal.vue';
 import AppButton from '@/components/ui/AppButton.vue';
+import IconActionButton from '@/components/ui/IconActionButton.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
 import UserAvatar from '@/components/ui/UserAvatar.vue';
+import ConfigurableDataTable from '@/components/ui/ConfigurableDataTable.vue';
+import { tableActionsColumn, type TableColumnDef } from '@/lib/tableColumns';
 import { getToken, getCompanyId } from '@/api/client';
 
 type Client = {
@@ -25,6 +28,24 @@ type Client = {
 const { canWriteModule, isVisible } = useModuleAccess();
 const toast = useToast();
 const canEdit = computed(() => canWriteModule('clients'));
+
+const clientTableColumns = computed((): TableColumnDef[] => {
+    const cols: TableColumnDef[] = [
+        { id: 'avatar', label: '', locked: true, headerClass: 'portal-table-avatar-cell py-2', cellClass: 'portal-table-avatar-cell py-2' },
+        { id: 'code', label: 'Código', cellClass: 'text-portal-muted py-2 pr-3 font-mono text-xs' },
+        { id: 'legal', label: 'Razón social', cellClass: 'py-2 pr-3' },
+        { id: 'tax', label: 'RFC', cellClass: 'text-portal-muted py-2 pr-3' },
+        { id: 'status', label: 'Estado', cellClass: 'text-portal-muted py-2 pr-3' },
+    ];
+    if (canEdit.value) {
+        cols.push(tableActionsColumn({ headerClass: 'py-2', cellClass: 'table-row-actions py-2' }));
+    }
+    return cols;
+});
+
+function clientRowClass(row: unknown): string {
+    return !(row as Client).is_active ? 'opacity-60' : '';
+}
 const canView = computed(() => isVisible('clients'));
 
 const clients = ref<Client[]>([]);
@@ -240,63 +261,44 @@ onMounted(load);
 
         <p v-if="loading" class="text-portal-muted">Cargando…</p>
 
-        <div v-else class="portal-table-wrap">
-            <table class="portal-data-table min-w-[36rem]">
-                <thead>
-                    <tr class="border-b">
-                        <th class="w-12 py-2 pr-3" />
-                        <th class="py-2 pr-3">Código</th>
-                        <th class="py-2 pr-3">Razón social</th>
-                        <th class="py-2 pr-3">RFC</th>
-                        <th class="py-2 pr-3">Estado</th>
-                        <th v-if="canEdit" class="py-2" />
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr
-                        v-for="c in clients"
-                        :key="c.id"
-                        class="border-b"
-                        :class="!c.is_active ? 'opacity-60' : ''"
-                    >
-                        <td class="py-2 pr-3">
-                            <UserAvatar
-                                :name="c.legal_name"
-                                :avatar-url="c.logo_url"
-                                size="sm"
-                            />
-                        </td>
-                        <td class="text-portal-muted py-2 pr-3 font-mono text-xs">{{ c.code ?? '—' }}</td>
-                        <td class="py-2 pr-3">
-                            <p class="text-portal-heading font-medium">{{ c.legal_name }}</p>
-                            <p v-if="c.trade_name" class="text-portal-muted text-xs">{{ c.trade_name }}</p>
-                        </td>
-                        <td class="text-portal-muted py-2 pr-3">{{ c.tax_id ?? '—' }}</td>
-                        <td class="text-portal-muted py-2 pr-3">
-                            {{ c.is_active ? 'Activo' : 'Inactivo' }}
-                        </td>
-                        <td v-if="canEdit" class="py-2 text-right">
-                            <button
-                                type="button"
-                                class="text-portal-link mr-2"
-                                @click="openEdit(c)"
-                            >
-                                Editar
-                            </button>
-                            <button
-                                v-if="c.is_active"
-                                type="button"
-                                class="text-red-400 hover:text-red-300"
-                                @click="deactivate(c)"
-                            >
-                                Desactivar
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <p v-if="!loading && clients.length === 0" class="text-portal-muted text-sm">No hay clientes registrados.</p>
+        <ConfigurableDataTable
+            v-else
+            table-id="catalog-clients"
+            table-class="min-w-[36rem]"
+            :columns="clientTableColumns"
+            :rows="clients"
+            row-key="id"
+            :row-class="clientRowClass"
+            empty-text="No hay clientes registrados."
+        >
+            <template #avatar="{ row }">
+                <UserAvatar
+                    :name="(row as Client).legal_name"
+                    :avatar-url="(row as Client).logo_url"
+                    size="sm"
+                    image-fit="contain"
+                />
+            </template>
+            <template #code="{ row }">{{ (row as Client).code ?? '—' }}</template>
+            <template #legal="{ row }">
+                <p class="text-portal-heading font-medium">{{ (row as Client).legal_name }}</p>
+                <p v-if="(row as Client).trade_name" class="text-portal-muted text-xs">
+                    {{ (row as Client).trade_name }}
+                </p>
+            </template>
+            <template #tax="{ row }">{{ (row as Client).tax_id ?? '—' }}</template>
+            <template #status="{ row }">{{ (row as Client).is_active ? 'Activo' : 'Inactivo' }}</template>
+            <template #actions="{ row }">
+                <IconActionButton icon="pencil" label="Editar cliente" @click="openEdit(row as Client)" />
+                <IconActionButton
+                    v-if="(row as Client).is_active"
+                    icon="trash"
+                    label="Desactivar cliente"
+                    variant="danger"
+                    @click="deactivate(row as Client)"
+                />
+            </template>
+        </ConfigurableDataTable>
 
 
         <AppModal
@@ -311,11 +313,16 @@ onMounted(load);
                 <div class="mt-3 flex flex-wrap items-center gap-4">
                     <button
                         type="button"
-                        class="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                        class="overflow-hidden rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                         :disabled="logoUploading"
                         @click="openLogoPicker"
                     >
-                        <UserAvatar :name="form.legal_name || 'Cliente'" :avatar-url="displayLogoUrl" size="lg" />
+                        <UserAvatar
+                            :name="form.legal_name || 'Cliente'"
+                            :avatar-url="displayLogoUrl"
+                            size="lg"
+                            image-fit="contain"
+                        />
                     </button>
                     <div class="flex flex-col gap-2">
                         <input

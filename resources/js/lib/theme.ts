@@ -1,6 +1,6 @@
 export type AppTheme = 'dark' | 'light';
 
-const STORAGE_KEY = 'noah-theme';
+const STORAGE_KEY = 'phoenix-theme';
 
 export function getStoredTheme(): AppTheme {
     if (typeof localStorage === 'undefined') {

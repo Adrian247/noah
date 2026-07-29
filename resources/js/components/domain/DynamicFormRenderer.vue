@@ -3,6 +3,8 @@ import { computed, ref } from 'vue';
 import { getToken, getCompanyId } from '@/api/client';
 import MaterialField from '@/components/ui/MaterialField.vue';
 import MaterialSelect from '@/components/ui/MaterialSelect.vue';
+import FormFieldPhotoThumb from '@/components/domain/FormFieldPhotoThumb.vue';
+import IconActionButton from '@/components/ui/IconActionButton.vue';
 
 export type FormField = {
     key: string;
@@ -34,14 +36,19 @@ export type OptionCatalog = {
     options: { value: string; label: string; description?: string }[];
 };
 
-const props = defineProps<{
-    schema: { sections?: FormSection[] } | null | undefined;
-    disabled?: boolean;
-    routineId?: number;
-    formSettings?: FormDesignSettings | null;
-    optionCatalogs?: OptionCatalog[];
-    highlightKeys?: string[];
-}>();
+const props = withDefaults(
+    defineProps<{
+        schema: { sections?: FormSection[] } | null | undefined;
+        disabled?: boolean;
+        routineId?: number;
+        formSettings?: FormDesignSettings | null;
+        optionCatalogs?: OptionCatalog[];
+        highlightKeys?: string[];
+        /** Una sección del esquema por fila (recomendado en modales y fichas largas). */
+        stackSections?: boolean;
+    }>(),
+    { stackSections: true },
+);
 
 const model = defineModel<Record<string, unknown>>({ default: () => ({}) });
 
@@ -165,10 +172,10 @@ function fieldSpansFullWidth(field: FormField): boolean {
 
 function fieldGridClass(field: FormField): string {
     if (fieldSpansFullWidth(field)) {
-        return 'col-span-2';
+        return 'sm:col-span-2';
     }
     if (field.type === 'options') {
-        return 'col-span-2';
+        return 'sm:col-span-2';
     }
     return '';
 }
@@ -222,11 +229,20 @@ async function onPhotosSelected(field: FormField, event: Event) {
                 headers,
                 body,
             });
-            const data = await res.json();
+            const text = await res.text();
+            let data: { message?: string; data?: { path?: string } } | null = null;
+            if (text.trim().startsWith('<')) {
+                throw new Error('El servidor devolvió una página HTML en lugar de JSON.');
+            }
+            try {
+                data = text ? JSON.parse(text) : null;
+            } catch {
+                throw new Error('Respuesta no válida al subir la imagen.');
+            }
             if (!res.ok) {
                 throw new Error(data?.message ?? res.statusText);
             }
-            const path = data.data.path as string;
+            const path = data?.data?.path as string;
             current.push({ path, caption: '' });
             setPhotoItems(field, [...current]);
         } catch (e) {
@@ -240,13 +256,23 @@ async function onPhotosSelected(field: FormField, event: Event) {
 </script>
 
 <template>
-    <div v-if="sections.length" class="grid gap-4 xl:grid-cols-2">
-        <p v-if="uploadError" class="text-sm text-red-400 xl:col-span-2">{{ uploadError }}</p>
-        <section v-for="(section, idx) in sections" :key="idx" class="portal-form-panel min-w-0">
+    <div
+        v-if="sections.length"
+        class="gap-4"
+        :class="stackSections ? 'flex flex-col' : 'grid xl:grid-cols-2'"
+    >
+        <p v-if="uploadError" class="text-sm text-red-400" :class="{ 'xl:col-span-2': !stackSections }">
+            {{ uploadError }}
+        </p>
+        <section
+            v-for="(section, idx) in sections"
+            :key="idx"
+            class="portal-form-panel w-full min-w-0"
+        >
             <h3 v-if="section.title" class="text-portal-heading text-sm font-medium">
                 {{ section.title }}
             </h3>
-            <div class="mt-3 grid grid-cols-2 gap-3">
+            <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <template v-for="field in section.fields" :key="field.key">
                     <div :id="fieldDomId(field)" :class="[fieldGridClass(field), fieldHighlightClass(field)]">
                     <MaterialSelect
@@ -316,7 +342,12 @@ async function onPhotosSelected(field: FormField, event: Event) {
                                 :key="item.path + pi"
                                 class="rounded-lg border border-white/10 p-3"
                             >
-                                <p class="text-portal-muted truncate font-mono text-xs">{{ item.path }}</p>
+                                <FormFieldPhotoThumb
+                                    v-if="routineId"
+                                    :routine-id="routineId"
+                                    :path="item.path"
+                                />
+                                <p v-else class="text-portal-muted truncate font-mono text-xs">{{ item.path }}</p>
                                 <MaterialField
                                     v-if="field.caption_enabled"
                                     :model-value="item.caption ?? ''"
@@ -325,14 +356,14 @@ async function onPhotosSelected(field: FormField, event: Event) {
                                     :disabled="disabled"
                                     @update:model-value="(v) => updateCaption(field, pi, v)"
                                 />
-                                <button
+                                <IconActionButton
                                     v-if="!disabled"
-                                    type="button"
-                                    class="mt-2 text-sm text-red-400 underline"
+                                    class="mt-2"
+                                    icon="trash"
+                                    label="Quitar foto"
+                                    variant="danger"
                                     @click="removePhoto(field, pi)"
-                                >
-                                    Quitar
-                                </button>
+                                />
                             </li>
                         </ul>
                         <input

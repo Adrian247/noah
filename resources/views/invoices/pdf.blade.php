@@ -14,6 +14,10 @@
 </head>
 <body>
     <h1>Factura {{ $invoice->number }}</h1>
+    @if ($invoice->custom_reference)
+        <p><strong>Referencia:</strong> {{ $invoice->custom_reference }}</p>
+    @endif
+    <p><strong>ID interno:</strong> #{{ $invoice->id }}</p>
     <p><strong>Cliente:</strong> {{ $invoice->client?->legal_name }}</p>
     <p><strong>Fecha emisión:</strong> {{ $invoice->issued_at?->format('d/m/Y H:i') }}</p>
     <table>

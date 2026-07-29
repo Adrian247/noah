@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import { getCompanyId, setCompanyId, clearCompanyId } from '@/api/client';
+import { setCompanyId, clearCompanyId } from '@/api/client';
 import type { CompanyOption } from '@/stores/auth';
+import { preferredCompany } from '@/lib/sessionCompany';
 
 export const useCompanyStore = defineStore('company', () => {
     const current = ref<CompanyOption | null>(null);
@@ -11,11 +12,7 @@ export const useCompanyStore = defineStore('company', () => {
             clear();
             return;
         }
-        const saved = getCompanyId();
-        const found = saved
-            ? companies.find((c) => String(c.id) === saved)
-            : undefined;
-        select(found ?? companies[0]);
+        select(preferredCompany(companies)!);
     }
 
     function select(company: CompanyOption) {

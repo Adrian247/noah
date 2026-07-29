@@ -16,8 +16,8 @@ const pad = {
 
 <template>
     <div
-        class="noah-glass-card rounded-2xl"
-        :class="[pad[padding], hover ? 'noah-glass-card--hover md-ripple-hover' : '']"
+        class="phoenix-glass-card rounded-2xl"
+        :class="[pad[padding], hover ? 'phoenix-glass-card--hover md-ripple-hover' : '']"
     >
         <slot />
     </div>

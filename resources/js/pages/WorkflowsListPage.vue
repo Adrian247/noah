@@ -10,6 +10,7 @@ import AppButton from '@/components/ui/AppButton.vue';
 import AppModal from '@/components/ui/AppModal.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
+import IconActionButton from '@/components/ui/IconActionButton.vue';
 
 type Workflow = {
     id: number;
@@ -160,10 +161,7 @@ onMounted(async () => {
                 class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
             >
                 <div class="min-w-0 flex-1">
-                    <RouterLink
-                        class="text-portal-link font-medium underline"
-                        :to="`/app/design/workflows/${w.id}`"
-                    >
+                    <RouterLink class="text-portal-heading font-medium hover:text-amber-600" :to="`/app/design/workflows/${w.id}`">
                         {{ w.name }}
                     </RouterLink>
                     <p class="text-portal-muted text-xs">{{ w.slug }} · v{{ w.version }}</p>
@@ -173,29 +171,21 @@ onMounted(async () => {
                     <span class="text-portal-muted text-xs">
                         {{ w.routine_types_count === 1 ? '1 tipo de rutina' : `${w.routine_types_count} tipos de rutina` }}
                     </span>
-                    <AppButton
-                        v-if="canWrite"
-                        type="button"
-                        variant="secondary"
-                        :disabled="duplicatingId === w.id || deletingId === w.id"
-                        @click="duplicateWorkflow(w)"
-                    >
-                        Duplicar
-                    </AppButton>
-                    <AppButton
-                        v-if="canWrite"
-                        type="button"
-                        variant="danger"
-                        :disabled="duplicatingId === w.id || deletingId === w.id"
-                        :title="
-                            w.routine_types_count > 0
-                                ? 'Quita la asignación en tipos de rutina antes de eliminar'
-                                : undefined
-                        "
-                        @click="deleteWorkflow(w)"
-                    >
-                        Eliminar
-                    </AppButton>
+                    <div v-if="canWrite" class="table-row-actions">
+                        <IconActionButton
+                            icon="copy"
+                            label="Duplicar workflow"
+                            :disabled="duplicatingId === w.id || deletingId === w.id"
+                            @click="duplicateWorkflow(w)"
+                        />
+                        <IconActionButton
+                            icon="trash"
+                            label="Eliminar workflow"
+                            variant="danger"
+                            :disabled="duplicatingId === w.id || deletingId === w.id"
+                            @click="deleteWorkflow(w)"
+                        />
+                    </div>
                 </div>
             </li>
         </ul>

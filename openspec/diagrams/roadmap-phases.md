@@ -1,8 +1,8 @@
-# Roadmap por fases — Noah
+# Roadmap por fases — Phoenix
 
 ```mermaid
 timeline
-  title Noah - fases de producto
+  title Phoenix - fases de producto
   section Fase 0
     Documentación OpenSpec : Glosario ADRs diagramas
   section Fase 1

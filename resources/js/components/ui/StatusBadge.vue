@@ -18,12 +18,12 @@ const mapDark: Record<string, string> = {
 };
 
 const mapLight: Record<string, string> = {
-    assigned: 'bg-sky-100 text-sky-900',
+    assigned: 'bg-sky-100 text-sky-950',
     pending_validation: 'bg-amber-100 text-amber-950',
-    pending_billing: 'bg-violet-100 text-violet-900',
-    validated: 'bg-emerald-100 text-emerald-900',
-    invoiced: 'bg-violet-100 text-violet-900',
-    issued: 'bg-emerald-100 text-emerald-900',
+    pending_billing: 'bg-violet-100 text-violet-950',
+    validated: 'bg-emerald-100 text-emerald-950',
+    invoiced: 'bg-violet-100 text-violet-950',
+    issued: 'bg-emerald-100 text-emerald-950',
 };
 
 const portalStatusClass: Record<string, string> = {

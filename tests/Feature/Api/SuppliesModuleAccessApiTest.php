@@ -23,8 +23,8 @@ class SuppliesModuleAccessApiTest extends TestCase
     public function test_technician_with_assets_read_only_cannot_create_asset(): void
     {
         $company = Company::query()->first();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
-        $technician = User::query()->where('email', 'tecnico@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
+        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
         Sanctum::actingAs($admin);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
@@ -50,8 +50,8 @@ class SuppliesModuleAccessApiTest extends TestCase
     public function test_technician_with_catalog_items_read_only_cannot_create_item(): void
     {
         $company = Company::query()->first();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
-        $technician = User::query()->where('email', 'tecnico@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
+        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
         Sanctum::actingAs($admin);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
@@ -77,8 +77,8 @@ class SuppliesModuleAccessApiTest extends TestCase
     public function test_technician_with_supplies_read_only_cannot_create_supply(): void
     {
         $company = Company::query()->first();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
-        $technician = User::query()->where('email', 'tecnico@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
+        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
         Sanctum::actingAs($admin);
 
         $this->withHeader('X-Company-Id', (string) $company->id)

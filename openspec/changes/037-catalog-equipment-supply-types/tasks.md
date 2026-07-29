@@ -56,7 +56,7 @@
 - [x] CatalogItem **VEH-L200-2018** + `specifications` de la ficha.
 - [x] Asset **L200-2018-DEMO**.
 - [x] Cuatro `supply_items` de la ficha con `supply_type_id`; migrar/retirar `FIL-ACE-PREM` duplicado.
-- [x] Ejecutar `noah:refresh-demo` y verificar credenciales en `docs/DEMO_ENV.md`.
+- [x] Ejecutar `phoenix:refresh-demo` y verificar credenciales en `docs/DEMO_ENV.md`.
 
 ## Fase 7 — Documentación y cierre
 

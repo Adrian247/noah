@@ -1,4 +1,4 @@
-# Dominio — índice (Noah)
+# Dominio — índice (Phoenix)
 
 Documentos por bounded context. Mapa: [bounded-contexts.md](../architecture/bounded-contexts.md).
 

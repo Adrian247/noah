@@ -1,4 +1,4 @@
-# Arquitectura por capas — Noah
+# Arquitectura por capas — Phoenix
 
 Monolito modular Laravel; fronteras lógicas.
 

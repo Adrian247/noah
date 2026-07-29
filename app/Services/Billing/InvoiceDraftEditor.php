@@ -35,6 +35,7 @@ class InvoiceDraftEditor
 
         $validated = validator($payload, [
             'client_id' => ['nullable', 'integer', Rule::exists('clients', 'id')->where('company_id', $companyId)],
+            'custom_reference' => ['nullable', 'string', 'max:128'],
             'notify_client_on_issue' => ['sometimes', 'boolean'],
             'client_portal_visible' => ['sometimes', 'boolean'],
             'delivery_deferred' => ['sometimes', 'boolean'],
@@ -61,7 +62,7 @@ class InvoiceDraftEditor
 
         $taxRate = (float) ($invoice->tax_rate_snapshot
             ?? $invoice->company?->billing_tax_rate
-            ?? config('noah.billing.tax_rate', 0.16));
+            ?? config('phoenix.billing.tax_rate', 0.16));
 
         return DB::transaction(function () use ($invoice, $validated, $taxRate, $request, $audit) {
             $invoice->lines()->delete();
@@ -84,6 +85,9 @@ class InvoiceDraftEditor
 
             $invoice->update([
                 'client_id' => $validated['client_id'] ?? null,
+                'custom_reference' => array_key_exists('custom_reference', $validated)
+                    ? ($validated['custom_reference'] !== '' ? $validated['custom_reference'] : null)
+                    : $invoice->custom_reference,
                 'notify_client_on_issue' => $validated['notify_client_on_issue'] ?? $invoice->notify_client_on_issue,
                 'client_portal_visible' => $validated['client_portal_visible'] ?? $invoice->client_portal_visible,
                 'delivery_deferred' => $validated['delivery_deferred'] ?? $invoice->delivery_deferred,

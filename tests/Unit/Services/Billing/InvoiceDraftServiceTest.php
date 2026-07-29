@@ -18,10 +18,10 @@ class InvoiceDraftServiceTest extends TestCase
 
     public function test_draft_total_matches_consumptions_plus_tax_when_labor_disabled(): void
     {
-        config(['noah.billing.labor_rate_per_hour' => 0, 'noah.billing.tax_rate' => 0.16]);
+        config(['phoenix.billing.labor_rate_per_hour' => 0, 'phoenix.billing.tax_rate' => 0.16]);
         $this->seed();
 
-        $technician = User::query()->where('email', 'tecnico@noah.local')->firstOrFail();
+        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
         $routine = $this->demoRoutine($technician);
         $execution = $routine->latestExecution ?? $routine->executions()->create([
             'performed_by' => $technician->id,

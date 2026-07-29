@@ -9,6 +9,7 @@ use App\Models\SupplyType;
 use App\Services\Forms\CatalogTypeFormCapture;
 use App\Services\Forms\FormDesignSettings;
 use App\Services\Forms\FormDefinitionGuard;
+use App\Support\SupplyUnits;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -39,6 +40,13 @@ class SupplyTypeController extends Controller
             ->get(['id', 'name', 'slug']);
 
         return response()->json(['data' => $forms]);
+    }
+
+    public function unitOptions(): JsonResponse
+    {
+        return response()->json([
+            'data' => SupplyUnits::optionsForCurrentCompany(),
+        ]);
     }
 
     public function formCapture(

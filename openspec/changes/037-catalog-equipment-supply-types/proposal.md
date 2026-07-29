@@ -14,7 +14,7 @@ Para esta versión, dentro de **Catálogos**:
 2. Submódulo CRUD **Tipos de insumo** + **catálogo normalizado** de ítems (marca/OEM en `specifications`) desde la ficha.
 3. Enlazar equipos a tipo de equipo; tipo **Vehículo** → formulario normalizado de inspección.
 4. Enlazar insumos a tipo de insumo.
-5. **Formulario vehículo:** crear/publicar esquema normalizado (`inspeccion-vehiculo-v1`); demo premium actual solo como **referencia** de patrones Noah.
+5. **Formulario vehículo:** crear/publicar esquema normalizado (`inspeccion-vehiculo-v1`); demo premium actual solo como **referencia** de patrones Phoenix.
 6. **Datos demo:** L200 2018 (specs del MD) + activo + insumos de la ficha.
 
 ## Alcance funcional
@@ -81,7 +81,7 @@ Reemplazar o complementar el ítem genérico `VEH-SUV-PREM` según decisión en 
 ## Navegación y permisos
 
 - `AppShell` → grupo **Catálogos**: entradas **Tipos de equipo** y **Tipos de insumo** (iconos acordes).
-- `NoahModuleCatalog`: no hace falta módulo nuevo si se reutiliza `catalog_items` / `catalog_supplies`; documentar en `openspec/frontend/navigation.md`.
+- `PhoenixModuleCatalog`: no hace falta módulo nuevo si se reutiliza `catalog_items` / `catalog_supplies`; documentar en `openspec/frontend/navigation.md`.
 - `router/index.ts`: rutas nuevas con `moduleId` existente.
 
 ## Modelo de dominio
@@ -105,7 +105,7 @@ Actualizar [`openspec/domain/catalogs.md`](../../domain/catalogs.md):
 2. Crear/editar equipo exige tipo; listado muestra tipo.
 3. Crear/editar insumo exige tipo; listado muestra tipo.
 4. Tipo **Vehículo** enlazado al **formulario normalizado** de inspección; rutina demo ejecutable con ese esquema.
-5. Tras `noah:refresh-demo`, existe **Mitsubishi L200** en catálogo y activo asociado; insumos de prueba del MD cargados.
+5. Tras `phoenix:refresh-demo`, existe **Mitsubishi L200** en catálogo y activo asociado; insumos de prueba del MD cargados.
 6. Tests feature API + al menos un test de validación “no borrar tipo en uso”.
 
 ## Riesgos y dependencias
@@ -114,6 +114,6 @@ Actualizar [`openspec/domain/catalogs.md`](../../domain/catalogs.md):
 
 ## Referencias en código actual
 
-- Formulario vehículo: `database/seeders/NoahDemoSeeder.php` (`revision-mayor-vehiculo-premium`).
+- Formulario vehículo: `database/seeders/PhoenixDemoSeeder.php` (`revision-mayor-vehiculo-premium`).
 - Respuestas test: `tests/Support/VehicleDemoFormResponses.php`.
 - UI equipos/insumos: `CatalogItemsPage.vue`, `SuppliesPage.vue`.

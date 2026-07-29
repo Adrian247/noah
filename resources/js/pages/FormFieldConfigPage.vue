@@ -6,7 +6,10 @@ import { useToast } from '@/composables/useToast';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
 import AppButton from '@/components/ui/AppButton.vue';
+import IconActionButton from '@/components/ui/IconActionButton.vue';
 import AppModal from '@/components/ui/AppModal.vue';
+import ConfigurableDataTable from '@/components/ui/ConfigurableDataTable.vue';
+import { tableActionsColumn, type TableColumnDef } from '@/lib/tableColumns';
 import { RouterLink } from 'vue-router';
 
 type OptionRow = { value: string; label: string; description?: string };
@@ -41,6 +44,13 @@ const mimeOptions = [
 ];
 
 const selectedMimes = ref<string[]>([]);
+
+const catalogOptionColumns: TableColumnDef[] = [
+    { id: 'value', label: 'Valor' },
+    { id: 'label', label: 'Nombre' },
+    { id: 'description', label: 'Descripción' },
+    tableActionsColumn({ cellClass: 'table-row-actions' }),
+];
 
 function emptyRow(): OptionRow {
     return { value: '', label: '', description: '' };
@@ -252,14 +262,14 @@ onMounted(load);
                             <span class="text-portal-muted shrink-0 text-xs">
                                 {{ c.options.length }} opción{{ c.options.length === 1 ? '' : 'es' }}
                             </span>
-                            <button
-                                v-if="canWrite"
-                                type="button"
-                                class="shrink-0 text-xs text-red-400 hover:text-red-300"
-                                @click.stop="removeCatalog(c.id)"
-                            >
-                                Eliminar
-                            </button>
+                            <div v-if="canWrite" class="table-row-actions shrink-0" @click.stop>
+                                <IconActionButton
+                                    icon="trash"
+                                    label="Eliminar catálogo"
+                                    variant="danger"
+                                    @click="removeCatalog(c.id)"
+                                />
+                            </div>
                         </button>
 
                         <div
@@ -268,38 +278,34 @@ onMounted(load);
                         >
                             <MaterialField v-model="editName" label="Nombre del catálogo" :disabled="!canWrite" />
                             <div class="overflow-x-auto">
-                                <table class="portal-data-table w-full min-w-[36rem] text-sm">
-                                    <thead>
-                                        <tr>
-                                            <th>Valor</th>
-                                            <th>Nombre</th>
-                                            <th>Descripción</th>
-                                            <th />
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr v-for="(row, idx) in editRows" :key="idx">
-                                            <td>
-                                                <input v-model="row.value" class="field-input w-full font-mono text-xs" />
-                                            </td>
-                                            <td>
-                                                <input v-model="row.label" class="field-input w-full" />
-                                            </td>
-                                            <td>
-                                                <input v-model="row.description" class="field-input w-full" />
-                                            </td>
-                                            <td>
-                                                <button
-                                                    type="button"
-                                                    class="text-xs text-red-400"
-                                                    @click="editRows.splice(idx, 1)"
-                                                >
-                                                    Quitar
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                                <ConfigurableDataTable
+                                    table-id="form-field-catalog-options-edit"
+                                    :columns="catalogOptionColumns"
+                                    :rows="editRows"
+                                    :row-key="(_row, index) => index"
+                                    table-class="w-full min-w-[36rem] text-sm"
+                                >
+                                    <template #value="{ row }">
+                                        <input
+                                            v-model="(row as OptionRow).value"
+                                            class="field-input w-full font-mono text-xs"
+                                        />
+                                    </template>
+                                    <template #label="{ row }">
+                                        <input v-model="(row as OptionRow).label" class="field-input w-full" />
+                                    </template>
+                                    <template #description="{ row }">
+                                        <input v-model="(row as OptionRow).description" class="field-input w-full" />
+                                    </template>
+                                    <template #actions="{ index }">
+                                        <IconActionButton
+                                            icon="trash"
+                                            label="Quitar opción"
+                                            variant="danger"
+                                            @click="editRows.splice(index, 1)"
+                                        />
+                                    </template>
+                                </ConfigurableDataTable>
                             </div>
                             <div v-if="canWrite" class="flex flex-wrap gap-2">
                                 <AppButton type="button" variant="secondary" @click="editRows.push(emptyRow())">
@@ -323,43 +329,44 @@ onMounted(load);
             <form id="new-catalog-form" class="space-y-4" @submit.prevent="createCatalog">
                 <MaterialField v-model="newCatalogName" label="Nombre del catálogo" required />
                 <div class="overflow-x-auto">
-                    <table class="portal-data-table w-full min-w-[36rem] text-sm">
-                        <thead>
-                            <tr>
-                                <th>Valor</th>
-                                <th>Nombre</th>
-                                <th>Descripción</th>
-                                <th />
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="(row, idx) in newCatalogRows" :key="idx">
-                                <td>
-                                    <input v-model="row.value" class="field-input w-full font-mono text-xs" placeholder="operativo" />
-                                </td>
-                                <td>
-                                    <input v-model="row.label" class="field-input w-full" placeholder="Operativo" />
-                                </td>
-                                <td>
-                                    <input
-                                        v-model="row.description"
-                                        class="field-input w-full"
-                                        placeholder="Ayuda para el técnico"
-                                    />
-                                </td>
-                                <td>
-                                    <button
-                                        v-if="newCatalogRows.length > 1"
-                                        type="button"
-                                        class="text-xs text-red-400"
-                                        @click="newCatalogRows.splice(idx, 1)"
-                                    >
-                                        Quitar
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <ConfigurableDataTable
+                        table-id="form-field-catalog-options-new"
+                        :columns="catalogOptionColumns"
+                        :rows="newCatalogRows"
+                        :row-key="(_row, index) => index"
+                        table-class="w-full min-w-[36rem] text-sm"
+                    >
+                        <template #value="{ row }">
+                            <input
+                                v-model="(row as OptionRow).value"
+                                class="field-input w-full font-mono text-xs"
+                                placeholder="operativo"
+                            />
+                        </template>
+                        <template #label="{ row }">
+                            <input
+                                v-model="(row as OptionRow).label"
+                                class="field-input w-full"
+                                placeholder="Operativo"
+                            />
+                        </template>
+                        <template #description="{ row }">
+                            <input
+                                v-model="(row as OptionRow).description"
+                                class="field-input w-full"
+                                placeholder="Ayuda para el técnico"
+                            />
+                        </template>
+                        <template #actions="{ index }">
+                            <IconActionButton
+                                v-if="newCatalogRows.length > 1"
+                                icon="trash"
+                                label="Quitar opción"
+                                variant="danger"
+                                @click="newCatalogRows.splice(index, 1)"
+                            />
+                        </template>
+                    </ConfigurableDataTable>
                 </div>
                 <AppButton type="button" variant="secondary" @click="newCatalogRows.push(emptyRow())">
                     + Fila

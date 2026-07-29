@@ -4,17 +4,17 @@ import { useToastStore } from '@/stores/toast';
 const toast = useToastStore();
 
 const styles = {
-    success: 'border-emerald-500/50 bg-emerald-950/95 text-emerald-50 shadow-emerald-900/30',
-    danger: 'border-red-500/50 bg-red-950/95 text-red-50 shadow-red-900/40',
-    warning: 'border-amber-500/50 bg-amber-950/95 text-amber-50 shadow-amber-900/30',
-    info: 'border-sky-500/40 bg-slate-900/95 text-slate-50 shadow-slate-900/40',
+    success: 'border-emerald-500/45 bg-emerald-950 text-emerald-50 shadow-emerald-900/30',
+    danger: 'border-red-500/45 bg-red-950 text-red-50 shadow-red-900/40',
+    warning: 'border-amber-500/45 bg-amber-950 text-amber-50 shadow-amber-900/30',
+    info: 'border-sky-500/40 bg-slate-900 text-slate-50 shadow-slate-900/40',
 };
 </script>
 
 <template>
     <Teleport to="body">
         <div
-            class="pointer-events-none fixed top-[4.5rem] right-0 z-[200] flex w-full max-w-md flex-col items-end gap-2 px-4 sm:top-20 sm:px-6"
+            class="pointer-events-none fixed top-4 right-0 z-[200] flex w-full max-w-md flex-col items-end gap-2 px-4 sm:px-6"
             aria-live="polite"
             aria-relevant="additions"
         >

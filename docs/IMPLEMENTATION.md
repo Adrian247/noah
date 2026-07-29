@@ -1,4 +1,4 @@
-# Implementación — Noah (estado)
+# Implementación — Phoenix (estado)
 
 ## Backend
 
@@ -21,8 +21,8 @@
 | Email pendiente validación (supervisores) | Implementado v1 (Mailpit) |
 | **Dashboard summary API** | Implementado |
 | **Usuarios empresa (lectura admin)** | Implementado |
-| **`noah:ensure-demo`** en arranque Docker | Implementado |
-| **`noah:refresh-demo`** (seed + permisos + credenciales) | Implementado — ver `docs/DEMO_ENV.md` |
+| **`phoenix:ensure-demo`** en arranque Docker | Implementado |
+| **`phoenix:refresh-demo`** (seed + permisos + credenciales) | Implementado — ver `docs/DEMO_ENV.md` |
 | **RBAC global** (rol + `extra_permissions`; menú derivado; ADR-012) | Implementado — cambio 034 |
 | **Plantilla de roles (plataforma)** | `GET/PUT /platform/role-permissions`, UI Plataforma — cambio 035 |
 | **Portal cliente** (`/portal/*`, API `portal/*`, rol `client`) | Implementado v1 |

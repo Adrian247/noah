@@ -1,4 +1,4 @@
-# Alcance — Noah
+# Alcance — Phoenix
 
 ## Qué es este proyecto
 
@@ -41,7 +41,7 @@
 
 ## Integraciones futuras
 
-Cualquier conexión con ERP, CRM, LIMS u otros sistemas se documentará en `architecture/integrations.md` con contrato explícito. Hasta entonces, Noah es **sistema maestro** de su propio dominio operativo.
+Cualquier conexión con ERP, CRM, LIMS u otros sistemas se documentará en `architecture/integrations.md` con contrato explícito. Hasta entonces, Phoenix es **sistema maestro** de su propio dominio operativo.
 
 ## Criterio de éxito de la fase documental
 

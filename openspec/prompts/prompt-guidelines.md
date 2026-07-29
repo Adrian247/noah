@@ -1,4 +1,4 @@
-# Guía de prompts — Noah
+# Guía de prompts — Phoenix
 
 ## Principios
 

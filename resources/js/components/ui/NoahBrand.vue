@@ -1,54 +1,8 @@
 <script setup lang="ts">
-withDefaults(
-    defineProps<{
-        size?: 'sm' | 'md' | 'lg';
-        showWordmark?: boolean;
-        variant?: 'sidebar' | 'light';
-    }>(),
-    { size: 'md', showWordmark: false, variant: 'sidebar' },
-);
-
-const box = { sm: 'h-8 w-8', md: 'h-9 w-9', lg: 'h-12 w-12' };
+/** @deprecated Use PhoenixBrand — kept for import compatibility */
+import PhoenixBrand from '@/components/ui/PhoenixBrand.vue';
 </script>
 
 <template>
-    <div class="flex items-center gap-2.5">
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 64 64"
-            class="shrink-0 rounded-xl shadow-md"
-            :class="box[size]"
-            role="img"
-            aria-label="Noah"
-        >
-            <defs>
-                <linearGradient id="noah-hull-mark" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#6366f1" />
-                    <stop offset="100%" stop-color="#4f46e5" />
-                </linearGradient>
-            </defs>
-            <rect width="64" height="64" rx="14" fill="#0f172a" />
-            <path fill="url(#noah-hull-mark)" d="M12 38c0-2 4-14 20-14s20 12 20 14v6H12v-6z" />
-            <path fill="#e0e7ff" opacity="0.95" d="M18 36c2-8 10-12 14-12s12 4 14 12H18z" />
-            <path
-                fill="none"
-                stroke="#94a3b8"
-                stroke-width="2"
-                stroke-linecap="round"
-                d="M10 46c6-3 12-3 18 0s12 3 18 0 8 3 14 0"
-            />
-            <path fill="#c7d2fe" d="M32 22v14h2V22h-2zm-1 22h4v4h-4v-4z" />
-        </svg>
-        <div v-if="showWordmark" class="text-left">
-            <p
-                class="text-lg font-bold tracking-tight"
-                :class="variant === 'light' ? 'text-slate-900' : 'text-white'"
-            >
-                Noah
-            </p>
-            <p class="text-xs" :class="variant === 'light' ? 'text-slate-500' : 'text-slate-400'">
-                Gestión técnica
-            </p>
-        </div>
-    </div>
+    <PhoenixBrand v-bind="$attrs" />
 </template>

@@ -26,7 +26,7 @@ Código **`VEH-L200-2018`**; `specifications` JSON en la ficha §3.
 
 ## Insumos (desde ficha §2)
 
-| SKU | Nombre en Noah | Tipo | Costo ref. MXN |
+| SKU | Nombre en Phoenix | Tipo | Costo ref. MXN |
 |-----|----------------|------|----------------|
 | `FRE-P54038-BRM` | Balatas delanteras Brembo P54038 (juego) | frenos | 1268.00 |
 | `FIL-1230A153-OEM` | Filtro de aceite Mitsubishi OEM | filtros | 550.00 |
@@ -41,4 +41,4 @@ Plantilla **normalizada** `inspeccion-vehiculo-v1` — ver [`formulario-vehiculo
 
 ## Ritual
 
-`docker compose exec app php artisan noah:refresh-demo` — `docs/DEMO_ENV.md`.
+`docker compose exec app php artisan phoenix:refresh-demo` — `docs/DEMO_ENV.md`.

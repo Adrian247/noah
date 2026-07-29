@@ -6,7 +6,7 @@ Aceptada (modelo desde fase 1; SaaS comercial en fase posterior).
 
 ## Contexto
 
-Noah debe soportar múltiples empresas sin mezclar datos.
+Phoenix debe soportar múltiples empresas sin mezclar datos.
 
 ## Decisión
 

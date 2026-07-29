@@ -1,4 +1,4 @@
-# Eventos de dominio — Noah
+# Eventos de dominio — Phoenix
 
 Eventos nombrados en pasado; payload mínimo e inmutable. Los consumidores deben ser idempotentes.
 

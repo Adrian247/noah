@@ -1,4 +1,4 @@
-# Monitoreo — Noah
+# Monitoreo — Phoenix
 
 Complementa [observability.md](../architecture/observability.md).
 

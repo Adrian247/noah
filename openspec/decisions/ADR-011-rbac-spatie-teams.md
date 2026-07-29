@@ -6,7 +6,7 @@ Aceptado (2026-07).
 
 ## Contexto
 
-Noah es multi-tenant por **empresa** (`X-Company-Id`). Los usuarios tienen membresías con un rol operativo (administrador, supervisor, técnico, …). Se requiere un catálogo de **permisos** estable y un mantenedor de usuarios sin duplicar lógica en cada controlador.
+Phoenix es multi-tenant por **empresa** (`X-Company-Id`). Los usuarios tienen membresías con un rol operativo (administrador, supervisor, técnico, …). Se requiere un catálogo de **permisos** estable y un mantenedor de usuarios sin duplicar lógica en cada controlador.
 
 ## Decisión
 
@@ -19,7 +19,7 @@ Noah es multi-tenant por **empresa** (`X-Company-Id`). Los usuarios tienen membr
 
 ## Consecuencias
 
-- Comando idempotente `php artisan noah:bootstrap-permissions` para catálogo, roles por empresa y asignaciones.
+- Comando idempotente `php artisan phoenix:bootstrap-permissions` para catálogo, roles por empresa y asignaciones.
 - `GET /auth/me` y login devuelven `permissions[]` por empresa para la UI.
 - Roles personalizados por cliente: posible en fase 2 sin cambiar el modelo base.
 - Dependencia externa acotada al bounded context **Identity**.

@@ -2,7 +2,7 @@
 
 Documento **técnico de referencia** (inventario de campos). En 037 **no** se rediseña el formulario; solo se **enlaza** al tipo de equipo Vehículo. Ver [`formulario-vehiculo-registro.md`](formulario-vehiculo-registro.md).
 
-Fuente: `NoahDemoSeeder` → slug `revision-mayor-vehiculo-premium`.
+Fuente: `PhoenixDemoSeeder` → slug `revision-mayor-vehiculo-premium`.
 
 ## Secciones y campos (resumen)
 

@@ -1,4 +1,4 @@
-# Contenedores — Noah
+# Contenedores — Phoenix
 
 Vista C4 **nivel 2**: aplicaciones y servicios en runtime.
 
@@ -9,7 +9,7 @@ flowchart TB
     MOB[App Flutter]
   end
 
-  subgraph noah [Noah - despliegue]
+  subgraph phoenix [Phoenix - despliegue]
     NGX[Nginx]
     API[Laravel API]
     WRK[Workers Horizon]

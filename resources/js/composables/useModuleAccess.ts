@@ -3,7 +3,7 @@ import { useCompanyStore } from '@/stores/company';
 
 export type ModuleAccessState = { read: boolean; write: boolean; visible: boolean };
 
-/** Debe coincidir con `App\Support\NoahModuleCatalog` (orden: rutas más largas primero). */
+/** Debe coincidir con `App\Support\PhoenixModuleCatalog` (orden: rutas más largas primero). */
 const ROUTE_MODULE_PAIRS: [string, string][] = [
     ['/app/billing/settings', 'billing'],
     ['/app/admin/users', 'company_users'],
@@ -12,9 +12,11 @@ const ROUTE_MODULE_PAIRS: [string, string][] = [
     ['/app/catalog/items/types', 'catalog_items'],
     ['/app/catalog/equipment-types', 'catalog_items'],
     ['/app/catalog/items', 'catalog_items'],
-    ['/app/catalog/supplies/types', 'catalog_supplies'],
-    ['/app/catalog/supply-types', 'catalog_supplies'],
-    ['/app/catalog/supplies', 'catalog_supplies'],
+    ['/app/inventory/types', 'inventory'],
+    ['/app/inventory', 'inventory'],
+    ['/app/catalog/supplies/types', 'inventory'],
+    ['/app/catalog/supply-types', 'inventory'],
+    ['/app/catalog/supplies', 'inventory'],
     ['/app/routines/types', 'design_routine_types'],
     ['/app/design/routine-types', 'design_routine_types'],
     ['/app/design/workflows', 'design_workflows'],

@@ -6,7 +6,7 @@ Aceptada.
 
 ## Contexto
 
-Noah es greenfield; el equipo es pequeño; se requiere velocidad de entrega sin sacrificar límites de dominio.
+Phoenix es greenfield; el equipo es pequeño; se requiere velocidad de entrega sin sacrificar límites de dominio.
 
 ## Decisión
 

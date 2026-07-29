@@ -1,4 +1,4 @@
-# Diseño — Noah
+# Diseño — Phoenix
 
 Esta carpeta describe **experiencia de usuario**, **arquitectura de información** y **patrones de interfaz** para la fase de diseño (sin implementación UI aún).
 
@@ -23,7 +23,7 @@ Esta carpeta describe **experiencia de usuario**, **arquitectura de información
 
 Ver [../diagrams/README.md](../diagrams/README.md) — en especial [design-configurator-flow.md](../diagrams/design-configurator-flow.md), [validation-billing-flow.md](../diagrams/validation-billing-flow.md), [end-to-end-flow.md](../diagrams/end-to-end-flow.md).
 
-## Principios UX (Noah)
+## Principios UX (Phoenix)
 
 - **Claridad operativa** sobre decoración; dashboards en fases posteriores.
 - **Estados visibles**: borrador, en ejecución, pendiente sync, pendiente validación, facturado.
@@ -32,4 +32,4 @@ Ver [../diagrams/README.md](../diagrams/README.md) — en especial [design-confi
 
 ## Marca
 
-Nombre producto: **Noah**. Identidad visual (logo, paleta) — pendiente; el design system usa placeholders hasta definir marca.
+Nombre producto: **Phoenix**. Identidad visual (logo, paleta) — pendiente; el design system usa placeholders hasta definir marca.

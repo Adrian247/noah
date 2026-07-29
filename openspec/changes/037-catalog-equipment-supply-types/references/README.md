@@ -9,4 +9,4 @@
 | [`formulario-vehiculo-baseline.md`](formulario-vehiculo-baseline.md) | Inventario del demo premium (solo referencia de patrones) |
 | [`datos-demo-baseline.md`](datos-demo-baseline.md) | Resumen entidades demo |
 
-Implementación: `NoahDemoSeeder.php`, tests, CRUD Vue existentes.
+Implementación: `PhoenixDemoSeeder.php`, tests, CRUD Vue existentes.

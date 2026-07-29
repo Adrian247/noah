@@ -10,6 +10,9 @@ import AppModal from '@/components/ui/AppModal.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
 import MaterialSelect from '@/components/ui/MaterialSelect.vue';
 import AppButton from '@/components/ui/AppButton.vue';
+import IconActionButton from '@/components/ui/IconActionButton.vue';
+import ConfigurableDataTable from '@/components/ui/ConfigurableDataTable.vue';
+import { tableActionsColumn, type TableColumnDef } from '@/lib/tableColumns';
 import { catalogEquipmentSectionNav } from '@/lib/sectionNav';
 
 type FormPick = { id: number; name: string; slug: string };
@@ -27,6 +30,18 @@ type EquipmentType = {
 const { canWriteModule } = useModuleAccess();
 const toast = useToast();
 const canWrite = computed(() => canWriteModule('catalog_items'));
+
+const equipmentTypeTableColumns = computed((): TableColumnDef[] => {
+    const cols: TableColumnDef[] = [
+        { id: 'code', label: 'Código', cellClass: 'py-2 font-mono text-sm' },
+        { id: 'name', label: 'Nombre' },
+        { id: 'form', label: 'Formulario de ficha', cellClass: 'text-portal-muted text-sm' },
+    ];
+    if (canWrite.value) {
+        cols.push(tableActionsColumn({ cellClass: 'text-right' }));
+    }
+    return cols;
+});
 
 const items = ref<EquipmentType[]>([]);
 const equipmentForms = ref<FormPick[]>([]);
@@ -155,35 +170,28 @@ onMounted(load);
         <ReadOnlyNotice v-if="!canWrite" module-label="Tipos de equipo" />
 
         <p v-if="loading" class="text-portal-muted">Cargando…</p>
-        <div v-else class="portal-table-wrap">
-            <table class="portal-data-table">
-                <thead>
-                    <tr class="border-b">
-                        <th class="py-2">Código</th>
-                        <th>Nombre</th>
-                        <th>Formulario de ficha</th>
-                        <th class="w-28" />
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="row in items" :key="row.id" class="border-b border-portal-border/60">
-                        <td class="py-2 font-mono text-sm">{{ row.code }}</td>
-                        <td>{{ row.name }}</td>
-                        <td class="text-portal-muted text-sm">
-                            {{ row.default_form_definition?.name ?? '—' }}
-                        </td>
-                        <td class="text-right">
-                            <template v-if="canWrite">
-                                <button type="button" class="portal-link mr-2" @click="openEdit(row)">Editar</button>
-                                <button type="button" class="portal-link text-red-600" @click="remove(row.id)">
-                                    Eliminar
-                                </button>
-                            </template>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <ConfigurableDataTable
+            v-else
+            table-id="catalog-equipment-types"
+            :columns="equipmentTypeTableColumns"
+            :rows="items"
+            row-key="id"
+        >
+            <template #code="{ row }">{{ (row as EquipmentType).code }}</template>
+            <template #name="{ row }">{{ (row as EquipmentType).name }}</template>
+            <template #form="{ row }">{{ (row as EquipmentType).default_form_definition?.name ?? '—' }}</template>
+            <template #actions="{ row }">
+                <div class="table-row-actions">
+                    <IconActionButton icon="pencil" label="Editar tipo de equipo" @click="openEdit(row as EquipmentType)" />
+                    <IconActionButton
+                        icon="trash"
+                        label="Eliminar tipo de equipo"
+                        variant="danger"
+                        @click="remove((row as EquipmentType).id)"
+                    />
+                </div>
+            </template>
+        </ConfigurableDataTable>
 
         <AppModal
             :open="showForm && canWrite"

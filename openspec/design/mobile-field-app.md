@@ -1,4 +1,4 @@
-# App de campo — Noah (diseño)
+# App de campo — Phoenix (diseño)
 
 Fase 2 — Flutter. Referencia arquitectónica: [mobile-sync.md](../architecture/mobile-sync.md).
 

@@ -20,10 +20,11 @@ class RoutineExecutionConsumptionsTest extends TestCase
     public function test_execution_persists_consumptions(): void
     {
         $this->seed();
-        $user = User::query()->where('email', 'tecnico@noah.local')->first();
+        $user = User::query()->where('email', 'misael.palos@mein-company.com')->first();
         $company = Company::query()->first();
         $routine = $this->demoRoutine($user);
-        $supply = SupplyItem::query()->first();
+        $supply = SupplyItem::query()->firstOrFail();
+        $supply->update(['quantity_on_hand' => 50]);
         $token = $user->createToken('test')->plainTextToken;
 
         $this->withToken($token)
@@ -42,5 +43,7 @@ class RoutineExecutionConsumptionsTest extends TestCase
         $routine->refresh();
         $this->assertSame(RoutineStatus::PendingValidation, $routine->status);
         $this->assertCount(1, $routine->latestExecution?->consumptions ?? []);
+        $supply->refresh();
+        $this->assertSame('48.0000', (string) $supply->quantity_on_hand);
     }
 }

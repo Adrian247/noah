@@ -1,9 +1,19 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
-import { api, getToken, getCompanyId } from '@/api/client';
+import { api, getCompanyId, getToken } from '@/api/client';
 import { useToast } from '@/composables/useToast';
+import { usePortalInvoiceDownload } from '@/composables/usePortalInvoiceDownload';
+import {
+    formatPortalDateTime,
+    formatPortalMoney,
+    reportStatusLabel,
+} from '@/lib/clientPortal';
+import PageHeader from '@/components/ui/PageHeader.vue';
+import GlassCard from '@/components/ui/GlassCard.vue';
+import AppButton from '@/components/ui/AppButton.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
+import ClientPortalWorkflowTimeline from '@/components/portal/ClientPortalWorkflowTimeline.vue';
 
 type WorkflowTransition = {
     from_step?: string | null;
@@ -20,6 +30,12 @@ type Execution = {
     validated_at?: string | null;
 };
 
+type GeneratedReportRow = {
+    id: number;
+    status: string;
+    created_at?: string | null;
+};
+
 type RoutineDetail = {
     id: number;
     status: string;
@@ -27,6 +43,7 @@ type RoutineDetail = {
         tag: string;
         serial_number?: string | null;
         catalog_item?: { name?: string };
+        site?: { name?: string };
     };
     routine_type?: { name: string };
     latest_execution?: Execution | null;
@@ -34,6 +51,7 @@ type RoutineDetail = {
     invoice?: {
         id: number;
         number?: string | null;
+        custom_reference?: string | null;
         status: string;
         total?: string;
         currency?: string;
@@ -44,13 +62,15 @@ type RoutineDetail = {
         status: string;
         transitions?: WorkflowTransition[];
     } | null;
-    generated_reports?: { id: number; status: string }[];
+    generated_reports?: GeneratedReportRow[];
 };
 
 const route = useRoute();
 const toast = useToast();
+const { downloadingId, downloadInvoicePackage } = usePortalInvoiceDownload();
 const routine = ref<RoutineDetail | null>(null);
 const loading = ref(true);
+const downloadingReportId = ref<number | null>(null);
 
 const executionHistory = computed(() => {
     const list = routine.value?.executions ?? [];
@@ -62,6 +82,26 @@ const executionHistory = computed(() => {
     }
     return [];
 });
+
+const pageTitle = computed(() => routine.value?.routine_type?.name ?? 'Detalle del servicio');
+
+const pageSubtitle = computed(() => {
+    if (!routine.value) {
+        return '';
+    }
+    const parts = [`Rutina #${routine.value.id}`];
+    if (routine.value.asset?.tag) {
+        parts.push(`Activo ${routine.value.asset.tag}`);
+    }
+    if (routine.value.asset?.serial_number) {
+        parts.push(`Serie ${routine.value.asset.serial_number}`);
+    }
+    return parts.join(' · ');
+});
+
+function invoiceDisplayLabel(inv: NonNullable<RoutineDetail['invoice']>): string {
+    return inv.custom_reference?.trim() || inv.number?.trim() || `Factura #${inv.id}`;
+}
 
 async function load() {
     loading.value = true;
@@ -77,127 +117,199 @@ async function load() {
     }
 }
 
-async function downloadInvoice(id: number) {
-    const res = await fetch(`/api/v1/portal/invoices/${id}/download`, {
-        headers: {
-            Authorization: `Bearer ${getToken()}`,
-            'X-Company-Id': getCompanyId() ?? '',
-            Accept: 'application/pdf',
-        },
-    });
-    if (!res.ok) {
-        toast.error('No se pudo descargar la factura.');
+async function downloadReport(reportId: number) {
+    if (!routine.value || downloadingReportId.value !== null) {
         return;
     }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `factura-${id}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadingReportId.value = reportId;
+    try {
+        const res = await fetch(
+            `/api/v1/portal/routines/${routine.value.id}/reports/${reportId}/download`,
+            {
+                headers: {
+                    Authorization: `Bearer ${getToken()}`,
+                    'X-Company-Id': getCompanyId() ?? '',
+                },
+            },
+        );
+        if (!res.ok) {
+            throw new Error('No se pudo descargar el informe.');
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `informe-rutina-${routine.value.id}-${reportId}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success('Informe descargado.');
+    } catch (e) {
+        toast.error((e as Error).message);
+    } finally {
+        downloadingReportId.value = null;
+    }
 }
 
 onMounted(load);
 </script>
 
 <template>
-    <div class="space-y-6">
-        <p>
-            <RouterLink class="text-sm text-amber-800 underline" to="/portal/routines">← Volver a rutinas</RouterLink>
-        </p>
+    <div class="client-portal-page">
+        <RouterLink to="/portal/routines" class="client-portal-back">← Volver a servicios</RouterLink>
 
-        <p v-if="loading" class="text-slate-500">Cargando…</p>
+        <GlassCard v-if="loading" padding="lg" class="mt-4">
+            <p class="text-portal-muted animate-pulse text-sm">Cargando detalle…</p>
+        </GlassCard>
 
         <template v-else-if="routine">
-            <div class="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                    <h2 class="text-xl font-semibold">Rutina #{{ routine.id }}</h2>
-                    <p class="mt-1 text-sm text-slate-600">
-                        {{ routine.routine_type?.name }} · Activo {{ routine.asset?.tag }}
-                        <span v-if="routine.asset?.serial_number"> · Serie {{ routine.asset.serial_number }}</span>
-                    </p>
-                    <p v-if="routine.asset?.catalog_item?.name" class="text-sm text-slate-500">
-                        {{ routine.asset.catalog_item.name }}
-                    </p>
-                </div>
+            <PageHeader :title="pageTitle" :subtitle="pageSubtitle" />
+
+            <div class="mb-6 flex flex-wrap items-center gap-3">
+                <span class="client-portal-id-badge">ID rutina #{{ routine.id }}</span>
                 <StatusBadge :status="routine.status" />
             </div>
 
-            <section
-                v-if="routine.workflow_instance?.transitions?.length"
-                class="rounded-xl border border-slate-200 bg-white p-4 text-sm"
-            >
-                <h3 class="font-medium text-slate-800">Progreso del servicio</h3>
-                <p class="mt-1 text-xs text-slate-500">
-                    Paso actual: {{ routine.workflow_instance.current_step_key }}
-                </p>
-                <ul class="mt-3 space-y-2 text-xs text-slate-600">
-                    <li
-                        v-for="(t, i) in routine.workflow_instance.transitions"
-                        :key="i"
-                    >
-                        {{ new Date(t.occurred_at).toLocaleString() }} —
-                        {{ t.from_step ?? 'inicio' }} → {{ t.to_step }} ({{ t.trigger }})
-                    </li>
-                </ul>
-            </section>
+            <div class="client-portal-detail-grid">
+                <GlassCard padding="lg" class="client-portal-detail-grid__main">
+                    <h2 class="text-portal-heading text-base font-semibold">Equipo atendido</h2>
+                    <dl class="client-portal-dl mt-4">
+                        <div>
+                            <dt>Etiqueta</dt>
+                            <dd>{{ routine.asset?.tag ?? '—' }}</dd>
+                        </div>
+                        <div>
+                            <dt>Número de serie</dt>
+                            <dd>{{ routine.asset?.serial_number ?? '—' }}</dd>
+                        </div>
+                        <div v-if="routine.asset?.catalog_item?.name">
+                            <dt>Modelo / catálogo</dt>
+                            <dd>{{ routine.asset.catalog_item.name }}</dd>
+                        </div>
+                        <div v-if="routine.asset?.site?.name">
+                            <dt>Sitio</dt>
+                            <dd>{{ routine.asset.site.name }}</dd>
+                        </div>
+                    </dl>
+                </GlassCard>
 
-            <section
-                v-if="routine.invoice"
-                class="rounded-xl border border-slate-200 bg-white p-4 text-sm"
-            >
-                <h3 class="font-medium text-slate-800">Factura</h3>
-                <p class="mt-2">
-                    {{ routine.invoice.number ?? `Factura #${routine.invoice.id}` }}
-                    <span v-if="routine.invoice.total" class="font-semibold">
-                        · {{ routine.invoice.total }} {{ routine.invoice.currency }}
-                    </span>
-                </p>
-                <p v-if="routine.invoice.issued_at" class="text-xs text-slate-500">
-                    Emitida {{ new Date(routine.invoice.issued_at).toLocaleString() }}
-                </p>
-                <button
-                    type="button"
-                    class="mt-3 rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-medium text-stone-950"
-                    @click="downloadInvoice(routine.invoice!.id)"
+                <GlassCard
+                    v-if="routine.workflow_instance?.transitions?.length"
+                    padding="lg"
+                    class="client-portal-detail-grid__side"
                 >
-                    Descargar PDF
-                </button>
-            </section>
+                    <h2 class="text-portal-heading text-base font-semibold">Trazabilidad del servicio</h2>
+                    <p class="text-portal-muted mt-1 text-xs">
+                        Línea de tiempo auditada de cada paso del workflow.
+                    </p>
+                    <ClientPortalWorkflowTimeline
+                        class="mt-4"
+                        :current-step-key="routine.workflow_instance.current_step_key"
+                        :transitions="routine.workflow_instance.transitions ?? []"
+                    />
+                </GlassCard>
 
-            <section
-                v-if="routine.generated_reports?.length"
-                class="rounded-xl border border-slate-200 bg-white p-4 text-sm"
-            >
-                <h3 class="font-medium text-slate-800">Informes</h3>
-                <ul class="mt-2 space-y-1 text-xs text-slate-600">
-                    <li v-for="rep in routine.generated_reports" :key="rep.id">
-                        Informe #{{ rep.id }} — {{ rep.status }}
-                    </li>
-                </ul>
-            </section>
+                <GlassCard v-if="routine.invoice" padding="lg" class="client-portal-detail-grid__span">
+                    <div class="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                            <h2 class="text-portal-heading text-base font-semibold">Facturación</h2>
+                            <p class="text-portal-muted mt-1 text-sm">
+                                {{ invoiceDisplayLabel(routine.invoice) }}
+                            </p>
+                            <p class="text-portal-muted text-xs">
+                                ID factura #{{ routine.invoice.id }}
+                                <span v-if="routine.invoice.number"> · Folio {{ routine.invoice.number }}</span>
+                            </p>
+                            <p
+                                v-if="routine.invoice.total && routine.invoice.currency"
+                                class="text-portal-heading mt-2 text-xl font-bold tabular-nums"
+                            >
+                                {{ formatPortalMoney(routine.invoice.total, routine.invoice.currency) }}
+                            </p>
+                            <p v-if="routine.invoice.issued_at" class="text-portal-muted mt-1 text-xs">
+                                Emitida {{ formatPortalDateTime(routine.invoice.issued_at) }}
+                            </p>
+                        </div>
+                        <AppButton
+                            type="button"
+                            :disabled="downloadingId === routine.invoice.id"
+                            @click="downloadInvoicePackage(routine.invoice!.id)"
+                        >
+                            {{
+                                downloadingId === routine.invoice.id
+                                    ? 'Preparando ZIP…'
+                                    : 'Descargar paquete ZIP'
+                            }}
+                        </AppButton>
+                    </div>
+                </GlassCard>
 
-            <section class="rounded-xl border border-slate-200 bg-white p-4 text-sm">
-                <h3 class="font-medium text-slate-800">Historial de visitas</h3>
-                <ul v-if="executionHistory.length" class="mt-3 divide-y text-sm">
-                    <li v-for="ex in executionHistory" :key="ex.id" class="py-3 first:pt-0">
-                        <p class="text-xs text-slate-500">Ejecución #{{ ex.id }}</p>
-                        <p v-if="ex.submitted_at" class="mt-1 text-slate-600">
-                            Enviada {{ new Date(ex.submitted_at).toLocaleString() }}
-                        </p>
-                        <p v-if="ex.validated_at" class="text-slate-600">
-                            Validada {{ new Date(ex.validated_at).toLocaleString() }}
-                        </p>
-                        <p v-if="ex.technician_comments" class="mt-2 text-slate-700">
-                            {{ ex.technician_comments }}
-                        </p>
-                    </li>
-                </ul>
-                <p v-else class="mt-2 text-slate-500">Sin ejecuciones registradas.</p>
-            </section>
+                <GlassCard
+                    v-if="routine.generated_reports?.length"
+                    padding="lg"
+                    class="client-portal-detail-grid__span"
+                >
+                    <h2 class="text-portal-heading text-base font-semibold">Informes de inspección</h2>
+                    <p class="text-portal-muted mt-1 text-sm">
+                        PDF generados a partir de la ejecución validada en campo.
+                    </p>
+                    <ul class="mt-4 space-y-3">
+                        <li
+                            v-for="rep in routine.generated_reports"
+                            :key="rep.id"
+                            class="client-portal-report-row"
+                        >
+                            <div>
+                                <p class="text-portal-heading text-sm font-medium">Informe #{{ rep.id }}</p>
+                                <p class="text-portal-muted text-xs">
+                                    {{ reportStatusLabel(rep.status) }}
+                                    <span v-if="rep.created_at">
+                                        · {{ formatPortalDateTime(rep.created_at) }}
+                                    </span>
+                                </p>
+                            </div>
+                            <AppButton
+                                v-if="rep.status === 'ready'"
+                                type="button"
+                                variant="secondary"
+                                :disabled="downloadingReportId === rep.id"
+                                @click="downloadReport(rep.id)"
+                            >
+                                {{ downloadingReportId === rep.id ? 'Descargando…' : 'PDF' }}
+                            </AppButton>
+                            <span v-else class="text-portal-muted text-xs">No disponible aún</span>
+                        </li>
+                    </ul>
+                </GlassCard>
+
+                <GlassCard padding="lg" class="client-portal-detail-grid__span">
+                    <h2 class="text-portal-heading text-base font-semibold">Visitas y ejecuciones</h2>
+                    <ul v-if="executionHistory.length" class="mt-4 divide-y divide-white/10">
+                        <li v-for="ex in executionHistory" :key="ex.id" class="py-4 first:pt-0 last:pb-0">
+                            <p class="text-portal-muted text-xs font-medium uppercase tracking-wide">
+                                Ejecución #{{ ex.id }}
+                                <span v-if="ex.status"> · {{ ex.status }}</span>
+                            </p>
+                            <p v-if="ex.submitted_at" class="text-portal-muted mt-2 text-sm">
+                                Enviada {{ formatPortalDateTime(ex.submitted_at) }}
+                            </p>
+                            <p v-if="ex.validated_at" class="text-portal-muted text-sm">
+                                Validada {{ formatPortalDateTime(ex.validated_at) }}
+                            </p>
+                            <blockquote
+                                v-if="ex.technician_comments"
+                                class="text-portal-heading mt-3 border-l-2 border-amber-500/40 pl-3 text-sm italic"
+                            >
+                                {{ ex.technician_comments }}
+                            </blockquote>
+                        </li>
+                    </ul>
+                    <p v-else class="text-portal-muted mt-3 text-sm">Sin ejecuciones registradas.</p>
+                </GlassCard>
+            </div>
         </template>
 
-        <p v-else class="text-slate-500">Rutina no encontrada o sin acceso.</p>
+        <GlassCard v-else padding="lg" class="mt-4">
+            <p class="text-portal-muted text-sm">Servicio no encontrado o sin acceso para tu cuenta.</p>
+        </GlassCard>
     </div>
 </template>

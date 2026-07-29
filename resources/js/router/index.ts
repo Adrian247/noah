@@ -1,7 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
-import { getToken, getCompanyId } from '@/api/client';
+import { getToken } from '@/api/client';
 import { applyLoginTheme, applyStoredThemeForApp } from '@/lib/theme';
+import {
+    hasCompanyAdministratorAccess,
+    isPortalClientMembership,
+    postLoginRoute,
+    resolveActiveCompany,
+} from '@/lib/sessionCompany';
 import AppShell from '@/layouts/AppShell.vue';
 
 const router = createRouter({
@@ -102,20 +108,24 @@ const router = createRouter({
                     redirect: { name: 'catalog-equipment-types' },
                 },
                 {
-                    path: 'catalog/supplies',
-                    name: 'catalog-supplies',
+                    path: 'inventory',
+                    name: 'inventory',
                     component: () => import('@/pages/SuppliesPage.vue'),
-                    meta: { title: 'Insumos', moduleId: 'catalog_supplies' },
+                    meta: { title: 'Inventario', moduleId: 'inventory' },
+                },
+                {
+                    path: 'inventory/types',
+                    name: 'inventory-supply-types',
+                    component: () => import('@/pages/SupplyTypesPage.vue'),
+                    meta: { title: 'Tipos de insumo', moduleId: 'inventory' },
+                },
+                {
+                    path: 'catalog/supplies',
+                    redirect: { name: 'inventory' },
                 },
                 {
                     path: 'catalog/supplies/types',
-                    name: 'catalog-supply-types',
-                    component: () => import('@/pages/SupplyTypesPage.vue'),
-                    meta: { title: 'Tipos de insumo', moduleId: 'catalog_supplies' },
-                },
-                {
-                    path: 'catalog/supply-types',
-                    redirect: { name: 'catalog-supply-types' },
+                    redirect: { name: 'inventory-supply-types' },
                 },
                 {
                     path: 'catalog/suppliers',
@@ -128,6 +138,14 @@ const router = createRouter({
                     name: 'catalog-clients',
                     component: () => import('@/pages/ClientsPage.vue'),
                     meta: { title: 'Clientes', moduleId: 'clients' },
+                },
+                {
+                    path: 'clients',
+                    redirect: { name: 'catalog-clients' },
+                },
+                {
+                    path: 'catalog/supply-types',
+                    redirect: { name: 'inventory-supply-types' },
                 },
                 {
                     path: 'sites',
@@ -206,6 +224,12 @@ const router = createRouter({
                     meta: { title: 'Usuarios', requiresRole: 'administrator' },
                 },
                 {
+                    path: 'platform/tenants',
+                    name: 'platform-tenants',
+                    component: () => import('@/pages/PlatformTenantsPage.vue'),
+                    meta: { title: 'Clientes de plataforma', requiresPlatformAdmin: true },
+                },
+                {
                     path: 'platform/role-permissions',
                     name: 'platform-role-permissions',
                     component: () => import('@/pages/PlatformRolePermissionsPage.vue'),
@@ -242,8 +266,8 @@ router.beforeEach(async (to) => {
         if (getToken()) {
             const ok = await auth.ensureSession();
             if (ok) {
-                const company = auth.companies[0];
-                if (company?.role === 'client') {
+                const company = resolveActiveCompany(auth.companies);
+                if (company && isPortalClientMembership(company)) {
                     return { name: 'portal-invoices' };
                 }
                 return { name: 'dashboard' };
@@ -260,19 +284,22 @@ router.beforeEach(async (to) => {
     }
 
     if (to.path.startsWith('/app')) {
-        const companyId = getCompanyId();
-        const company =
-            auth.companies.find((c) => String(c.id) === companyId) ?? auth.companies[0];
-        if (company?.role === 'client') {
+        const company = resolveActiveCompany(auth.companies);
+        if (company && isPortalClientMembership(company)) {
             return { name: 'portal-invoices' };
+        }
+    }
+
+    if (to.matched.some((record) => record.meta.clientPortal)) {
+        const company = resolveActiveCompany(auth.companies);
+        if (company && !isPortalClientMembership(company)) {
+            return { name: 'dashboard' };
         }
     }
 
     const requiredModule = to.meta.moduleId as string | undefined;
     if (requiredModule) {
-        const companyId = getCompanyId();
-        const company =
-            auth.companies.find((c) => String(c.id) === companyId) ?? auth.companies[0];
+        const company = resolveActiveCompany(auth.companies);
         const modules = company?.modules ?? {};
         const access = modules[requiredModule];
         if (!access?.visible) {
@@ -282,10 +309,13 @@ router.beforeEach(async (to) => {
 
     const requiredRole = to.meta.requiresRole as string | undefined;
     if (requiredRole) {
-        const companyId = getCompanyId();
-        const company =
-            auth.companies.find((c) => String(c.id) === companyId) ?? auth.companies[0];
-        if (company?.role !== requiredRole) {
+        const company = resolveActiveCompany(auth.companies);
+        const role = company?.role;
+        const allowed =
+            requiredRole === 'administrator'
+                ? hasCompanyAdministratorAccess(role)
+                : role === requiredRole;
+        if (!allowed) {
             return { name: 'dashboard' };
         }
     }
@@ -296,9 +326,7 @@ router.beforeEach(async (to) => {
 
     const requiredPermission = to.meta.requiresPermission as string | undefined;
     if (requiredPermission) {
-        const companyId = getCompanyId();
-        const company =
-            auth.companies.find((c) => String(c.id) === companyId) ?? auth.companies[0];
+        const company = resolveActiveCompany(auth.companies);
         const permissions = company?.permissions ?? [];
         const elevated =
             requiredPermission === 'clients.view' && permissions.includes('clients.manage');

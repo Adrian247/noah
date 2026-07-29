@@ -1,8 +1,8 @@
-# Capacidades futuras IA y visión — Noah
+# Capacidades futuras IA y visión — Phoenix
 
 ```mermaid
 mindmap
-  root((Noah futuro))
+  root((Phoenix futuro))
     Visión
       OCR placas
       Reconocimiento equipo

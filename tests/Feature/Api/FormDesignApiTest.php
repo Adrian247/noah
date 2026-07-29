@@ -23,7 +23,7 @@ class FormDesignApiTest extends TestCase
     private function adminHeaders(): array
     {
         $this->seed();
-        $admin = User::query()->where('email', 'admin@noah.local')->first();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
         $company = Company::query()->first();
 
         return [
@@ -104,7 +104,7 @@ class FormDesignApiTest extends TestCase
     public function test_execution_rejects_invalid_select_value(): void
     {
         $this->seed();
-        $technician = User::query()->where('email', 'tecnico@noah.local')->first();
+        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
         $company = Company::query()->first();
         $routine = $this->demoRoutine();
         $token = $technician->createToken('test')->plainTextToken;
@@ -139,10 +139,10 @@ class FormDesignApiTest extends TestCase
     public function test_form_field_upload_respects_size_policy(): void
     {
         Storage::fake('evidence');
-        config(['noah.evidence.disk' => 'evidence']);
+        config(['phoenix.evidence.disk' => 'evidence']);
 
         $this->seed();
-        $technician = User::query()->where('email', 'tecnico@noah.local')->first();
+        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
         $company = Company::query()->first();
         $company->update(['form_max_image_size_kb' => 1]);
         $routine = $this->demoRoutine();
@@ -157,5 +157,40 @@ class FormDesignApiTest extends TestCase
                 'file' => $file,
             ])
             ->assertStatus(422);
+    }
+
+    public function test_form_field_media_streams_demo_photo(): void
+    {
+        $this->seed();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->firstOrFail();
+        $company = Company::query()->firstOrFail();
+        $routine = $this->demoRoutine();
+        $token = $admin->createToken('test')->plainTextToken;
+
+        $responses = $routine->latestExecution?->responses ?? [];
+        $photoPath = null;
+        foreach ($responses as $value) {
+            if (! is_array($value)) {
+                continue;
+            }
+            foreach ($value as $entry) {
+                if (is_array($entry) && isset($entry['path'])) {
+                    $photoPath = $entry['path'];
+                    break 2;
+                }
+            }
+        }
+        $this->assertNotNull($photoPath);
+
+        $this->withToken($token)
+            ->withHeader('X-Company-Id', (string) $company->id)
+            ->get('/api/v1/routines/'.$routine->id.'/form-field-media?path='.urlencode((string) $photoPath))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'image/jpeg');
+
+        $this->withToken($token)
+            ->withHeader('X-Company-Id', (string) $company->id)
+            ->get('/api/v1/routines/'.$routine->id.'/form-field-media?path='.urlencode('executions/999/demo/x.jpg'))
+            ->assertForbidden();
     }
 }

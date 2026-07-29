@@ -1,4 +1,4 @@
-# Conceptualización — Noah
+# Conceptualización — Phoenix
 
 Documento central que traduce la intención del producto en un modelo mental coherente. Complementa [product.md](product.md) y [scope.md](scope.md).
 
@@ -11,7 +11,7 @@ Las empresas de mantenimiento industrial suelen usar:
 - Facturación desconectada de la evidencia de campo.
 - Reportes que exigen desarrollo cada vez que cambia el formato o la marca del cliente.
 
-**Noah** unifica catálogos, operación, documentación configurable y facturación, con captura móvil y validación en oficina.
+**Phoenix** unifica catálogos, operación, documentación configurable y facturación, con captura móvil y validación en oficina.
 
 ## Solución en una oración
 
@@ -26,7 +26,7 @@ flowchart TB
     Mobile[Móvil campo - fase 2]
   end
 
-  subgraph platform [Noah - plataforma]
+  subgraph platform [Phoenix - plataforma]
     Core[Core: identidad, empresas, seguridad]
     Catalog[Catálogos y activos]
     Ops[Operación: rutinas y mantenimientos]
@@ -66,7 +66,7 @@ Un **tipo de rutina** enlaza: formulario + plantilla de reporte + workflow + (op
 sequenceDiagram
   participant A as Administrador
   participant T as Técnico
-  participant N as Noah API
+  participant N as Phoenix API
   participant S as Supervisor
   participant F as Facturación
 
@@ -105,7 +105,7 @@ Dominio **separado**: eventos del workflow (p. ej. `RoutineValidated`) disparan 
 - Escala horizontal posterior (más instancias API, storage externo, PG HA) sin cambiar contratos de dominio.
 - Eventos de dominio para desacoplar generación de reportes, notificaciones y facturación.
 
-## Qué hace a Noah “producto” y no “proyecto a medida”
+## Qué hace a Phoenix “producto” y no “proyecto a medida”
 
 Metadatos para nuevos tipos de servicio **sin** nuevos controladores por cliente. La app móvil **descarga** definiciones de formulario. Los reportes y flujos se versionan. Eso habilita SaaS multi-tenant en fases posteriores ([ADR-009](../decisions/ADR-009-multitenancy.md)).
 

@@ -16,7 +16,7 @@ class DashboardApiTest extends TestCase
     public function test_dashboard_summary_returns_counts(): void
     {
         $this->seed();
-        $user = User::query()->where('email', 'admin@noah.local')->first();
+        $user = User::query()->where('email', 'admin@pyro-systems.com')->first();
         $company = Company::query()->first();
 
         Sanctum::actingAs($user);
@@ -30,6 +30,13 @@ class DashboardApiTest extends TestCase
                     'routines_assigned',
                     'routines_validated',
                     'invoices_draft',
+                    'operations',
+                    'catalog',
+                    'design',
+                    'inventory',
+                    'focus_routines',
+                    'recent_activity',
+                    'generated_at',
                 ],
             ]);
     }

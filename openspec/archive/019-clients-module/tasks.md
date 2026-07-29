@@ -3,8 +3,8 @@
 ## Dominio y datos
 
 - [ ] Migración `clients` + modelo `Client` (`BelongsToCompany`)
-- [ ] Permisos `clients.manage`, `clients.view` en `NoahPermission` y mapa de roles
-- [ ] `noah:bootstrap-permissions` / seeder actualiza roles
+- [ ] Permisos `clients.manage`, `clients.view` en `PhoenixPermission` y mapa de roles
+- [ ] `phoenix:bootstrap-permissions` / seeder actualiza roles
 
 ## API
 

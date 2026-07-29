@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Enums\NoahPermission;
+use App\Enums\PhoenixPermission;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Services\Identity\CompanyAuthorizationService;
 use App\Support\CurrentCompany;
-use App\Support\NoahModuleCatalog;
+use App\Support\PhoenixModuleCatalog;
 use Illuminate\Http\JsonResponse;
 
 class CompanyRoleController extends Controller
@@ -19,9 +19,9 @@ class CompanyRoleController extends Controller
         return response()->json([
             'data' => $authorization->rolesForCompany($company),
             'permission_labels' => $authorization->permissionLabels(),
-            'all_permissions' => NoahPermission::values(),
-            'permission_groups' => $authorization->permissionGroupsForGranting(),
-            'modules_catalog' => NoahModuleCatalog::forApi(),
+            'all_permissions' => PhoenixPermission::values(),
+            'permission_groups' => $authorization->permissionGroupsForCompanyGranting(),
+            'modules_catalog' => PhoenixModuleCatalog::forApi(),
         ]);
     }
 }

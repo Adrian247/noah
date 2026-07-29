@@ -1,6 +1,6 @@
-# Noah — Especificación del producto
+# Phoenix — Especificación del producto
 
-**Noah** es un proyecto **nuevo y autónomo**. Esta carpeta (`openspec/`) es la **única fuente de verdad** para visión, arquitectura, dominio y diseño.
+**Phoenix** es un proyecto **nuevo y autónomo**. Esta carpeta (`openspec/`) es la **única fuente de verdad** para visión, arquitectura, dominio y diseño.
 
 ## Alcance de este repositorio
 
@@ -9,7 +9,7 @@
 
 ## Relación con otros sistemas
 
-Noah **no comparte** dominio de datos, despliegue ni código con otros productos. Se pueden reutilizar **ideas y patrones** aprendidos en otros trabajos; integraciones futuras en [architecture/integrations.md](architecture/integrations.md).
+Phoenix **no comparte** dominio de datos, despliegue ni código con otros productos. Se pueden reutilizar **ideas y patrones** aprendidos en otros trabajos; integraciones futuras en [architecture/integrations.md](architecture/integrations.md).
 
 ## Índice rápido
 
@@ -27,7 +27,7 @@ Noah **no comparte** dominio de datos, despliegue ni código con otros productos
 
 | Documento | Tema |
 |-----------|------|
-| [product.md](vision/product.md) | Qué es Noah |
+| [product.md](vision/product.md) | Qué es Phoenix |
 | [concept.md](vision/concept.md) | Modelo mental y flujos |
 | [scope.md](vision/scope.md) | Greenfield, fases, límites |
 | [principles.md](vision/principles.md) | Principios de diseño |

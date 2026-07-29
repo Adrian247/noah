@@ -1,4 +1,4 @@
-# Dominio — Notifications (Noah)
+# Dominio — Notifications (Phoenix)
 
 Motor: [notification-engine.md](../architecture/notification-engine.md).
 

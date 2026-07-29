@@ -17,7 +17,7 @@ class ProfileAvatarApiTest extends TestCase
     {
         Storage::fake('public');
         $this->seed();
-        $user = User::query()->where('email', 'admin@noah.local')->first();
+        $user = User::query()->where('email', 'admin@pyro-systems.com')->first();
         Sanctum::actingAs($user);
 
         $file = UploadedFile::fake()->create('avatar.png', 100, 'image/png');

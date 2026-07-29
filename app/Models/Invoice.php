@@ -17,6 +17,7 @@ class Invoice extends Model
         'client_id',
         'routine_id',
         'number',
+        'custom_reference',
         'status',
         'currency',
         'tax_rate_snapshot',
@@ -64,5 +65,10 @@ class Invoice extends Model
     public function lines(): HasMany
     {
         return $this->hasMany(InvoiceLine::class);
+    }
+
+    public function evidences(): HasMany
+    {
+        return $this->hasMany(InvoiceEvidence::class);
     }
 }

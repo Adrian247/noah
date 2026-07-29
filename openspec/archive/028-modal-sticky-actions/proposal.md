@@ -45,7 +45,7 @@ Páginas full-page con formulario largo (sin modal) **no** entran en 028 salvo q
 ### 3. Comportamiento
 
 - Pie visible en viewports ≥ 320px; en móvil, pie sticky dentro del modal (no del viewport global).
-- Botón primario a la derecha; secundario Cancelar a la izquierda (patrón Noah existente).
+- Botón primario a la derecha; secundario Cancelar a la izquierda (patrón Phoenix existente).
 - `disabled` / loading en Guardar sin romper layout del pie.
 - Accesibilidad: `role="dialog"`, `aria-labelledby`, foco inicial en primer campo, trap de foco opcional v1.
 

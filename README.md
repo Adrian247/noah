@@ -1,4 +1,4 @@
-# Noah
+# Phoenix
 
 Plataforma configurable para gestión de mantenimiento industrial: catálogos, rutinas, reportes dinámicos, facturación y (en fases posteriores) app móvil offline con sincronización e IA asistida.
 
@@ -46,12 +46,12 @@ npm install && npm run build
 
 | Servicio | URL |
 |----------|-----|
-| **Noah** | **http://localhost:8888** |
+| **Phoenix** | **http://localhost:8888** |
 | API health | http://localhost:8888/api/v1/health |
 | Mailpit | http://localhost:8025 |
 | MinIO | http://localhost:9001 |
 
-Demo: `admin@noah.local` / `noah_application` — ritual y cuentas: [docs/DEMO_ENV.md](docs/DEMO_ENV.md).
+Demo: `admin@pyro-systems.com` / `phoenix_application` — ritual y cuentas: [docs/DEMO_ENV.md](docs/DEMO_ENV.md).
 
 ## Licencia
 

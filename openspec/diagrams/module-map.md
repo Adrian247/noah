@@ -1,4 +1,4 @@
-# Diagrama — Mapa de módulos (Noah)
+# Diagrama — Mapa de módulos (Phoenix)
 
 Índice de diagramas: [README.md](README.md).
 

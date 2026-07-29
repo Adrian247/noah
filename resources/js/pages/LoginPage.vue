@@ -6,9 +6,15 @@ import { useCompanyStore } from '@/stores/company';
 import { api } from '@/api/client';
 import BacteriumNetwork from '@/components/BacteriumNetwork.vue';
 import AppAtmosphere from '@/components/AppAtmosphere.vue';
-import NoahBrand from '@/components/ui/NoahBrand.vue';
+import PhoenixBrand from '@/components/ui/PhoenixBrand.vue';
 import AppButton from '@/components/ui/AppButton.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
+import LoginFormPanel from '@/components/login/LoginFormPanel.vue';
+import { useSystemEnterStore } from '@/stores/systemEnter';
+import { postLoginRoute } from '@/lib/sessionCompany';
+
+/** Tiempo mínimo del overlay de entrada (loader + animación). */
+const LOGIN_ENTER_MIN_MS = 2600;
 
 type PortalContent = {
     service_title?: string | null;
@@ -39,8 +45,8 @@ const capabilities = [
     },
 ];
 
-const email = ref('admin@noah.local');
-const password = ref('noah_application');
+const email = ref('admin@pyro-systems.com');
+const password = ref('pyro.2026$');
 const passwordReadonly = ref(true);
 const loading = ref(false);
 const portal = ref<PortalContent | null>(null);
@@ -67,7 +73,7 @@ async function loadDemoHealth() {
         }>('/health');
         if (res.demo && !res.demo.accounts_ready) {
             demoHint.value =
-                'No hay cuentas demo. Reparando… vuelve a intentar en unos segundos o ejecuta: docker compose exec app php artisan noah:refresh-demo';
+                'No hay cuentas demo. Reparando… vuelve a intentar en unos segundos o ejecuta: docker compose exec app php artisan phoenix:refresh-demo';
             window.setTimeout(() => void loadDemoHealth(), 2500);
         } else {
             demoHint.value = null;
@@ -81,20 +87,29 @@ async function submit() {
     applyDemoCredentials();
     loading.value = true;
     auth.error = null;
+    const systemEnter = useSystemEnterStore();
+    systemEnter.show('Autenticando…');
+    const enterStartedAt = Date.now();
     try {
         await auth.login(email.value.trim(), password.value);
+        systemEnter.show('Entrando al sistema…');
         company.hydrate(auth.companies);
-        await router.push('/app/dashboard');
+        await router.push(postLoginRoute(auth.companies));
+        const remaining = LOGIN_ENTER_MIN_MS - (Date.now() - enterStartedAt);
+        if (remaining > 0) {
+            await new Promise((resolve) => window.setTimeout(resolve, remaining));
+        }
     } finally {
+        systemEnter.hide();
         loading.value = false;
     }
 }
 
-const DEMO_EMAIL = 'admin@noah.local';
-const DEMO_PASSWORD = 'noah_application';
+const DEMO_EMAIL = 'admin@pyro-systems.com';
+const DEMO_PASSWORD = 'pyro.2026$';
 
 function applyDemoCredentials() {
-    if (email.value === '' || email.value === 'admin@noah.local') {
+    if (email.value === '' || email.value === 'admin@pyro-systems.com') {
         email.value = DEMO_EMAIL;
     }
     if (password.value === '' || password.value === 'password') {
@@ -118,6 +133,7 @@ onMounted(() => {
 
 <template>
     <div class="login-shell relative min-h-dvh text-slate-100 lg:h-dvh lg:overflow-hidden">
+
         <BacteriumNetwork subdued warm />
 
         <AppAtmosphere />
@@ -127,9 +143,9 @@ onMounted(() => {
             <section
                 class="flex items-center justify-start px-6 py-12 sm:px-10 lg:py-0 lg:pl-10 xl:pl-16 2xl:pl-24"
             >
-                <div class="login-glass-premium login-stagger w-full max-w-[22rem] p-8 sm:max-w-sm sm:p-9">
+                <LoginFormPanel class="w-full max-w-[22rem] sm:max-w-sm">
                     <div class="login-reveal mb-7">
-                        <NoahBrand size="lg" :show-wordmark="true" variant="sidebar" />
+                        <PhoenixBrand size="lg" :show-wordmark="true" variant="sidebar" animated />
                         <p class="mt-3 text-sm leading-relaxed text-slate-400">
                             Acceso seguro a operaciones industriales
                         </p>
@@ -140,7 +156,7 @@ onMounted(() => {
                             v-model="email"
                             label="Correo electrónico"
                             type="email"
-                            name="noah-email"
+                            name="phoenix-email"
                             required
                             autocomplete="username"
                         />
@@ -148,26 +164,28 @@ onMounted(() => {
                             v-model="password"
                             label="Contraseña"
                             type="password"
-                            name="noah-password"
+                            name="phoenix-password"
                             required
-                            placeholder="noah_application"
+                            placeholder="pyro.2026$"
                             autocomplete="off"
                             :readonly="passwordReadonly"
                             @focus="onPasswordFocus"
                         />
                         <Transition name="login-fade">
-                            <p v-if="demoHint" class="text-sm text-amber-400">{{ demoHint }}</p>
-                            <p v-if="auth.error" class="text-sm text-red-400">
-                                {{ auth.error }}
-                                <span class="mt-1 block text-xs text-slate-500">
-                                    Demo local:
-                                    <span class="font-mono">admin@noah.local</span>
-                                    /
-                                    <span class="font-mono">noah_application</span>
-                                    — si falla:
-                                    <span class="font-mono">docker compose exec app php artisan noah:refresh-demo</span>
-                                </span>
-                            </p>
+                            <div v-if="demoHint || auth.error" class="space-y-2">
+                                <p v-if="demoHint" class="text-sm text-amber-400">{{ demoHint }}</p>
+                                <p v-if="auth.error" class="text-sm text-red-400">
+                                    {{ auth.error }}
+                                    <span class="mt-1 block text-xs text-slate-500">
+                                        Demo local:
+                                        <span class="font-mono">admin@pyro-systems.com</span>
+                                        /
+                                        <span class="font-mono">pyro.2026$</span>
+                                        — si falla:
+                                        <span class="font-mono">docker compose exec app php artisan phoenix:refresh-demo</span>
+                                    </span>
+                                </p>
+                            </div>
                         </Transition>
                         <AppButton
                             type="submit"
@@ -179,9 +197,9 @@ onMounted(() => {
                         </AppButton>
                         <p class="text-center text-xs text-slate-500">
                             Demo local:
-                            <span class="font-mono text-slate-400">admin@noah.local</span>
+                            <span class="font-mono text-slate-400">admin@pyro-systems.com</span>
                             /
-                            <span class="font-mono text-slate-400">noah_application</span>
+                            <span class="font-mono text-slate-400">pyro.2026$</span>
                         </p>
                     </form>
 
@@ -200,14 +218,14 @@ onMounted(() => {
                             >
                                 {{ portal.contact_email }}
                             </a>
-                            <span v-else>soporte@noah.local</span>
+                            <span v-else>soporte@pyro-systems.com</span>
                         </p>
                         <p class="mt-1 text-slate-400">{{ portal?.contact_phone ?? '+52 55 0000 0000' }}</p>
                         <p class="mt-1 text-slate-500">
                             {{ portal?.contact_hours ?? 'Lun–Vie 8:00–18:00 (hora Ciudad de México)' }}
                         </p>
                     </div>
-                </div>
+                </LoginFormPanel>
             </section>
 
             <!-- Columna narrativa: anclada arriba-izquierda del espacio libre -->
@@ -218,12 +236,12 @@ onMounted(() => {
                     <div class="mb-5 inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1">
                         <span class="h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
                         <span class="text-[11px] font-semibold uppercase tracking-wide text-amber-200/90">
-                            Plataforma Noah
+                            Plataforma Phoenix
                         </span>
                     </div>
                     <h1 class="max-w-2xl text-4xl font-extrabold leading-[1.12] tracking-tight xl:text-5xl 2xl:text-[3.25rem]">
                         <span class="login-headline-accent">
-                            {{ portal?.service_title ?? 'Gestión técnica industrial' }}
+                            {{ portal?.service_title ?? 'Gestión técnica clara para operaciones industriales' }}
                         </span>
                     </h1>
                     <p class="mt-5 max-w-xl text-base leading-relaxed text-slate-300/95 xl:text-lg">
@@ -270,7 +288,7 @@ onMounted(() => {
                         >
                             {{ portal.contact_email }}
                         </a>
-                        <span v-else class="text-slate-300">soporte@noah.local</span>
+                        <span v-else class="text-slate-300">soporte@pyro-systems.com</span>
                         <span class="hidden text-slate-600 sm:inline" aria-hidden="true">·</span>
                         <span>{{ portal?.contact_phone ?? '+52 55 0000 0000' }}</span>
                         <span class="hidden text-slate-600 sm:inline" aria-hidden="true">·</span>
