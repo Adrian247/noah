@@ -251,6 +251,8 @@ Route::prefix('v1')->group(function (): void {
                 ->middleware('company.module:design_reports,read');
             Route::post('/design/reports/{reportTemplate}/preview', [ReportTemplateController::class, 'previewDraft'])
                 ->middleware('company.module:design_reports,read');
+            Route::post('/design/reports/{reportTemplate}/preview-pdf', [ReportTemplateController::class, 'previewDraftPdf'])
+                ->middleware('company.module:design_reports,read');
             Route::put('/design/reports/{reportTemplate}', [ReportTemplateController::class, 'update'])
                 ->middleware('company.module:design_reports,write');
             Route::delete('/design/reports/{reportTemplate}', [ReportTemplateController::class, 'destroy'])
@@ -345,6 +347,8 @@ Route::prefix('v1')->group(function (): void {
             Route::put('/billing/invoices/{invoice}/draft', [InvoiceController::class, 'updateDraft'])
                 ->middleware('company.module:billing,write');
             Route::post('/billing/invoices/{invoice}/issue', [InvoiceController::class, 'issue'])
+                ->middleware('company.module:billing,write');
+            Route::post('/billing/invoices/{invoice}/deliver', [InvoiceController::class, 'deliverToClient'])
                 ->middleware('company.module:billing,write');
 
             Route::get('/billing/invoices/{invoice}/package', [InvoiceController::class, 'downloadPackage'])

@@ -5,6 +5,7 @@ import { api } from '@/api/client';
 import { useCompanyStore } from '@/stores/company';
 import { useModuleAccess } from '@/composables/useModuleAccess';
 import { useToast } from '@/composables/useToast';
+import { useConfirm } from '@/composables/useConfirm';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionSubnav from '@/components/ui/SectionSubnav.vue';
 import AppButton from '@/components/ui/AppButton.vue';
@@ -37,6 +38,7 @@ const route = useRoute();
 const router = useRouter();
 const company = useCompanyStore();
 const toast = useToast();
+const confirm = useConfirm();
 const { canWriteModule } = useModuleAccess();
 const routines = ref<Routine[]>([]);
 const loading = ref(true);
@@ -177,11 +179,11 @@ const creatingDemo = ref(false);
 const deletingId = ref<number | null>(null);
 
 async function deleteRoutine(r: Routine) {
-    if (
-        !window.confirm(
-            `¿Eliminar la rutina #${r.id} (${r.routine_type?.name ?? 'Rutina'})? Esta acción no se puede deshacer.`,
-        )
-    ) {
+    const accepted = await confirm(
+        `¿Eliminar la rutina #${r.id} (${r.routine_type?.name ?? 'Rutina'})? Esta acción no se puede deshacer.`,
+        { title: 'Eliminar rutina', confirmLabel: 'Eliminar', danger: true },
+    );
+    if (!accepted) {
         return;
     }
     deletingId.value = r.id;

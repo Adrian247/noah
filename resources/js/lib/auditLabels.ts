@@ -15,6 +15,7 @@ const ACTION_LABELS: Record<string, string> = {
     'workflow.deleted': 'Workflow eliminado',
     'workflow.definition_updated': 'Definición de workflow actualizada',
     'invoice.issued': 'Factura emitida',
+    'invoice.delivered_to_client': 'Documentación entregada al cliente',
     'invoice.draft_updated': 'Borrador de factura actualizado',
     'report.template_renamed': 'Plantilla de reporte renombrada',
     'report.components_updated': 'Componentes de reporte actualizados',

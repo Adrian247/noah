@@ -6,6 +6,7 @@ import { useToast } from '@/composables/useToast';
 import { useModuleAccess } from '@/composables/useModuleAccess';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
+import ColorPickerField from '@/components/ui/ColorPickerField.vue';
 import MaterialSelect from '@/components/ui/MaterialSelect.vue';
 import RichTextEditor from '@/components/ui/RichTextEditor.vue';
 import AppButton from '@/components/ui/AppButton.vue';
@@ -52,6 +53,8 @@ type PageSettings = {
         subtitle?: string;
         body?: string;
         show_date?: boolean;
+        /** YYYY-MM-DD; vacío = fecha de la rutina al generar el informe */
+        date_fixed?: string;
         omit_header_footer?: boolean;
         image_path?: string;
         logo_source?: 'none' | 'company' | 'client' | 'custom';
@@ -88,6 +91,13 @@ type DesignPreset = {
 
 type RoutineFormSource = { slug: string; name: string };
 
+const defaultThemeColors = {
+    primary: '#d97706',
+    accent: '#f59e0b',
+    cover_bg: '#1e3a5f',
+    cover_text: '#f8fafc',
+} as const;
+
 const designPresets = ref<DesignPreset[]>([]);
 const routineForms = ref<RoutineFormSource[]>([]);
 const selectedPresetId = ref('phoenix_industrial');
@@ -115,10 +125,12 @@ const pageSettings = ref<PageSettings>({
         subtitle: '{{company}}',
         body: '',
         show_date: true,
+        date_fixed: '',
         omit_header_footer: true,
         logo_source: 'none',
     },
     typography: { title_pt: 22, subtitle_pt: 16, body_pt: 11 },
+    theme: { colors: { ...defaultThemeColors } },
 });
 const formFields = ref<FormFieldOption[]>([]);
 const sectionTemplates = ref<SectionTemplateRow[]>([]);
@@ -178,6 +190,14 @@ function normalizeCoverPage(cover: PageSettings['cover_page']): PageSettings['co
         }
     }
     return next;
+}
+
+function ensureThemeColors(settings: PageSettings): void {
+    settings.theme ??= {};
+    settings.theme.colors = {
+        ...defaultThemeColors,
+        ...settings.theme.colors,
+    };
 }
 
 const coverLogoSource = computed({
@@ -354,6 +374,10 @@ async function load() {
                 ...(d?.page_settings?.theme?.colors ?? {}),
             },
         };
+        ensureThemeColors(merged);
+        if (merged.cover_page.date_fixed === undefined || merged.cover_page.date_fixed === null) {
+            merged.cover_page.date_fixed = '';
+        }
         pageSettings.value = merged;
         const presetsRes = await api<{ data: DesignPreset[] }>('/design/reports/presets');
         designPresets.value = presetsRes.data ?? [];
@@ -395,6 +419,7 @@ async function applyDesignPreset() {
                 ...(res.data.page_settings?.theme?.colors ?? {}),
             },
         };
+        ensureThemeColors(merged);
         pageSettings.value = merged;
         if (merged.theme?.preset_id) {
             selectedPresetId.value = merged.theme.preset_id;
@@ -416,14 +441,14 @@ const routineFormOptions = computed(() =>
     routineForms.value.map((f) => ({ value: f.slug, label: f.name })),
 );
 
-async function downloadPreviewHtml() {
+async function downloadPreviewPdf() {
     downloadingPreview.value = true;
     try {
         const token = getToken();
         const companyId = getCompanyId();
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
-            Accept: 'text/html',
+            Accept: 'application/pdf',
         };
         if (token) {
             headers.Authorization = `Bearer ${token}`;
@@ -431,7 +456,7 @@ async function downloadPreviewHtml() {
         if (companyId) {
             headers['X-Company-Id'] = companyId;
         }
-        const res = await fetch(`/api/v1/design/reports/${route.params.id}/preview`, {
+        const res = await fetch(`/api/v1/design/reports/${route.params.id}/preview-pdf`, {
             method: 'POST',
             headers,
             body: JSON.stringify({
@@ -440,18 +465,17 @@ async function downloadPreviewHtml() {
             }),
         });
         if (!res.ok) {
-            throw new Error('No se pudo generar la descarga.');
+            throw new Error('No se pudo generar el PDF de vista previa.');
         }
-        const html = await res.text();
+        const blob = await res.blob();
         const safeName = (templateName.value || 'reporte').replace(/[^\w\s-]/g, '').trim() || 'reporte';
-        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const anchor = document.createElement('a');
         anchor.href = url;
-        anchor.download = `vista-previa-${safeName}.html`;
+        anchor.download = `vista-previa-${safeName}.pdf`;
         anchor.click();
         URL.revokeObjectURL(url);
-        toast.success('Vista previa descargada.');
+        toast.success('PDF de vista previa descargado.');
     } catch (e) {
         toast.error((e as Error).message);
     } finally {
@@ -852,37 +876,16 @@ onUnmounted(() => {
                 </button>
             </div>
 
-            <div
-                v-if="pageSettings.theme?.colors"
-                class="border-portal-border/40 grid gap-3 rounded-xl border p-4 md:grid-cols-3"
-            >
-                <p class="text-portal-heading md:col-span-3 text-xs font-medium uppercase tracking-wide">
+            <div class="border-portal-border/40 grid gap-3 rounded-xl border p-4 sm:grid-cols-2">
+                <p class="text-portal-heading sm:col-span-2 text-xs font-medium uppercase tracking-wide">
                     Ajuste fino de colores (opcional)
                 </p>
-                <label class="text-portal-muted flex items-center gap-2 text-xs">
-                    Primario
-                    <input
-                        v-model="pageSettings.theme!.colors!.primary"
-                        type="color"
-                        class="h-8 w-12 cursor-pointer rounded border border-transparent bg-transparent"
-                    />
-                </label>
-                <label class="text-portal-muted flex items-center gap-2 text-xs">
-                    Acento
-                    <input
-                        v-model="pageSettings.theme!.colors!.accent"
-                        type="color"
-                        class="h-8 w-12 cursor-pointer rounded border border-transparent bg-transparent"
-                    />
-                </label>
-                <label class="text-portal-muted flex items-center gap-2 text-xs">
-                    Portada
-                    <input
-                        v-model="pageSettings.theme!.colors!.cover_bg"
-                        type="color"
-                        class="h-8 w-12 cursor-pointer rounded border border-transparent bg-transparent"
-                    />
-                </label>
+                <p class="text-portal-muted sm:col-span-2 text-xs leading-snug">
+                    Los colores de la portada se configuran en la sección
+                    <strong class="text-portal-heading font-medium">Página de presentación</strong>.
+                </p>
+                <ColorPickerField v-model="pageSettings.theme!.colors!.primary" label="Primario" />
+                <ColorPickerField v-model="pageSettings.theme!.colors!.accent" label="Acento" />
             </div>
         </section>
 
@@ -1022,10 +1025,35 @@ onUnmounted(() => {
                         <MaterialField v-model="pageSettings.cover_page!.title" label="Título portada" />
                         <MaterialField v-model="pageSettings.cover_page!.subtitle" label="Subtítulo portada" />
                         <RichTextEditor v-model="pageSettings.cover_page!.body" label="Cuerpo portada" />
+                        <div class="border-portal-border/40 grid gap-3 rounded-lg border p-3 sm:grid-cols-2">
+                            <p class="text-portal-heading sm:col-span-2 text-xs font-medium">Colores de la portada</p>
+                            <ColorPickerField
+                                v-model="pageSettings.theme!.colors!.cover_bg"
+                                label="Fondo"
+                                default-hex="#1e3a5f"
+                            />
+                            <ColorPickerField
+                                v-model="pageSettings.theme!.colors!.cover_text"
+                                label="Textos (título, subtítulo, cuerpo y fecha)"
+                                default-hex="#f8fafc"
+                            />
+                        </div>
                         <label class="text-portal-muted flex items-center gap-2 text-sm">
-                            <input v-model="pageSettings.cover_page!.show_date" type="checkbox" />
-                            Mostrar fecha
+                            <input v-model="pageSettings.cover_page!.show_date" type="checkbox" class="size-4 rounded" />
+                            Mostrar fecha en portada
                         </label>
+                        <template v-if="pageSettings.cover_page!.show_date">
+                            <MaterialField
+                                v-model="pageSettings.cover_page!.date_fixed"
+                                type="date"
+                                label="Fecha en portada"
+                                placeholder="Automática"
+                            />
+                            <p class="text-portal-muted -mt-1 text-xs leading-snug">
+                                Deja la fecha vacía para usar la del informe al generar el PDF (fecha de envío de la
+                                rutina en informes reales; hoy en vista previa).
+                            </p>
+                        </template>
                         <label class="text-portal-muted flex items-center gap-2 text-sm">
                             <input v-model="pageSettings.cover_page!.omit_header_footer" type="checkbox" />
                             Omitir cabecera y pie en la portada
@@ -1096,7 +1124,12 @@ onUnmounted(() => {
                         </div>
                         <div class="grid gap-2 md:grid-cols-3">
                             <MaterialSelect v-model="c.align" label="Alineación" :options="alignOptions" />
-                            <MaterialField v-model="c.color" label="Color (#RRGGBB)" placeholder="#111111" />
+                            <ColorPickerField
+                                optional
+                                label="Color del texto"
+                                :model-value="c.color"
+                                @update:model-value="(v) => (c.color = v)"
+                            />
                             <MaterialField v-model="c.size_pt" label="Tamaño (pt)" type="number" />
                         </div>
                         <MaterialField
@@ -1164,9 +1197,9 @@ onUnmounted(() => {
                         type="button"
                         variant="secondary"
                         :disabled="!previewUrl || downloadingPreview"
-                        @click="downloadPreviewHtml"
+                        @click="downloadPreviewPdf"
                     >
-                        {{ downloadingPreview ? 'Generando…' : 'Descargar vista previa' }}
+                        {{ downloadingPreview ? 'Generando…' : 'Descargar PDF (vista previa)' }}
                     </AppButton>
                 </div>
                 <div class="report-designer-preview min-h-0 flex-1 overflow-x-hidden overflow-y-auto rounded-lg border border-white/10 bg-slate-200">

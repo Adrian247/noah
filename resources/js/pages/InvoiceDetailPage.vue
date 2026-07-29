@@ -59,7 +59,9 @@ type Invoice = {
     notify_client_on_issue?: boolean;
     client_portal_visible?: boolean;
     delivery_deferred?: boolean;
-    client?: { id: number; legal_name: string } | null;
+    delivered_to_client_at?: string | null;
+    issued_at?: string | null;
+    client?: { id: number; legal_name: string; billing_email?: string | null } | null;
     lines: {
         line_type: LineType;
         description: string;
@@ -90,6 +92,7 @@ const editLines = ref<DraftLine[]>([]);
 const loading = ref(true);
 const saving = ref(false);
 const issuing = ref(false);
+const delivering = ref(false);
 const notifyClient = ref(false);
 const portalVisible = ref(false);
 const deliveryDeferred = ref(false);
@@ -104,6 +107,10 @@ const routineReportEvidences = computed(() => evidences.value.filter((e) => e.ki
 const satEvidence = computed(() => evidences.value.find((e) => e.kind === 'sat_cfdi') ?? null);
 
 const isDraft = computed(() => invoice.value?.status === 'draft');
+const canDeliverToClient = computed(
+    () => !isDraft.value && canIssue.value && invoice.value?.status === 'issued' && invoice.value?.client_id != null,
+);
+const deliverOptionsSelected = computed(() => notifyClient.value || portalVisible.value);
 
 function lineImport(line: Invoice['lines'][0], index: number): DraftLine {
     return {
@@ -424,6 +431,31 @@ async function issueInvoice() {
         toast.error((e as Error).message);
     } finally {
         issuing.value = false;
+    }
+}
+
+async function deliverToClient() {
+    if (!invoice.value || !canDeliverToClient.value || !deliverOptionsSelected.value) {
+        return;
+    }
+    delivering.value = true;
+    try {
+        const res = await api<{ data: Invoice }>(`/billing/invoices/${invoice.value.id}/deliver`, {
+            method: 'POST',
+            body: JSON.stringify({
+                notify_client: notifyClient.value,
+                client_portal_visible: portalVisible.value,
+            }),
+        });
+        invoice.value = res.data;
+        notifyClient.value = Boolean(res.data.notify_client_on_issue);
+        portalVisible.value = Boolean(res.data.client_portal_visible);
+        deliveryDeferred.value = Boolean(res.data.delivery_deferred);
+        toast.success('Documentación enviada al cliente.');
+    } catch (e) {
+        toast.error((e as Error).message);
+    } finally {
+        delivering.value = false;
     }
 }
 
@@ -813,10 +845,40 @@ onMounted(load);
                     </tbody>
                 </table>
 
-                <div v-if="!isDraft" class="mt-4">
+                <div v-if="!isDraft" class="mt-4 space-y-4">
                     <AppButton type="button" variant="secondary" @click="downloadDeliveryPackage">
                         Descargar paquete ZIP (PDF + evidencias)
                     </AppButton>
+
+                    <div v-if="canDeliverToClient" class="portal-form-panel space-y-3 p-4 text-sm">
+                        <p class="text-portal-heading font-medium">Entrega de documentación al cliente</p>
+                        <p v-if="invoice.delivered_to_client_at" class="text-portal-muted text-xs">
+                            Última entrega registrada:
+                            {{ new Date(invoice.delivered_to_client_at).toLocaleString('es-MX') }}
+                            <span v-if="invoice.delivery_deferred"> (emisión con envío diferido)</span>
+                        </p>
+                        <p v-else-if="invoice.delivery_deferred" class="text-portal-muted text-xs">
+                            Emitiste con envío diferido; configura las opciones y envía cuando el cliente esté listo.
+                        </p>
+                        <p v-else class="text-portal-muted text-xs">
+                            Si al emitir no notificaste al cliente ni habilitaste el portal, puedes hacerlo ahora.
+                        </p>
+                        <label class="flex items-start gap-2">
+                            <input v-model="notifyClient" type="checkbox" class="mt-1" />
+                            <span>Notificar por email (paquete y enlace al portal si aplica)</span>
+                        </label>
+                        <label class="flex items-start gap-2">
+                            <input v-model="portalVisible" type="checkbox" class="mt-1" />
+                            <span>Visible en portal del cliente (descarga ZIP con PDF y evidencias)</span>
+                        </label>
+                        <AppButton
+                            type="button"
+                            :disabled="delivering || !deliverOptionsSelected"
+                            @click="deliverToClient"
+                        >
+                            {{ delivering ? 'Enviando…' : 'Enviar documentación al cliente' }}
+                        </AppButton>
+                    </div>
                 </div>
 
                 <dl class="mt-6 space-y-1 text-sm text-right">

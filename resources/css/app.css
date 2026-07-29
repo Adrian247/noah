@@ -2035,7 +2035,7 @@
     .app-toast-enter-from,
     .app-toast-leave-to {
         opacity: 0;
-        transform: translateX(1rem);
+        transform: translate(0.75rem, -0.25rem);
     }
 
     .app-toast-move {
@@ -2629,6 +2629,35 @@
     .portal-callout--success {
         @apply border-emerald-500/40 bg-emerald-500/15;
         color: #d1fae5;
+    }
+
+    .app-toast-host {
+        width: min(28rem, calc(100vw - 2rem));
+    }
+
+    .app-toast {
+        box-shadow:
+            0 18px 44px -14px rgb(0 0 0 / 0.55),
+            inset 0 1px 0 rgb(255 255 255 / 0.06);
+    }
+
+    .app-toast__dismiss {
+        color: inherit;
+        opacity: 0.72;
+        transition:
+            opacity 0.15s ease,
+            background-color 0.15s ease;
+    }
+
+    .app-toast__dismiss:hover {
+        opacity: 1;
+        background: rgb(255 255 255 / 0.1);
+    }
+
+    .app-toast__dismiss:focus-visible {
+        opacity: 1;
+        outline: 2px solid rgb(245 158 11 / 0.55);
+        outline-offset: 2px;
     }
 
     .portal-msg-warning {
@@ -3232,6 +3261,10 @@
 [data-theme='light'] .portal-callout--success {
     @apply border-emerald-300 bg-emerald-50;
     color: #064e3b;
+}
+
+[data-theme='light'] .app-toast {
+    box-shadow: var(--shadow-glass);
 }
 
 [data-theme='light'] .portal-msg-warning {

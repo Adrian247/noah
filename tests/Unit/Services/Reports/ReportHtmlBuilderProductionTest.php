@@ -53,7 +53,7 @@ class ReportHtmlBuilderProductionTest extends TestCase
         $html = app(ReportHtmlBuilder::class)->build($routine, $execution, $components, $pageSettings);
 
         $coverPos = strpos($html, 'report-cover--sheet');
-        $mainPos = strpos($html, '<div class="report-pdf-main">');
+        $mainPos = strpos($html, 'class="report-pdf-main');
         $this->assertNotFalse($coverPos);
         $this->assertNotFalse($mainPos);
         $this->assertLessThan($mainPos, $coverPos);
@@ -177,5 +177,105 @@ class ReportHtmlBuilderProductionTest extends TestCase
         $this->assertStringContainsString($assetTag, $html);
         $this->assertStringNotContainsString('{{company}}', $html);
         $this->assertStringNotContainsString('{{asset_tag}}', $html);
+    }
+
+    public function test_cover_body_converts_editor_html_with_literal_markdown(): void
+    {
+        $html = app(ReportHtmlBuilder::class)->buildPreviewPdfHtml(
+            [['type' => 'title', 'text' => 'Cuerpo']],
+            [
+                'cover_page' => [
+                    'enabled' => true,
+                    'title' => 'Informe',
+                    'body' => '<p>Activo: **{{asset_tag}}**\\n\\nRutina de mantenimiento documentada.</p>',
+                    'omit_header_footer' => true,
+                ],
+                'theme' => [
+                    'colors' => [
+                        'cover_bg' => '#1e3a5f',
+                        'cover_text' => '#f8fafc',
+                    ],
+                ],
+            ],
+        );
+
+        $this->assertStringContainsString('<strong>DEMO-001</strong>', $html);
+        $this->assertStringNotContainsString('**DEMO-001**', $html);
+        $this->assertStringNotContainsString('\\n', $html);
+        $this->assertStringContainsString('report-cover-body', $html);
+        $this->assertStringContainsString('report-cover-page__bg', $html);
+        $this->assertStringContainsString('min-height: 297mm', $html);
+        $this->assertStringContainsString('margin: -18mm -14mm -22mm -14mm', $html);
+        $this->assertStringContainsString('report-pdf-main--body', $html);
+    }
+
+    public function test_themed_cover_pdf_is_cover_plus_content_without_blank_page(): void
+    {
+        $html = app(ReportHtmlBuilder::class)->buildPreviewPdfHtml(
+            [['type' => 'title', 'text' => 'Cuerpo']],
+            [
+                'cover_page' => [
+                    'enabled' => true,
+                    'title' => 'Portada',
+                    'omit_header_footer' => true,
+                ],
+                'header' => ['enabled' => true, 'text' => 'Encabezado'],
+                'footer' => ['enabled' => true, 'text' => 'Pie'],
+                'theme' => [
+                    'colors' => [
+                        'cover_bg' => '#1e3a5f',
+                        'cover_text' => '#f8fafc',
+                    ],
+                ],
+            ],
+        );
+
+        $this->assertStringContainsString('if ($PAGE_NUM >= 2)', $html);
+
+        $probe = \Tests\Support\ReportPdfLayoutProbe::fromHtml($html, true);
+
+        $this->assertSame(2, $probe->pageCount, 'Portada temática + cuerpo debe ser exactamente 2 páginas.');
+        if (! $probe->bboxAvailable()) {
+            $this->markTestSkipped('pdftotext no disponible para validar layout.');
+        }
+        $this->assertTrue($probe->hasTextOnPage(1, 'Portada'));
+        $this->assertFalse($probe->hasTextOnPage(1, 'Encabezado'));
+        $this->assertFalse($probe->hasTextOnPage(1, 'Pie'));
+        $this->assertTrue($probe->hasTextOnPage(2, 'Cuerpo'));
+        $this->assertTrue($probe->hasTextOnPage(2, 'Encabezado'));
+        $minX = $probe->minXOnPage(2);
+        $this->assertNotNull($minX);
+        $this->assertGreaterThanOrEqual(35.0, $minX, 'El cuerpo debe respetar margen horizontal (~14mm).');
+    }
+
+    public function test_cover_respects_fixed_date_on_pdf_html(): void
+    {
+        $html = app(ReportHtmlBuilder::class)->buildPreviewPdfHtml(
+            [['type' => 'title', 'text' => 'Cuerpo']],
+            [
+                'cover_page' => [
+                    'enabled' => true,
+                    'title' => 'Informe',
+                    'show_date' => true,
+                    'date_fixed' => '2025-03-15',
+                    'omit_header_footer' => true,
+                ],
+            ],
+        );
+
+        $this->assertStringContainsString('15/03/2025', $html);
+    }
+
+    public function test_body_pages_keep_default_page_margins_when_cover_disabled(): void
+    {
+        $html = app(ReportHtmlBuilder::class)->buildPreviewPdfHtml(
+            [['type' => 'title', 'text' => 'Solo cuerpo']],
+            ['cover_page' => ['enabled' => false]],
+        );
+
+        $this->assertStringContainsString('@page { margin: 18mm 14mm 22mm 14mm', $html);
+        $this->assertStringNotContainsString('@page report-content', $html);
+        $this->assertStringNotContainsString('page: report-cover', $html);
+        $this->assertStringNotContainsString('height: 773pt', $html);
     }
 }

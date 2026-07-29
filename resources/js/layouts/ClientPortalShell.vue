@@ -11,7 +11,6 @@ import { clientPortalSessionFooter } from '@/lib/clientPortalFooter';
 import AppAtmosphere from '@/components/AppAtmosphere.vue';
 import BacteriumNetwork from '@/components/BacteriumNetwork.vue';
 import PortalLightFrost from '@/components/PortalLightFrost.vue';
-import AppToastHost from '@/components/ui/AppToastHost.vue';
 import PhoenixBrand from '@/components/ui/PhoenixBrand.vue';
 import NavIcon from '@/components/ui/NavIcon.vue';
 import UserAvatar from '@/components/ui/UserAvatar.vue';
@@ -167,6 +166,5 @@ async function logout() {
             </footer>
         </div>
 
-        <AppToastHost />
     </div>
 </template>

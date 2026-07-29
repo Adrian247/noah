@@ -12,7 +12,6 @@ import PhoenixBrand from '@/components/ui/PhoenixBrand.vue';
 import BacteriumNetwork from '@/components/BacteriumNetwork.vue';
 import AppAtmosphere from '@/components/AppAtmosphere.vue';
 import PortalLightFrost from '@/components/PortalLightFrost.vue';
-import AppToastHost from '@/components/ui/AppToastHost.vue';
 import ProductTour from '@/components/onboarding/ProductTour.vue';
 import { useTheme } from '@/composables/useTheme';
 import SidebarNavTooltip from '@/components/layout/SidebarNavTooltip.vue';
@@ -300,7 +299,6 @@ async function onAvatarSelected(event: Event) {
             sidebarPhase === 'expanding' ? 'app-portal-shell--sidebar-expanding' : '',
         ]"
     >
-        <AppToastHost />
         <ProductTour />
         <BacteriumNetwork subdued warm :light="!isDark" />
         <AppAtmosphere />

@@ -119,22 +119,30 @@ class ReportSampleDataFactory
     {
         $captionEnabled = (bool) ($field['caption_enabled'] ?? false);
         $allowMultiple = (bool) ($field['allow_multiple'] ?? false);
+        $maxImages = $allowMultiple ? max(1, (int) ($field['max_images'] ?? 4)) : 1;
+        $key = (string) ($field['key'] ?? 'foto');
+
+        $count = 1;
+        if ($allowMultiple) {
+            $count = min($maxImages, $key === 'foto_frenos' || $key === 'foto_neumaticos' ? 3 : 2);
+        }
+
+        $captions = ['Vista frontal', 'Detalle izquierdo', 'Detalle derecho', 'Panorámica'];
+        $items = [];
+        for ($i = 0; $i < $count; $i++) {
+            $item = ['path' => '__preview_placeholder__'];
+            if ($captionEnabled) {
+                $item['caption'] = $count > 1
+                    ? ($captions[$i] ?? ('Vista '.($i + 1)))
+                    : 'Foto de ejemplo';
+            }
+            $items[] = $item;
+        }
 
         if ($allowMultiple) {
-            $items = [
-                ['path' => '__preview_placeholder__', 'caption' => $captionEnabled ? 'Vista frontal' : ''],
-            ];
-            if ($captionEnabled) {
-                $items[0]['caption'] = 'Vista frontal';
-            }
-
             return $items;
         }
 
-        if ($captionEnabled) {
-            return ['path' => '__preview_placeholder__', 'caption' => 'Foto de ejemplo'];
-        }
-
-        return '__preview_placeholder__';
+        return $captionEnabled ? $items[0] : '__preview_placeholder__';
     }
 }

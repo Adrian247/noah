@@ -779,11 +779,11 @@ class PhoenixDemoSeeder extends Seeder
             ['company_id' => $company->id, 'slug' => 'informe-revision-mayor-vehiculo'],
             [
                 'name' => 'Informe revisión mayor vehículo',
-                'description' => 'Informe alineado al formulario normalizado inspeccion-vehiculo-v1',
+                'description' => 'Informe alineado al formulario revisión mayor premium',
             ]
         );
 
-        $reportComponents = app(ReportPresetApplier::class)->componentsFromFormVersion($normalizedFormVersion);
+        $reportComponents = app(ReportPresetApplier::class)->componentsFromFormVersion($formVersion);
         $reportComponents[] = ['type' => 'divider', 'style' => 'solid', 'margin_pt' => 12];
         $reportComponents[] = ['type' => 'subtitle', 'text' => 'Anexos', 'align' => 'left'];
         $reportComponents[] = ['type' => 'section_template', 'section_template_id' => $sectionAlcance->id, 'align' => 'left'];
@@ -829,7 +829,7 @@ class PhoenixDemoSeeder extends Seeder
             ['company_id' => $company->id, 'slug' => 'revision-mayor-vehiculo-premium'],
             [
                 'name' => 'Revisión mayor vehículo (premium)',
-                'form_version_id' => $normalizedFormVersion->id,
+                'form_version_id' => $formVersion->id,
                 'report_template_version_id' => $reportVersion->id,
                 'is_active' => true,
             ]
@@ -906,14 +906,10 @@ class PhoenixDemoSeeder extends Seeder
 
     private function ensureDemonstrationRoutine(Company $company, \Database\Seeders\Support\TenantDemoProfile $profile): void
     {
-        $hasDemo = Routine::query()
+        $existingDemo = Routine::query()
             ->where('company_id', $company->id)
             ->where('is_demo', true)
-            ->exists();
-
-        if ($hasDemo) {
-            return;
-        }
+            ->first();
 
         $technicianEmail = null;
         foreach ($profile->staff as $staffRow) {
@@ -932,7 +928,15 @@ class PhoenixDemoSeeder extends Seeder
             return;
         }
 
-        app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
+        $factory = app(DemoRoutineFactory::class);
+
+        if ($existingDemo !== null) {
+            $factory->refreshDemoResponses($existingDemo);
+
+            return;
+        }
+
+        $factory->createForCompany($company->id, $technician);
     }
 
     private function seedDemoClientLogo(Client $client): void

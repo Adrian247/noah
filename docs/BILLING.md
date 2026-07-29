@@ -79,6 +79,7 @@ Fallback: `PHOENIX_BILLING_LABOR_RATE`, `PHOENIX_BILLING_TAX_RATE` en `config/ph
 - `GET /billing/invoices`, `GET /billing/invoices/{id}`
 - `PUT /billing/invoices/{id}/draft` — prefactura (líneas, cliente, `custom_reference`, flags de entrega)
 - `POST /billing/invoices/{id}/issue`
+- `POST /billing/invoices/{id}/deliver` — entrega al cliente tras emisión (email y/o portal; auditoría en el hilo del workflow)
 - `GET /billing/invoices/{id}/package` — ZIP de entrega (emitidas)
 - Evidencias: `GET/POST/DELETE /billing/invoices/{id}/evidences`, descarga por evidencia
 - `GET/POST/PUT/DELETE /clients`

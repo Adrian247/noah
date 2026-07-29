@@ -42,5 +42,23 @@ class DemoRoutineFactoryTest extends TestCase
         foreach ($photoPaths as $photoPath) {
             $this->assertTrue($disk->exists($photoPath), 'Demo photos must be stored on the evidence disk for PDF reports.');
         }
+
+        $frenos = $responses['foto_frenos'] ?? null;
+        $this->assertIsArray($frenos);
+        $this->assertCount(4, $frenos, 'foto_frenos debe incluir galería demo de 4 imágenes.');
+
+        $neumaticos = $responses['foto_neumaticos'] ?? null;
+        $this->assertIsArray($neumaticos);
+        $this->assertCount(3, $neumaticos, 'foto_neumaticos debe incluir galería demo de 3 imágenes.');
+
+        $pathsByField = [];
+        foreach ($photoPaths as $photoPath) {
+            $pathsByField[$photoPath] = true;
+        }
+        $this->assertCount(
+            count($photoPaths),
+            array_keys($pathsByField),
+            'Cada foto demo debe tener ruta única.',
+        );
     }
 }

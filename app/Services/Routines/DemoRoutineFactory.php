@@ -18,7 +18,21 @@ class DemoRoutineFactory
     /** @var array<string, string> */
     private const SELECT_DEFAULTS = [
         'nivel_combustible' => 'tres_cuartos',
-        'filtro_aceite_reemplazado' => 'si',
+        'filtros_cambio_aceite' => 'si',
+    ];
+
+    /** Fotos por campo en rutina demo (galerías). */
+    private const MULTI_PHOTO_DEMO_COUNTS = [
+        'foto_frenos' => 4,
+        'foto_neumaticos' => 3,
+    ];
+
+    /** @var list<string> */
+    private const MULTI_PHOTO_CAPTIONS = [
+        'Vista frontal',
+        'Detalle izquierdo',
+        'Detalle derecho',
+        'Panorámica',
     ];
 
     /** @var array<string, int|float> */
@@ -76,6 +90,42 @@ class DemoRoutineFactory
     }
 
     /**
+     * Regenera respuestas (incl. fotos demo) para una rutina demo existente según el formulario publicado actual.
+     */
+    public function refreshDemoResponses(Routine $routine): void
+    {
+        if (! $routine->is_demo) {
+            return;
+        }
+
+        $routine->loadMissing('routineType.formVersion');
+        $schema = $routine->routineType?->formVersion?->schema ?? ['sections' => []];
+        $responses = $this->fakeResponses($schema, $routine->id, (int) $routine->company_id);
+        $this->formValidator->validate($schema, $responses, (int) $routine->company_id);
+
+        $execution = $routine->latestExecution;
+        if ($execution !== null) {
+            $execution->update(['responses' => $responses]);
+
+            return;
+        }
+
+        $assignee = $routine->assigned_to;
+        if ($assignee === null) {
+            return;
+        }
+
+        $routine->executions()->create([
+            'performed_by' => $assignee,
+            'responses' => $responses,
+            'technician_comments' => 'Rutina demo — datos sintéticos para prueba rápida.',
+            'corrected_comments' => 'Rutina demo — datos sintéticos para prueba rápida.',
+            'duration_minutes' => 75,
+            'status' => 'draft',
+        ]);
+    }
+
+    /**
      * @param  array<string, mixed>  $schema
      * @return array<string, mixed>
      */
@@ -119,7 +169,7 @@ class DemoRoutineFactory
                 ? 'Sin daños visibles reportados. Cliente solicita revisión estándar premium.'
                 : 'Observación demo generada automáticamente.',
             'select', 'options' => $this->firstCatalogValue($field, $companyId) ?? 'operativo',
-            'photo' => $this->fakePhotoValue($routineId, $key),
+            'photo' => $this->fakePhotoValue($routineId, $key, $field),
             default => 'OK',
         };
     }
@@ -149,13 +199,42 @@ class DemoRoutineFactory
     }
 
     /**
+     * @param  array<string, mixed>  $field
      * @return list<array{path: string, caption?: string}>
      */
-    private function fakePhotoValue(int $routineId, string $fieldKey): array
+    private function fakePhotoValue(int $routineId, string $fieldKey, array $field): array
     {
+        $allowMultiple = (bool) ($field['allow_multiple'] ?? false);
+        $maxImages = $allowMultiple ? max(1, (int) ($field['max_images'] ?? 4)) : 1;
+        $captionEnabled = (bool) ($field['caption_enabled'] ?? false);
+
+        $count = 1;
+        if ($allowMultiple) {
+            $count = self::MULTI_PHOTO_DEMO_COUNTS[$fieldKey] ?? min(3, $maxImages);
+            $count = max(2, min($count, $maxImages));
+        }
+
+        $items = [];
+        for ($index = 0; $index < $count; $index++) {
+            $items[] = $this->storeDemoPhotoItem($routineId, $fieldKey, $index, $count, $captionEnabled);
+        }
+
+        return $items;
+    }
+
+    /**
+     * @return array{path: string, caption?: string}
+     */
+    private function storeDemoPhotoItem(
+        int $routineId,
+        string $fieldKey,
+        int $index,
+        int $total,
+        bool $captionEnabled,
+    ): array {
         $diskName = config('phoenix.evidence.disk', 'evidence');
-        $path = config('phoenix.evidence.path_prefix').'/'.$routineId.'/demo/'.$fieldKey.'-'.Str::uuid().'.jpg';
-        $binary = $this->demoJpegBytes($fieldKey);
+        $path = config('phoenix.evidence.path_prefix').'/'.$routineId.'/demo/'.$fieldKey.'-'.$index.'-'.Str::uuid().'.jpg';
+        $binary = $this->demoJpegBytes($fieldKey, $index, $total);
 
         $disk = Storage::disk($diskName);
         $dir = dirname($path);
@@ -164,23 +243,40 @@ class DemoRoutineFactory
         }
         $disk->put($path, $binary);
 
-        return [['path' => $path, 'caption' => 'Evidencia demo — '.$fieldKey]];
+        $item = ['path' => $path];
+        if ($captionEnabled) {
+            $caption = $total > 1
+                ? (self::MULTI_PHOTO_CAPTIONS[$index] ?? ('Evidencia '.($index + 1).' de '.$total))
+                : 'Evidencia demo — '.$fieldKey;
+            $item['caption'] = $caption;
+        }
+
+        return $item;
     }
 
-    private function demoJpegBytes(string $fieldKey): string
+    private function demoJpegBytes(string $fieldKey, int $index = 0, int $total = 1): string
     {
         if (function_exists('imagecreatetruecolor')) {
             $width = 640;
             $height = 480;
             $image = imagecreatetruecolor($width, $height);
             if ($image !== false) {
-                $background = imagecolorallocate($image, 226, 232, 240);
-                $accent = imagecolorallocate($image, 180, 83, 9);
+                $palettes = [
+                    [[226, 232, 240], [180, 83, 9]],
+                    [[254, 243, 199], [217, 119, 6]],
+                    [[209, 250, 229], [5, 150, 105]],
+                    [[224, 231, 255], [79, 70, 229]],
+                ];
+                [$bgRgb, $accentRgb] = $palettes[$index % count($palettes)];
+                $background = imagecolorallocate($image, ...$bgRgb);
+                $accent = imagecolorallocate($image, ...$accentRgb);
                 $text = imagecolorallocate($image, 51, 65, 85);
                 imagefilledrectangle($image, 0, 0, $width, $height, $background);
                 imagefilledrectangle($image, 0, 0, $width, 56, $accent);
-                $label = 'Evidencia demo — '.$fieldKey;
-                imagestring($image, 5, 16, 20, 'Phoenix', $background);
+                $label = $total > 1
+                    ? $fieldKey.' ('.($index + 1).'/'.$total.')'
+                    : $fieldKey;
+                imagestring($image, 5, 16, 20, 'Phoenix demo', $background);
                 imagestring($image, 5, 16, (int) ($height / 2), $label, $text);
                 ob_start();
                 imagejpeg($image, null, 88);

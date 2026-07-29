@@ -8,7 +8,6 @@ import { useToast } from '@/composables/useToast';
 import GlassCard from '@/components/ui/GlassCard.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import AppButton from '@/components/ui/AppButton.vue';
-import IconActionButton from '@/components/ui/IconActionButton.vue';
 import AlertBanner from '@/components/ui/AlertBanner.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
 
@@ -60,18 +59,8 @@ async function load() {
     }
 }
 
-async function issue(id: number) {
-    if (!canManage.value) {
-        toast.error('Solo facturación o administrador pueden emitir.');
-        return;
-    }
-    try {
-        await api(`/billing/invoices/${id}/issue`, { method: 'POST' });
-        toast.success(`Factura #${id} emitida.`);
-        await load();
-    } catch (e) {
-        toast.error((e as Error).message);
-    }
+function openInvoice(id: number) {
+    void router.push(`/app/billing/${id}`);
 }
 
 onMounted(load);
@@ -120,12 +109,16 @@ onMounted(load);
                 :key="inv.id"
                 padding="md"
                 hover
-                class="flex flex-wrap items-center justify-between gap-4"
+                class="cursor-pointer transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500"
+                role="link"
+                tabindex="0"
+                @click="openInvoice(inv.id)"
+                @keydown.enter="openInvoice(inv.id)"
             >
                 <div>
                     <div class="flex flex-wrap items-center gap-2">
                         <h2 class="invoice-list-title">
-                            Factura #{{ inv.id }}
+                            {{ inv.status === 'draft' ? 'Prefactura' : 'Factura' }} #{{ inv.id }}
                             <span v-if="inv.custom_reference" class="text-portal-muted font-normal">
                                 · {{ inv.custom_reference }}
                             </span>
@@ -137,19 +130,9 @@ onMounted(load);
                         Subtotal ${{ inv.subtotal }} · IVA ${{ inv.tax_total }} ·
                         <strong class="text-portal-heading">Total ${{ inv.total }}</strong>
                     </p>
-                </div>
-                <div class="table-row-actions">
-                    <IconActionButton
-                        icon="eye"
-                        label="Ver detalle de factura"
-                        @click="router.push(`/app/billing/${inv.id}`)"
-                    />
-                    <IconActionButton
-                        v-if="inv.status === 'draft' && canManage"
-                        icon="send"
-                        label="Emitir factura"
-                        @click="issue(inv.id)"
-                    />
+                    <p v-if="inv.status === 'draft' && canManage" class="text-portal-muted mt-2 text-xs">
+                        Abre para revisar líneas y emitir.
+                    </p>
                 </div>
             </GlassCard>
             <p v-if="invoices.length === 0" class="text-portal-muted text-sm">No hay facturas aún.</p>

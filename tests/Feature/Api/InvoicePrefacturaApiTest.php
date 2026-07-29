@@ -3,6 +3,8 @@
 namespace Tests\Feature\Api;
 
 use App\Enums\InvoiceStatus;
+use App\Models\AuditEntry;
+use App\Mail\ClientInvoiceIssuedMail;
 use App\Models\Client;
 use App\Models\Invoice;
 use App\Services\Routines\DemoRoutineFactory;
@@ -12,6 +14,7 @@ use App\Services\Billing\InvoiceDraftService;
 use App\Support\CurrentCompany;
 use App\Services\Identity\CompanyAuthorizationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\UsesMeinCompany;
@@ -329,5 +332,60 @@ class InvoicePrefacturaApiTest extends TestCase
         $this->withHeader('X-Company-Id', (string) $company->id)
             ->postJson("/api/v1/billing/invoices/{$invoice->id}/issue")
             ->assertStatus(422);
+    }
+
+    public function test_deliver_to_client_after_deferred_issue_audits_with_workflow_correlation(): void
+    {
+        Mail::fake();
+
+        $company = $this->meinCompany();
+        $billing = $this->meinUser('elena.sanchez@mein-company.com');
+        $technician = $this->meinUser('misael.palos@mein-company.com');
+        $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
+        $correlationId = $routine->workflowInstance?->correlation_id;
+        $this->assertNotNull($correlationId);
+
+        $client = Client::query()->where('company_id', $company->id)->firstOrFail();
+
+        $invoice = Invoice::query()->create([
+            'company_id' => $company->id,
+            'routine_id' => $routine->id,
+            'client_id' => $client->id,
+            'status' => InvoiceStatus::Issued,
+            'number' => 'MEIN-DELIVER-001',
+            'currency' => 'MXN',
+            'tax_rate_snapshot' => 0.16,
+            'subtotal' => 100,
+            'tax_total' => 16,
+            'total' => 116,
+            'issued_at' => now(),
+            'notify_client_on_issue' => false,
+            'client_portal_visible' => false,
+            'delivery_deferred' => true,
+            'delivered_to_client_at' => null,
+        ]);
+
+        Sanctum::actingAs($billing);
+
+        $this->withHeader('X-Company-Id', (string) $company->id)
+            ->postJson("/api/v1/billing/invoices/{$invoice->id}/deliver", [
+                'notify_client' => true,
+                'client_portal_visible' => true,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.client_portal_visible', true)
+            ->assertJsonPath('data.delivery_deferred', false);
+
+        $invoice->refresh();
+        $this->assertNotNull($invoice->delivered_to_client_at);
+
+        Mail::assertQueued(ClientInvoiceIssuedMail::class);
+
+        $entry = AuditEntry::query()
+            ->where('action', 'invoice.delivered_to_client')
+            ->where('subject_id', $invoice->id)
+            ->first();
+        $this->assertNotNull($entry);
+        $this->assertSame($correlationId, $entry->correlation_id);
     }
 }

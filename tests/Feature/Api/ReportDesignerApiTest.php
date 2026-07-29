@@ -112,6 +112,28 @@ class ReportDesignerApiTest extends TestCase
         $this->assertStringContainsString('Título en vivo', $response->getContent());
     }
 
+    public function test_admin_can_download_preview_pdf_from_draft(): void
+    {
+        $this->seed();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
+        $company = Company::query()->first();
+        $token = $admin->createToken('test')->plainTextToken;
+        $template = ReportTemplate::query()->where('company_id', $company->id)->first();
+
+        $response = $this->withToken($token)
+            ->withHeader('X-Company-Id', (string) $company->id)
+            ->post("/api/v1/design/reports/{$template->id}/preview-pdf", [
+                'components' => [
+                    ['type' => 'title', 'text' => 'PDF borrador', 'align' => 'center'],
+                ],
+                'page_settings' => ['typography' => ['title_pt' => 22, 'body_pt' => 11]],
+            ]);
+
+        $response->assertOk();
+        $response->assertHeader('content-type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF', $response->getContent());
+    }
+
     public function test_admin_can_save_description(): void
     {
         $this->seed();

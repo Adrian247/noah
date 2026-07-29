@@ -16,6 +16,8 @@ class ReportMarkdown
             return '';
         }
 
+        $text = self::normalizeTextEscapes($text);
+
         if (self::looksLikeHtml($text)) {
             return self::sanitizeRichHtml($text);
         }
@@ -25,6 +27,14 @@ class ReportMarkdown
         }
 
         return self::converter()->convert($text)->getContent();
+    }
+
+    private static function normalizeTextEscapes(string $text): string
+    {
+        $text = str_replace(["\r\n", "\r"], "\n", $text);
+
+        // Cadenas guardadas desde JSON/UI con saltos escapados como texto literal.
+        return str_replace(['\\r\\n', '\\n', '\\r'], "\n", $text);
     }
 
     private static function looksLikeHtml(string $text): bool
@@ -44,10 +54,11 @@ class ReportMarkdown
 
     private static function looksLikeLegacyInline(string $text): bool
     {
-        return ! str_contains($text, "\n")
-            && ! str_contains($text, '#')
-            && ! str_contains($text, '- ')
-            && (str_contains($text, '**') || str_contains($text, '__'));
+        if (str_contains($text, '#') || str_contains($text, '- ') || str_contains($text, '```')) {
+            return false;
+        }
+
+        return str_contains($text, '**') || str_contains($text, '__');
     }
 
     private static function legacyToHtml(string $text): string

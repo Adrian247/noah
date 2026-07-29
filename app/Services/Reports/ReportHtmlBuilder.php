@@ -77,6 +77,49 @@ class ReportHtmlBuilder
     }
 
     /**
+     * HTML listo para DomPDF (misma salida que un informe generado), con datos de ejemplo.
+     *
+     * @param  array<int, array<string, mixed>>  $components
+     * @param  array<string, mixed>  $pageSettings
+     */
+    public function buildPreviewPdfHtml(array $components, array $pageSettings = [], ?int $reportTemplateId = null): string
+    {
+        $sampleResponses = [];
+        if ($reportTemplateId !== null) {
+            $sampleResponses = app(ReportSampleDataFactory::class)->buildForPreview($components, $reportTemplateId);
+        }
+
+        $routine = new Routine([
+            'id' => 0,
+            'company_id' => 0,
+        ]);
+        $company = null;
+
+        if ($reportTemplateId !== null) {
+            $template = ReportTemplate::query()->find($reportTemplateId);
+            if ($template !== null) {
+                $routine->company_id = $template->company_id;
+                $company = Company::query()->find($template->company_id);
+            }
+        }
+
+        if ($company === null) {
+            $company = new Company(['name' => 'Empresa demo']);
+        }
+
+        $routine->setRelation('company', $company);
+        $routine->setRelation('asset', (object) ['tag' => 'DEMO-001']);
+
+        $execution = new RoutineExecution([
+            'responses' => $sampleResponses,
+            'technician_comments' => (string) ($sampleResponses['technician_comments'] ?? 'Texto técnico de muestra.'),
+            'corrected_comments' => (string) ($sampleResponses['corrected_comments'] ?? 'Comentario corregido de ejemplo.'),
+        ]);
+
+        return $this->renderDocument($routine, $execution, $components, $pageSettings, false, false, $reportTemplateId);
+    }
+
+    /**
      * @param  array<int, array<string, mixed>>  $components
      * @param  array<string, mixed>  $pageSettings
      */
@@ -121,6 +164,7 @@ class ReportHtmlBuilder
             $subtitlePt,
             $pageSettings,
             $companyForLogo,
+            $execution,
         );
 
         foreach ($components as $component) {
@@ -129,7 +173,7 @@ class ReportHtmlBuilder
 
         $coverSettings = $pageSettings['cover_page'] ?? [];
         $coverEnabled = ! empty($coverSettings['enabled']);
-        $omitHeaderOnCover = (bool) ($coverSettings['omit_header_footer'] ?? true);
+        $omitHeaderOnCover = $this->coverOmitsHeaderFooter($coverSettings);
         $useDompdfScriptChrome = ! $isPreview && $this->shouldUsePdfChrome($pageSettings);
 
         $headerHtml = $this->renderHeaderFooter($pageSettings['header'] ?? null, $company?->name ?? 'Phoenix', $routineId, 'header', $asset?->tag ?? '', $isPreview);
@@ -142,6 +186,7 @@ class ReportHtmlBuilder
             : '';
 
         $metaLine = 'Phoenix · '.$this->e($company?->name ?? 'Phoenix').' · Rutina #'.$routineId;
+        $isolatePdfCoverPage = ! $isPreview && $coverEnabled && $this->hasThemedCoverBackground();
 
         if ($isPreview) {
             return $this->wrapHtmlDocument(
@@ -163,6 +208,7 @@ class ReportHtmlBuilder
                 ),
                 true,
                 $thumbnail,
+                false,
             );
         }
 
@@ -189,6 +235,7 @@ class ReportHtmlBuilder
             ),
             false,
             false,
+            $isolatePdfCoverPage,
         );
     }
 
@@ -242,7 +289,7 @@ class ReportHtmlBuilder
             $html .= $coverHtml;
         }
 
-        $html .= '<div class="report-pdf-main">';
+        $html .= '<div class="report-pdf-main'.($coverEnabled ? ' report-pdf-main--body' : '').'">';
         $html .= $mainLead;
         if (! $coverEnabled) {
             $html .= '<div class="meta">'.$metaLine.'</div>';
@@ -334,6 +381,9 @@ class ReportHtmlBuilder
         $startPage = $skipFirstPage ? 2 : 1;
         $pageNumbersOn = ! empty($pageNumber['enabled']);
         $countStartAt = max(1, (int) ($pageNumber['start_at'] ?? 1));
+        if ($skipFirstPage) {
+            $countStartAt = max($countStartAt, 2);
+        }
         $headerLit = var_export($headerPlain, true);
         $footerLit = var_export($footerPlain, true);
         $pageNumbersLit = $pageNumbersOn ? 'true' : 'false';
@@ -467,22 +517,65 @@ HTML;
         string $inner,
         bool $isPreview,
         bool $thumbnail,
+        bool $isolatePdfCoverPage = false,
     ): string {
         $previewCss = $isPreview ? $this->previewStyles($thumbnail) : '';
-        $themedCoverPdfCss = (! $isPreview && $this->hasThemedCoverBackground())
+        $themedCoverPdfCss = (! $isPreview && $isolatePdfCoverPage)
             ? '
-@page :first { margin: 0; }
-body.report-pdf.report-pdf--with-cover .report-cover.report-cover--themed {
+body.report-pdf .report-cover-page--sheet {
+  position: relative;
+  margin: -18mm -14mm -22mm -14mm;
+  width: calc(100% + 28mm);
   min-height: 297mm;
-  width: 100%;
-  margin: 0;
-  padding: 22mm 18mm 20mm;
+  padding: 0;
+  overflow: hidden;
+  page-break-after: always;
+  page-break-inside: avoid;
   box-sizing: border-box;
+}
+body.report-pdf .report-cover-page__bg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+body.report-pdf .report-cover-page__content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  text-align: center;
+}
+body.report-pdf .report-cover-page--sheet table.report-cover-layout {
+  width: 100%;
+  border-collapse: collapse;
+}
+body.report-pdf .report-cover-page--sheet .report-cover-hero-cell {
+  text-align: center;
+  vertical-align: middle;
+  padding: 18mm 14mm;
+}
+body.report-pdf .report-cover-page--sheet .report-cover-hero-inner {
+  width: 100%;
+  text-align: center;
+  margin: 0 auto;
+}
+body.report-pdf .report-cover-page--sheet h1,
+body.report-pdf .report-cover-page--sheet h2.report-subtitle,
+body.report-pdf .report-cover-page--sheet .report-cover-date,
+body.report-pdf .report-cover-page--sheet .report-cover-body,
+body.report-pdf .report-cover-page--sheet .report-cover-body p {
+  text-align: center !important;
+  margin-left: auto;
+  margin-right: auto;
 }
 '
             : '';
         $pdfCss = $isPreview ? '' : '
-@page { margin: 18mm 14mm 22mm 14mm; }
+@page { margin: 18mm 14mm 22mm 14mm; size: A4 portrait; }
 body.report-pdf { margin: 0; padding: 0; font-family: DejaVu Sans, sans-serif; }
 .report-field-line { margin: 0 0 8px; line-height: 1.45; }
 .report-field-label { font-weight: 700; color: #111; }
@@ -499,8 +592,14 @@ body.report-pdf .report-cover.report-cover--sheet {
   page-break-after: always;
   page-break-inside: avoid;
 }
-body.report-pdf .report-cover-body { font-size: 10pt; line-height: 1.4; text-align: left; margin-top: 16px; max-width: 100%; }
-body.report-pdf .report-cover-image { max-width: 120px; max-height: 120px; margin-bottom: 16px; }
+body.report-pdf .report-cover.report-cover--fullbleed {
+  page-break-after: avoid !important;
+}
+body.report-pdf .report-cover-body { font-size: 10pt; line-height: 1.5; text-align: center !important; margin-top: 16px; max-width: 100%; }
+body.report-pdf .report-cover-body p,
+body.report-pdf .report-cover-body div,
+body.report-pdf .report-cover-body span { text-align: center !important; margin: 0.35em 0; }
+body.report-pdf .report-cover-image { display: block; max-width: 120px; max-height: 120px; margin: 0 auto 16px; }
 body.report-pdf .report-pdf-main { margin: 0; padding: 0; }
 '.$themedCoverPdfCss;
 
@@ -536,9 +635,22 @@ h1 { font-size: {$titlePt}pt; margin-bottom: 12px; color: {$headingColor}; }
 h2.report-subtitle { font-size: {$subtitlePt}pt; margin-bottom: 10px; font-weight: 600; color: {$subtitleColor}; border-bottom: 2px solid {$accentColor}; padding-bottom: 4px; }
 .meta { color: {$mutedColor}; font-size: 9pt; margin-bottom: 16px; }
 p { line-height: 1.5; margin: 0 0 10px; }
-.report-cover { display: flex; flex-direction: column; justify-content: center; text-align: center; min-height: 240mm; padding: 48px; }
+.report-cover { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; min-height: 240mm; padding: 48px; box-sizing: border-box; }
+.report-cover--themed h1 { color: inherit !important; margin: 0.15em 0 0.25em; font-weight: 700; border: 0; }
+.report-cover--themed h2.report-subtitle { color: inherit !important; border: 0 !important; padding: 0 !important; margin: 0.35em 0 !important; font-weight: 600; }
+.report-cover--themed .report-cover-date { font-size: 9pt; opacity: 0.82; margin: 0.5em 0 0.75em; }
+.report-cover-page--sheet { position: relative; width: 100%; min-height: 297mm; box-sizing: border-box; }
+.report-cover-page__bg { position: absolute; left: 0; top: 0; right: 0; bottom: 0; z-index: 0; }
+.report-cover-page__content { position: relative; z-index: 1; width: 100%; }
+.report-cover-page--sheet h1,
+.report-cover-page--sheet h2.report-subtitle,
+.report-cover-page--sheet .report-cover-date,
+.report-cover-page--sheet .report-cover-body,
+.report-cover-page--sheet .report-cover-body p { text-align: center !important; }
 .report-cover-image { display: block; max-width: 160px; max-height: 160px; width: auto; height: auto; object-fit: contain; margin: 0 auto 28px; }
-.report-cover-body { margin-top: 24px; text-align: left; }
+.report-cover-body { margin-top: 24px; text-align: center !important; max-width: 36rem; margin-left: auto; margin-right: auto; }
+.report-cover-body p,
+.report-cover-body div { text-align: center !important; margin: 0.35em 0; }
 .report-image-caption { font-size: 9pt; color: #555; margin-top: 4px; }
 .report-gallery { margin: 12px 0; }
 .report-header, .report-footer { font-size: 9pt; color: #444; width: 100%; }
@@ -611,8 +723,11 @@ body.report-preview { margin: 0; padding: 12px 0 28px; background: #e5e7eb; over
 }
 .report-preview-banner { background: #f59e0b; color: #1c1917; padding: 8px 12px; font-size: 10pt; margin: 0 auto 12px; max-width: 210mm; box-sizing: border-box; }
 .report-page { width: 210mm; min-height: 297mm; margin: 0 auto 20px; padding: 48px; background: #fff; box-shadow: 0 4px 24px rgb(0 0 0 / 0.12); box-sizing: border-box; }
-.report-page--cover-themed { padding: 0; }
-.report-page--cover-themed .report-cover { min-height: 297mm; margin: 0; box-sizing: border-box; }
+.report-page--cover-themed { padding: 0; min-height: 297mm; height: 297mm; overflow: hidden; }
+.report-page--cover-sheet { padding: 0 !important; background: transparent !important; box-sizing: border-box; }
+.report-page--cover-sheet .report-cover-page--sheet { width: 100%; min-height: 297mm; height: 297mm; margin: 0; }
+.report-page--cover-sheet .report-cover-page__bg { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.report-page--cover-themed .report-cover:not(.report-cover-page--sheet) { min-height: 297mm; margin: 0; box-sizing: border-box; }
 .report-page--cover .report-cover { min-height: 200mm; page-break-after: always; }
 ';
     }
@@ -721,6 +836,7 @@ body.report-preview { margin: 0; padding: 12px 0 28px; background: #e5e7eb; over
         int $subtitlePt,
         array $pageSettings = [],
         ?Company $company = null,
+        ?RoutineExecution $execution = null,
     ): string {
         if ($cover === null || empty($cover['enabled'])) {
             return '';
@@ -733,29 +849,109 @@ body.report-preview { margin: 0; padding: 12px 0 28px; background: #e5e7eb; over
 
         $title = $this->replacePlaceholders((string) ($cover['title'] ?? ''), $companyName, $assetTag, $routineId);
         $subtitle = $this->replacePlaceholders((string) ($cover['subtitle'] ?? ''), $companyName, $assetTag, $routineId);
-        $body = $this->formatText($this->replacePlaceholders((string) ($cover['body'] ?? ''), $companyName, $assetTag, $routineId));
+        $body = $this->formatCoverBody($this->replacePlaceholders((string) ($cover['body'] ?? ''), $companyName, $assetTag, $routineId));
         $dateLine = ! empty($cover['show_date'])
-            ? '<p class="meta">'.e(now()->format('d/m/Y')).'</p>'
+            ? '<p class="report-cover-date" style="text-align:center;'.($coverText !== '' ? 'color:'.$coverText.';' : '').'">'
+                .$this->e($this->formatCoverDisplayDate($cover, $execution))
+                .'</p>'
             : '';
         $imageHtml = $this->resolveCoverImageHtml($cover, $company);
 
-        $shellStyle = 'font-family: '.$font.';';
-        if ($coverBg !== '') {
-            $shellStyle .= 'background:'.$coverBg.';color:'.$coverText.';';
-        }
-        $titleStyle = 'font-size: '.$titlePt.'pt;';
+        $titleStyle = 'font-size: '.$titlePt.'pt;text-align:center;width:100%;margin:0.15em 0 0.25em;';
         if ($coverText !== '') {
             $titleStyle .= 'color:'.$coverText.';';
         }
+
+        if ($coverBg !== '') {
+            return $this->renderThemedCoverSheet(
+                $coverBg,
+                $coverText,
+                $accent,
+                $font,
+                $titleStyle,
+                $titlePt,
+                $subtitlePt,
+                $title,
+                $subtitle,
+                $body,
+                $dateLine,
+                $imageHtml,
+            );
+        }
+
+        $shellStyle = 'font-family: '.$font.';';
 
         return '<div class="report-cover report-cover--sheet report-cover--themed" style="'.$shellStyle.'">'
             .$imageHtml
             .'<div style="width:48px;height:4px;background:'.$accent.';margin:0 auto 20px;border-radius:2px;"></div>'
             .'<h1 style="'.$titleStyle.'">'.$this->formatText($title).'</h1>'
-            .($subtitle !== '' ? '<h2 class="report-subtitle" style="font-size: '.$subtitlePt.'pt;border:0;">'.$this->formatText($subtitle).'</h2>' : '')
+            .($subtitle !== '' ? '<h2 class="report-subtitle" style="font-size: '.$subtitlePt.'pt;border:0;text-align:center;font-weight:600;">'.$this->formatText($subtitle).'</h2>' : '')
+            .($dateLine !== '' ? '<div style="text-align:center;">'.$dateLine.'</div>' : '')
+            .($body !== '' ? '<div class="report-cover-body">'.$body.'</div>' : '')
+            .'</div>';
+    }
+
+    private function renderThemedCoverSheet(
+        string $coverBg,
+        string $coverText,
+        string $accent,
+        string $font,
+        string $titleStyle,
+        int $titlePt,
+        int $subtitlePt,
+        string $title,
+        string $subtitle,
+        string $body,
+        string $dateLine,
+        string $imageHtml,
+    ): string {
+        $subtitleStyle = 'font-size: '.$subtitlePt.'pt;border:0;text-align:center;font-weight:600;margin:0.35em 0;width:100%;';
+        if ($coverText !== '') {
+            $subtitleStyle .= 'color:'.$coverText.';';
+        }
+
+        $heroInner = '<div class="report-cover-hero-inner" style="font-family:'.$font.';color:'.$coverText.';">'
+            .$imageHtml
+            .'<div style="width:48px;height:4px;background:'.$accent.';margin:12px auto 16px;border-radius:2px;"></div>'
+            .'<h1 style="'.$titleStyle.'">'.$this->formatText($title).'</h1>'
+            .($subtitle !== '' ? '<h2 class="report-subtitle" style="'.$subtitleStyle.'">'.$this->formatText($subtitle).'</h2>' : '')
             .$dateLine
             .($body !== '' ? '<div class="report-cover-body">'.$body.'</div>' : '')
             .'</div>';
+
+        return '<div class="report-cover-page report-cover-page--sheet">'
+            .'<div class="report-cover-page__bg" style="background:'.$coverBg.';"></div>'
+            .'<div class="report-cover-page__content" style="color:'.$coverText.';">'
+            .'<table class="report-cover-layout" width="100%" cellpadding="0" cellspacing="0">'
+            .'<tr>'
+            .'<td class="report-cover-hero-cell" align="center" valign="middle" style="color:'.$coverText.';text-align:center;">'
+            .'<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="text-align:center;">'
+            .$heroInner
+            .'</td></tr></table>'
+            .'</td>'
+            .'</tr>'
+            .'</table>'
+            .'</div>'
+            .'</div>';
+    }
+
+    /**
+     * @param  array<string, mixed>  $cover
+     */
+    private function formatCoverDisplayDate(array $cover, ?RoutineExecution $execution): string
+    {
+        $fixed = trim((string) ($cover['date_fixed'] ?? ''));
+        if ($fixed !== '') {
+            try {
+                return \Illuminate\Support\Carbon::parse($fixed)->format('d/m/Y');
+            } catch (\Throwable) {
+                // Usar fecha de informe si el valor guardado no es válido.
+            }
+        }
+
+        $at = $execution?->submitted_at ?? $execution?->created_at;
+
+        return ($at ?? now())->format('d/m/Y');
     }
 
     /**
@@ -814,6 +1010,68 @@ body.report-preview { margin: 0; padding: 12px 0 28px; background: #e5e7eb; over
     private function formatText(string $text): string
     {
         return ReportMarkdown::toHtml($text);
+    }
+
+    private function formatCoverBody(string $text): string
+    {
+        if ($text === '') {
+            return '';
+        }
+
+        if ($this->coverBodyShouldUseMarkdown($text)) {
+            $text = $this->richHtmlToPlainText($text);
+        }
+
+        return $this->alignCoverBodyHtml(ReportMarkdown::toHtml($text));
+    }
+
+    private function coverBodyShouldUseMarkdown(string $text): bool
+    {
+        $looksHtml = str_contains($text, '<p>') || str_contains($text, '<div>');
+
+        if (! $looksHtml) {
+            return false;
+        }
+
+        return str_contains($text, '**')
+            || str_contains($text, '__')
+            || str_contains($text, '\\n');
+    }
+
+    private function richHtmlToPlainText(string $html): string
+    {
+        $html = (string) preg_replace('#</p>\s*<p[^>]*>#i', "\n\n", $html);
+        $html = (string) preg_replace('#<br\s*/?>#i', "\n", $html);
+
+        return trim(html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    }
+
+    private function alignCoverBodyHtml(string $html): string
+    {
+        if ($html === '') {
+            return '';
+        }
+
+        $html = (string) preg_replace_callback(
+            '/\sstyle="([^"]*)"/i',
+            static function (array $matches): string {
+                $style = (string) preg_replace(
+                    '/text-align\s*:\s*(?:left|start|right|end)\s*;?/i',
+                    'text-align:center;',
+                    $matches[1],
+                );
+                $style = trim($style, '; ');
+
+                return $style === '' ? '' : ' style="'.$style.'"';
+            },
+            $html,
+        );
+
+        return (string) preg_replace(
+            '/<p(?![^>]*style=)([^>]*)>/i',
+            '<p style="text-align:center;margin:0.35em 0;"$1>',
+            $html,
+        );
     }
 
     /**
@@ -1133,13 +1391,7 @@ body.report-preview { margin: 0; padding: 12px 0 28px; background: #e5e7eb; over
             return '<div class="report-page report-page--cover">';
         }
 
-        $coverText = is_string($colors['cover_text'] ?? null) ? $colors['cover_text'] : '#f8fafc';
-        if (! preg_match('/^#[0-9A-Fa-f]{6}$/', $coverText)) {
-            $coverText = '#f8fafc';
-        }
-
-        return '<div class="report-page report-page--cover report-page--cover-themed" style="background:'
-            .$coverBg.';color:'.$coverText.';">';
+        return '<div class="report-page report-page--cover report-page--cover-themed report-page--cover-sheet" style="background:'.$coverBg.';padding:0;">';
     }
 
     private function hasThemedCoverBackground(): bool
@@ -1148,6 +1400,31 @@ body.report-preview { margin: 0; padding: 12px 0 28px; background: #e5e7eb; over
         $coverBg = $colors['cover_bg'] ?? null;
 
         return is_string($coverBg) && preg_match('/^#[0-9A-Fa-f]{6}$/', $coverBg);
+    }
+
+    /**
+     * @param  array<string, mixed>  $coverSettings
+     */
+    private function coverOmitsHeaderFooter(array $coverSettings): bool
+    {
+        if (! array_key_exists('omit_header_footer', $coverSettings)) {
+            return true;
+        }
+
+        $value = $coverSettings['omit_header_footer'];
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (is_int($value) || is_float($value)) {
+            return (bool) $value;
+        }
+        if (is_string($value)) {
+            $parsed = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
+            return $parsed ?? true;
+        }
+
+        return (bool) $value;
     }
 
     private function themeStyles(): string

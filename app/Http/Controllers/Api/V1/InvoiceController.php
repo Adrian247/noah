@@ -11,6 +11,7 @@ use App\Mail\ClientInvoiceIssuedMail;
 use App\Models\GeneratedReport;
 use App\Models\Invoice;
 use App\Services\Audit\AuditLogger;
+use App\Services\Billing\InvoiceClientDeliveryService;
 use App\Services\Billing\InvoiceDeliveryPackageBuilder;
 use App\Services\Billing\InvoiceDraftEditor;
 use App\Services\Billing\InvoiceEvidenceService;
@@ -31,6 +32,7 @@ class InvoiceController extends Controller
         private readonly WorkflowRuntime $workflow,
         private readonly InvoiceEvidenceService $invoiceEvidences,
         private readonly InvoiceDeliveryPackageBuilder $deliveryPackage,
+        private readonly InvoiceClientDeliveryService $clientDelivery,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -192,9 +194,7 @@ class InvoiceController extends Controller
         ]);
 
         if ($routine !== null) {
-            if ($instance?->correlation_id) {
-                AuditCorrelation::set($instance->correlation_id);
-            }
+            $this->clientDelivery->bindWorkflowAuditCorrelation($invoice);
             if ($instance !== null && $this->workflow->canApplyTrigger($instance, WorkflowRuntime::TRIGGER_INVOICE_ISSUED)) {
                 $this->workflow->onInvoiceIssued($routine, $request->user(), $audit);
             } else {
@@ -216,6 +216,33 @@ class InvoiceController extends Controller
                 new ClientInvoiceIssuedMail($fresh->load(['lines', 'client', 'company', 'evidences'])),
             );
         }
+
+        return response()->json(['data' => $fresh]);
+    }
+
+    public function deliverToClient(Request $request, Invoice $invoice, AuditLogger $audit): JsonResponse
+    {
+        $this->authorizePermission($request, 'billing.issue');
+
+        if ($invoice->status !== InvoiceStatus::Issued) {
+            return response()->json(['message' => 'Solo facturas emitidas pueden entregarse al cliente.'], 422);
+        }
+
+        if ($invoice->client_id === null) {
+            throw ValidationException::withMessages([
+                'client_id' => ['La factura no tiene cliente asignado.'],
+            ]);
+        }
+
+        $data = $request->validate([
+            'notify_client' => ['required', 'boolean'],
+            'client_portal_visible' => ['required', 'boolean'],
+        ]);
+
+        $fresh = $this->clientDelivery->deliver($invoice, [
+            'notify_client' => (bool) $data['notify_client'],
+            'client_portal_visible' => (bool) $data['client_portal_visible'],
+        ], $request, $audit);
 
         return response()->json(['data' => $fresh]);
     }

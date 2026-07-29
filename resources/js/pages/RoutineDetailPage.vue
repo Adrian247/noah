@@ -4,6 +4,7 @@ import { useRoute, RouterLink, useRouter } from 'vue-router';
 import DynamicFormRenderer from '@/components/domain/DynamicFormRenderer.vue';
 import { validateRequiredFields } from '@/composables/validateFormResponses';
 import { useToast } from '@/composables/useToast';
+import { useConfirm } from '@/composables/useConfirm';
 import { api, getToken, getCompanyId } from '@/api/client';
 import { useCompanyStore } from '@/stores/company';
 import { usePermissions } from '@/composables/usePermissions';
@@ -85,6 +86,7 @@ type AuditEntry = {
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
+const confirm = useConfirm();
 const companyStore = useCompanyStore();
 const { can } = usePermissions();
 const routine = ref<Routine | null>(null);
@@ -408,11 +410,11 @@ async function deleteRoutine() {
     if (!routine.value) {
         return;
     }
-    if (
-        !window.confirm(
-            `¿Eliminar la rutina #${routine.value.id}? Esta acción no se puede deshacer.`,
-        )
-    ) {
+    const accepted = await confirm(
+        `¿Eliminar la rutina #${routine.value.id}? Esta acción no se puede deshacer.`,
+        { title: 'Eliminar rutina', confirmLabel: 'Eliminar', danger: true },
+    );
+    if (!accepted) {
         return;
     }
     deletingRoutine.value = true;

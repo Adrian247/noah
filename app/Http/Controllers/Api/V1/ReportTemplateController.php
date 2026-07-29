@@ -21,6 +21,7 @@ use App\Models\FormDefinition;
 use App\Models\Company;
 use App\Services\Platform\PlatformTenantService;
 use App\Support\PlatformAdmin;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -170,6 +171,32 @@ class ReportTemplateController extends Controller
         );
 
         return response($html, 200, ['Content-Type' => 'text/html; charset=UTF-8']);
+    }
+
+    public function previewDraftPdf(Request $request, ReportTemplate $reportTemplate, ReportHtmlBuilder $htmlBuilder): \Illuminate\Http\Response
+    {
+        $data = $request->validate([
+            'components' => ['nullable', 'array'],
+            'page_settings' => ['nullable', 'array'],
+        ]);
+
+        $html = $htmlBuilder->buildPreviewPdfHtml(
+            $data['components'] ?? [],
+            $data['page_settings'] ?? [],
+            $reportTemplate->id,
+        );
+
+        $enablePhp = str_contains($html, 'type="text/php"');
+        $pdf = Pdf::loadHTML($html)->setPaper('a4');
+        $pdf->getDomPDF()->set_option('isPhpEnabled', $enablePhp);
+        $pdf->getDomPDF()->set_option('isRemoteEnabled', false);
+
+        $filename = 'vista-previa-'.Str::slug($reportTemplate->name ?: 'reporte').'.pdf';
+
+        return response($pdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
     }
 
     public function show(ReportTemplate $reportTemplate, FormFieldCatalog $fields, FormReportFieldAlignment $alignment): JsonResponse
