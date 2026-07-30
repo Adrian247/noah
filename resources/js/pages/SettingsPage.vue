@@ -9,6 +9,7 @@ import GlassCard from '@/components/ui/GlassCard.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import BillingSettingsForm from '@/components/settings/BillingSettingsForm.vue';
 import MobileSecuritySettingsForm from '@/components/settings/MobileSecuritySettingsForm.vue';
+import NotificationSettingsForm from '@/components/settings/NotificationSettingsForm.vue';
 
 const { theme, setTheme } = useTheme();
 const { can } = usePermissions();
@@ -42,7 +43,7 @@ function selectTheme(next: AppTheme) {
     <div class="max-w-2xl space-y-8">
         <PageHeader
             title="Configuración"
-            subtitle="Tema, facturación, app móvil y contenido del portal de acceso."
+            subtitle="Tema, notificaciones, facturación, app móvil y contenido del portal de acceso."
         />
 
         <section id="apariencia">
@@ -68,6 +69,16 @@ function selectTheme(next: AppTheme) {
                         <p class="text-portal-muted mt-1 text-xs leading-relaxed">{{ opt.description }}</p>
                     </button>
                 </div>
+            </GlassCard>
+        </section>
+
+        <section id="notificaciones">
+            <GlassCard padding="lg" class="space-y-4">
+                <h2 class="text-portal-heading text-base font-semibold">Notificaciones</h2>
+                <p class="text-portal-muted text-sm">
+                    Posición en pantalla, sonido por tipo y prueba en vivo. Se guarda en este navegador.
+                </p>
+                <NotificationSettingsForm />
             </GlassCard>
         </section>
 

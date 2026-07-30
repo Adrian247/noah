@@ -1,0 +1,26 @@
+[
+    {
+        "id": "success",
+        "text": "Soft warm digital success chime, short pleasant confirmation tone for a business app",
+        "duration_seconds": 1.2,
+        "prompt_influence": 0.45
+    },
+    {
+        "id": "danger",
+        "text": "Short subtle error alert tone, low urgent beep for a professional dashboard",
+        "duration_seconds": 1.1,
+        "prompt_influence": 0.5
+    },
+    {
+        "id": "warning",
+        "text": "Brief amber caution notification ping, gentle attention sound",
+        "duration_seconds": 1.15,
+        "prompt_influence": 0.45
+    },
+    {
+        "id": "info",
+        "text": "Light neutral UI notification blip, clean and minimal",
+        "duration_seconds": 1.0,
+        "prompt_influence": 0.4
+    }
+]

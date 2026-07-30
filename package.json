@@ -6,7 +6,9 @@
         "build": "vite build",
         "dev": "vite",
         "onboarding:audio": "node scripts/generate-onboarding-audio.mjs",
-        "onboarding:audio:elevenlabs": "ONBOARDING_AUDIO_PROVIDER=elevenlabs ONBOARDING_AUDIO_FORCE=1 node scripts/generate-onboarding-audio.mjs"
+        "onboarding:audio:elevenlabs": "ONBOARDING_AUDIO_PROVIDER=elevenlabs ONBOARDING_AUDIO_FORCE=1 node scripts/generate-onboarding-audio.mjs",
+        "notifications:audio": "node scripts/generate-notification-audio.mjs",
+        "notifications:audio:elevenlabs": "NOTIFICATION_AUDIO_PROVIDER=elevenlabs NOTIFICATION_AUDIO_FORCE=1 node scripts/generate-notification-audio.mjs"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",

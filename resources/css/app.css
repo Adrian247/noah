@@ -87,9 +87,57 @@
         filter: brightness(1.05);
     }
 
+    .portal-scroll {
+        overflow-x: hidden;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgb(255 255 255 / 0.16) transparent;
+    }
+
+    .portal-scroll::-webkit-scrollbar {
+        width: 0.4rem;
+    }
+
+    .portal-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .portal-scroll::-webkit-scrollbar-thumb {
+        border: 2px solid transparent;
+        border-radius: 999px;
+        background: rgb(255 255 255 / 0.14);
+        background-clip: padding-box;
+    }
+
+    .portal-scroll::-webkit-scrollbar-thumb:hover {
+        background: rgb(245 158 11 / 0.38);
+        background-clip: padding-box;
+    }
+
+    [data-theme='light'] .portal-scroll {
+        scrollbar-color: rgb(15 23 42 / 0.22) transparent;
+    }
+
+    [data-theme='light'] .portal-scroll::-webkit-scrollbar-thumb {
+        background: rgb(15 23 42 / 0.18);
+        background-clip: padding-box;
+    }
+
+    [data-theme='light'] .portal-scroll::-webkit-scrollbar-thumb:hover {
+        background: rgb(245 158 11 / 0.45);
+        background-clip: padding-box;
+    }
+
     .app-main-scroll {
         @apply min-h-0 overscroll-y-contain;
-        -webkit-overflow-scrolling: touch;
+    }
+
+    .sidebar-nav-scroll {
+        @apply min-h-0;
+    }
+
+    .glass-sidebar .sidebar-nav-scroll {
+        padding-right: 0.25rem;
     }
 
     .portal-topbar {
@@ -1423,8 +1471,26 @@
         z-index: 125;
         width: min(17.5rem, calc(100vw - 1.5rem));
         max-height: min(20rem, calc(100dvh - 1.5rem));
+        overflow-x: hidden;
         overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgb(255 255 255 / 0.16) transparent;
         color: rgb(226 232 240);
+    }
+
+    .sidebar-session-menu::-webkit-scrollbar {
+        width: 0.4rem;
+    }
+
+    .sidebar-session-menu::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .sidebar-session-menu::-webkit-scrollbar-thumb {
+        border: 2px solid transparent;
+        border-radius: 999px;
+        background: rgb(255 255 255 / 0.14);
+        background-clip: padding-box;
     }
 
     .sidebar-session-menu__heading {
@@ -2027,19 +2093,372 @@
 
     .app-toast-enter-active,
     .app-toast-leave-active {
-        transition:
-            opacity 0.22s ease,
-            transform 0.22s ease;
+        transition: none;
     }
 
-    .app-toast-enter-from,
-    .app-toast-leave-to {
+    /* Glow del menú: solo durante la secuencia de entrada */
+    .app-toast:not(.app-toast--playing) .app-toast__menu-fx.sidebar-collapse-fx--collapse .sidebar-collapse-fx__beam,
+    .app-toast:not(.app-toast--playing) .app-toast__menu-fx.sidebar-collapse-fx--collapse .sidebar-collapse-fx__glow,
+    .app-toast:not(.app-toast--playing) .app-toast__menu-fx.sidebar-collapse-fx--collapse .sidebar-collapse-fx__scan {
+        animation: none !important;
         opacity: 0;
-        transform: translate(0.75rem, -0.25rem);
     }
 
     .app-toast-move {
-        transition: transform 0.22s ease;
+        transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* —— Secuencia: logo → shell se desprende → texto → glow —— */
+    .app-toast-host--from-right .app-toast--playing .app-toast__logo-flight {
+        animation: app-toast-logo-lead-from-right 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .app-toast-host--from-right .app-toast--playing .app-toast__logo-trail {
+        animation: app-toast-trail-from-right 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .app-toast-host--from-right .app-toast--playing .app-toast__logo-trail--soft {
+        animation: app-toast-trail-from-right-soft 0.52s 0.04s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .app-toast-host--from-right .app-toast--playing .app-toast__shell {
+        animation: app-toast-shell-unfold-h 0.52s 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .app-toast-host--from-right .app-toast--playing .app-toast__content {
+        animation: app-toast-text-from-right 0.4s 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .app-toast-host--from-right .app-toast-leave-active {
+        animation: app-toast-leave-to-right 0.32s cubic-bezier(0.4, 0, 0.2, 1) both;
+    }
+
+    .app-toast-host--from-left .app-toast--playing .app-toast__logo-flight {
+        animation: app-toast-logo-lead-from-left 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .app-toast-host--from-left .app-toast--playing .app-toast__logo-trail {
+        animation: app-toast-trail-from-left 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .app-toast-host--from-left .app-toast--playing .app-toast__logo-trail--soft {
+        animation: app-toast-trail-from-left-soft 0.52s 0.04s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .app-toast-host--from-left .app-toast--playing .app-toast__shell {
+        animation: app-toast-shell-unfold-h 0.52s 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .app-toast-host--from-left .app-toast--playing .app-toast__content {
+        animation: app-toast-text-from-left 0.4s 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .app-toast-host--from-left .app-toast-leave-active {
+        animation: app-toast-leave-to-left 0.32s cubic-bezier(0.4, 0, 0.2, 1) both;
+    }
+
+    .app-toast-host--from-top .app-toast--playing .app-toast__logo-flight {
+        animation: app-toast-logo-lead-from-top 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .app-toast-host--from-top .app-toast--playing .app-toast__logo-trail {
+        animation: app-toast-trail-from-top 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .app-toast-host--from-top .app-toast--playing .app-toast__logo-trail--soft {
+        animation: app-toast-trail-from-top-soft 0.52s 0.04s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .app-toast-host--from-top .app-toast--playing .app-toast__shell {
+        animation: app-toast-shell-unfold-v 0.52s 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .app-toast-host--from-top .app-toast--playing .app-toast__content {
+        animation: app-toast-text-from-right 0.4s 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .app-toast-host--from-top .app-toast-leave-active {
+        animation: app-toast-leave-to-top 0.32s cubic-bezier(0.4, 0, 0.2, 1) both;
+    }
+
+    /* Fase 4: efecto menú (beam + glow + scan) */
+    .app-toast--playing .app-toast__menu-fx.sidebar-collapse-fx--collapse .sidebar-collapse-fx__beam {
+        animation: sidebar-fx-beam 0.56s 1.4s cubic-bezier(0.32, 0.72, 0, 1) forwards !important;
+        opacity: 1;
+    }
+
+    .app-toast--playing .app-toast__menu-fx.sidebar-collapse-fx--collapse .sidebar-collapse-fx__glow {
+        animation: sidebar-fx-glow-pulse 0.56s 1.4s ease-out forwards !important;
+        opacity: 1;
+    }
+
+    .app-toast--playing .app-toast__menu-fx.sidebar-collapse-fx--collapse .sidebar-collapse-fx__scan {
+        animation: sidebar-fx-scan 0.56s 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+        opacity: 1;
+    }
+
+    .app-toast-host--from-left .app-toast--playing .app-toast__menu-fx.sidebar-collapse-fx--collapse .sidebar-collapse-fx__beam {
+        animation-name: sidebar-fx-beam-reverse !important;
+    }
+
+    @keyframes app-toast-logo-lead-from-right {
+        0% {
+            opacity: 0;
+            transform: translateY(-50%) translateX(5.5rem);
+        }
+
+        100% {
+            opacity: 1;
+            transform: translateY(-50%) translateX(0);
+        }
+    }
+
+    @keyframes app-toast-logo-lead-from-left {
+        0% {
+            opacity: 0;
+            transform: translateY(-50%) translateX(-5.5rem);
+        }
+
+        100% {
+            opacity: 1;
+            transform: translateY(-50%) translateX(0);
+        }
+    }
+
+    @keyframes app-toast-logo-lead-from-top {
+        0% {
+            opacity: 0;
+            transform: translateY(-4.5rem);
+        }
+
+        100% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes app-toast-trail-from-right {
+        0% {
+            opacity: 0;
+            transform: translateY(-50%) scaleX(0.15);
+        }
+
+        18% {
+            opacity: 0.95;
+        }
+
+        55% {
+            opacity: 0.65;
+            transform: translateY(-50%) scaleX(1.65);
+        }
+
+        100% {
+            opacity: 0;
+            transform: translateY(-50%) scaleX(0.4);
+        }
+    }
+
+    @keyframes app-toast-trail-from-right-soft {
+        0% {
+            opacity: 0;
+            transform: translateY(-50%) scaleX(0.1);
+        }
+
+        25% {
+            opacity: 0.45;
+        }
+
+        65% {
+            opacity: 0.28;
+            transform: translateY(-50%) scaleX(2.25);
+        }
+
+        100% {
+            opacity: 0;
+            transform: translateY(-50%) scaleX(0.55);
+        }
+    }
+
+    @keyframes app-toast-trail-from-left {
+        0% {
+            opacity: 0;
+            transform: translateY(-50%) scaleX(0.15);
+        }
+
+        18% {
+            opacity: 0.95;
+        }
+
+        55% {
+            opacity: 0.65;
+            transform: translateY(-50%) scaleX(1.65);
+        }
+
+        100% {
+            opacity: 0;
+            transform: translateY(-50%) scaleX(0.4);
+        }
+    }
+
+    @keyframes app-toast-trail-from-left-soft {
+        0% {
+            opacity: 0;
+            transform: translateY(-50%) scaleX(0.1);
+        }
+
+        25% {
+            opacity: 0.45;
+        }
+
+        65% {
+            opacity: 0.28;
+            transform: translateY(-50%) scaleX(2.25);
+        }
+
+        100% {
+            opacity: 0;
+            transform: translateY(-50%) scaleX(0.55);
+        }
+    }
+
+    @keyframes app-toast-trail-from-top {
+        0% {
+            opacity: 0;
+            transform: translateX(-50%) scaleY(0.15);
+        }
+
+        18% {
+            opacity: 0.95;
+        }
+
+        55% {
+            opacity: 0.65;
+            transform: translateX(-50%) scaleY(1.65);
+        }
+
+        100% {
+            opacity: 0;
+            transform: translateX(-50%) scaleY(0.4);
+        }
+    }
+
+    @keyframes app-toast-trail-from-top-soft {
+        0% {
+            opacity: 0;
+            transform: translateX(-50%) scaleY(0.1);
+        }
+
+        25% {
+            opacity: 0.45;
+        }
+
+        65% {
+            opacity: 0.28;
+            transform: translateX(-50%) scaleY(2.25);
+        }
+
+        100% {
+            opacity: 0;
+            transform: translateX(-50%) scaleY(0.55);
+        }
+    }
+
+    @keyframes app-toast-shell-unfold-h {
+        0% {
+            opacity: 0;
+            transform: scaleX(0.1);
+            filter: blur(3px);
+        }
+
+        35% {
+            opacity: 0.92;
+            filter: blur(0);
+        }
+
+        100% {
+            opacity: 1;
+            transform: scaleX(1);
+            filter: blur(0);
+        }
+    }
+
+    @keyframes app-toast-shell-unfold-v {
+        0% {
+            opacity: 0;
+            transform: scaleY(0.12);
+            filter: blur(3px);
+        }
+
+        35% {
+            opacity: 0.92;
+            filter: blur(0);
+        }
+
+        100% {
+            opacity: 1;
+            transform: scaleY(1);
+            filter: blur(0);
+        }
+    }
+
+    @keyframes app-toast-text-from-right {
+        0% {
+            opacity: 0;
+            transform: translateX(2.25rem);
+        }
+
+        100% {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @keyframes app-toast-text-from-left {
+        0% {
+            opacity: 0;
+            transform: translateX(-2.25rem);
+        }
+
+        100% {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @keyframes app-toast-leave-to-right {
+        0% {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        100% {
+            opacity: 0;
+            transform: translateX(2rem);
+        }
+    }
+
+    @keyframes app-toast-leave-to-left {
+        0% {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        100% {
+            opacity: 0;
+            transform: translateX(-2rem);
+        }
+    }
+
+    @keyframes app-toast-leave-to-top {
+        0% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        100% {
+            opacity: 0;
+            transform: translateY(-1.5rem);
+        }
     }
 
     .material-field {
@@ -2632,13 +3051,385 @@
     }
 
     .app-toast-host {
-        width: min(28rem, calc(100vw - 2rem));
+        width: min(22rem, calc(100vw - 2rem));
+    }
+
+    .app-toast-host--top-right {
+        top: 1rem;
+        right: 1rem;
+        left: auto;
+        bottom: auto;
+        align-items: flex-end;
+    }
+
+    .app-toast-host--top-left {
+        top: 1rem;
+        left: 1rem;
+        right: auto;
+        bottom: auto;
+        align-items: flex-start;
+    }
+
+    .app-toast-host--top-center {
+        top: 1rem;
+        left: 50%;
+        right: auto;
+        bottom: auto;
+        transform: translateX(-50%);
+        align-items: center;
+    }
+
+    .app-toast-host--bottom-right {
+        bottom: 1rem;
+        right: 1rem;
+        top: auto;
+        left: auto;
+        align-items: flex-end;
+    }
+
+    .app-toast-host--bottom-left {
+        bottom: 1rem;
+        left: 1rem;
+        top: auto;
+        right: auto;
+        align-items: flex-start;
+    }
+
+    @media (min-width: 640px) {
+        .app-toast-host--top-right {
+            top: 1.25rem;
+            right: 1.5rem;
+        }
+
+        .app-toast-host--top-left {
+            top: 1.25rem;
+            left: 1.5rem;
+        }
+
+        .app-toast-host--top-center {
+            top: 1.25rem;
+        }
+
+        .app-toast-host--bottom-right {
+            bottom: 1.25rem;
+            right: 1.5rem;
+        }
+
+        .app-toast-host--bottom-left {
+            bottom: 1.25rem;
+            left: 1.5rem;
+        }
+    }
+
+    .app-toast-stack {
+        display: flex;
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
     }
 
     .app-toast {
-        box-shadow:
-            0 18px 44px -14px rgb(0 0 0 / 0.55),
-            inset 0 1px 0 rgb(255 255 255 / 0.06);
+        width: 100%;
+        position: relative;
+        overflow: visible;
+        color: #f1f5f9;
+    }
+
+    .app-toast__shell {
+        position: relative;
+        overflow: hidden;
+        isolation: isolate;
+        border-radius: 1rem;
+        transform-origin: left center;
+    }
+
+    .app-toast-host--from-top .app-toast__shell {
+        transform-origin: top left;
+    }
+
+    .app-toast--playing .app-toast__shell {
+        opacity: 0;
+        transform: scaleX(0.1);
+    }
+
+    .app-toast-host--from-top .app-toast--playing .app-toast__shell {
+        transform: scaleY(0.12);
+    }
+
+    .app-toast:not(.app-toast--playing) .app-toast__shell {
+        opacity: 1;
+        transform: none;
+    }
+
+    .app-toast__logo-flight {
+        position: absolute;
+        top: 50%;
+        left: 0.65rem;
+        z-index: 6;
+        width: 2.25rem;
+        height: 2.25rem;
+        transform: translateY(-50%);
+        pointer-events: none;
+    }
+
+    .app-toast-host--from-top .app-toast__logo-flight {
+        top: 0.8rem;
+        transform: none;
+    }
+
+    .app-toast__logo-trail {
+        position: absolute;
+        top: 50%;
+        left: 0.2rem;
+        z-index: 0;
+        height: 0.72rem;
+        width: 9rem;
+        border-radius: 999px;
+        opacity: 0;
+        pointer-events: none;
+        filter: blur(3px);
+        transform: translateY(-50%);
+    }
+
+    .app-toast__logo-trail--soft {
+        width: 12.5rem;
+        filter: blur(7px);
+        opacity: 0;
+    }
+
+    .app-toast-host--from-right .app-toast__logo-trail {
+        transform-origin: left center;
+        background: linear-gradient(
+            90deg,
+            rgb(251 146 60 / 0.04) 0%,
+            rgb(251 191 36 / 0.35) 55%,
+            rgb(253 224 71 / 0.88) 92%,
+            rgb(254 240 138 / 0.95) 100%
+        );
+    }
+
+    .app-toast-host--from-right .app-toast__logo-trail--soft {
+        background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgb(245 158 11 / 0.12) 45%,
+            rgb(251 191 36 / 0.28) 100%
+        );
+    }
+
+    .app-toast-host--from-left .app-toast__logo-trail {
+        left: auto;
+        right: 0.2rem;
+        transform-origin: right center;
+        background: linear-gradient(
+            270deg,
+            rgb(251 146 60 / 0.04) 0%,
+            rgb(251 191 36 / 0.35) 55%,
+            rgb(253 224 71 / 0.88) 92%,
+            rgb(254 240 138 / 0.95) 100%
+        );
+    }
+
+    .app-toast-host--from-left .app-toast__logo-trail--soft {
+        background: linear-gradient(
+            270deg,
+            transparent 0%,
+            rgb(245 158 11 / 0.12) 45%,
+            rgb(251 191 36 / 0.28) 100%
+        );
+    }
+
+    .app-toast-host--from-top .app-toast__logo-trail {
+        top: 0.35rem;
+        left: 50%;
+        width: 0.72rem;
+        height: 9rem;
+        transform: translateX(-50%);
+        transform-origin: top center;
+        background: linear-gradient(
+            180deg,
+            rgb(251 146 60 / 0.04) 0%,
+            rgb(251 191 36 / 0.35) 55%,
+            rgb(253 224 71 / 0.88) 92%,
+            rgb(254 240 138 / 0.95) 100%
+        );
+    }
+
+    .app-toast-host--from-top .app-toast__logo-trail--soft {
+        height: 12.5rem;
+        background: linear-gradient(
+            180deg,
+            transparent 0%,
+            rgb(245 158 11 / 0.12) 45%,
+            rgb(251 191 36 / 0.28) 100%
+        );
+    }
+
+    .app-toast__logo-wing--lead {
+        position: relative;
+        z-index: 2;
+        width: 2.25rem;
+        will-change: transform, opacity;
+    }
+
+    .app-toast-host--from-top .app-toast__logo-wing--lead {
+        transform: none;
+    }
+
+    .app-toast__logo-wing--lead .phoenix-brand__logo {
+        width: 1.65rem;
+        height: 1.65rem;
+    }
+
+    .app-toast__menu-fx {
+        border-radius: inherit;
+        z-index: 3;
+    }
+
+    .app-toast-host--from-right .app-toast__menu-fx-glow {
+        background: radial-gradient(
+            ellipse 90% 70% at 100% 50%,
+            rgb(245 158 11 / 0.28) 0%,
+            transparent 62%
+        ) !important;
+    }
+
+    .app-toast-host--from-left .app-toast__menu-fx-glow {
+        background: radial-gradient(
+            ellipse 90% 70% at 0% 50%,
+            rgb(245 158 11 / 0.28) 0%,
+            transparent 62%
+        ) !important;
+    }
+
+    .app-toast-host--from-top .app-toast__menu-fx-glow {
+        background: radial-gradient(
+            ellipse 70% 90% at 50% 0%,
+            rgb(245 158 11 / 0.28) 0%,
+            transparent 62%
+        ) !important;
+    }
+
+    .app-toast__body {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.35rem;
+        min-height: 3rem;
+        padding: 0.8rem 0.85rem 0.8rem 0;
+    }
+
+    .app-toast__logo-spacer {
+        width: 2.9rem;
+        flex-shrink: 0;
+    }
+
+    .app-toast__content {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        min-width: 0;
+        flex: 1 1 auto;
+        align-items: flex-start;
+        gap: 0.65rem;
+        transform-origin: left center;
+        will-change: transform, opacity;
+    }
+
+    .app-toast:not(.app-toast--playing) .app-toast__logo-flight,
+    .app-toast:not(.app-toast--playing) .app-toast__logo-trail,
+    .app-toast:not(.app-toast--playing) .app-toast__content {
+        opacity: 1;
+    }
+
+    .app-toast:not(.app-toast--playing) .app-toast__logo-trail {
+        opacity: 0;
+    }
+
+    .app-toast__noise {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        opacity: 0.08;
+        pointer-events: none;
+    }
+
+    .app-toast__glow {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        opacity: 0.9;
+    }
+
+    .app-toast__message {
+        color: #f8fafc;
+    }
+
+    .app-toast--success .app-toast__shell {
+        border-color: rgb(52 211 153 / 0.32);
+    }
+
+    .app-toast--success .app-toast__glow {
+        background: radial-gradient(
+            ellipse 85% 80% at 100% 42%,
+            rgb(52 211 153 / 0.22) 0%,
+            rgb(16 185 129 / 0.06) 42%,
+            transparent 68%
+        );
+    }
+
+    .app-toast--success .app-toast__message {
+        color: #d1fae5;
+    }
+
+    .app-toast--danger .app-toast__shell {
+        border-color: rgb(248 113 113 / 0.34);
+    }
+
+    .app-toast--danger .app-toast__glow {
+        background: radial-gradient(
+            ellipse 85% 80% at 100% 42%,
+            rgb(248 113 113 / 0.24) 0%,
+            rgb(239 68 68 / 0.07) 42%,
+            transparent 68%
+        );
+    }
+
+    .app-toast--danger .app-toast__message {
+        color: #fee2e2;
+    }
+
+    .app-toast--warning .app-toast__shell {
+        border-color: rgb(251 191 36 / 0.34);
+    }
+
+    .app-toast--warning .app-toast__glow {
+        background: radial-gradient(
+            ellipse 85% 80% at 100% 42%,
+            rgb(251 191 36 / 0.26) 0%,
+            rgb(245 158 11 / 0.08) 42%,
+            transparent 68%
+        );
+    }
+
+    .app-toast--warning .app-toast__message {
+        color: #fef3c7;
+    }
+
+    .app-toast--info .app-toast__glow {
+        background: radial-gradient(
+            ellipse 85% 80% at 100% 42%,
+            rgb(148 163 184 / 0.18) 0%,
+            rgb(100 116 139 / 0.06) 42%,
+            transparent 68%
+        );
+    }
+
+    .app-toast--info .app-toast__message {
+        color: #e2e8f0;
     }
 
     .app-toast__dismiss {
@@ -3263,8 +4054,27 @@
     color: #064e3b;
 }
 
-[data-theme='light'] .app-toast {
-    box-shadow: var(--shadow-glass);
+[data-theme='light'] .app-toast__shell.login-glass-premium {
+    border-color: rgb(255 255 255 / 0.11);
+    background: rgb(10 12 18 / 0.88);
+    box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 0.14),
+        inset 0 -1px 0 rgb(0 0 0 / 0.25),
+        0 24px 48px -18px rgb(0 0 0 / 0.55);
+    -webkit-backdrop-filter: blur(44px) saturate(1.75);
+    backdrop-filter: blur(44px) saturate(1.75);
+}
+
+[data-theme='light'] .app-toast--success .app-toast__shell {
+    border-color: rgb(52 211 153 / 0.32);
+}
+
+[data-theme='light'] .app-toast--danger .app-toast__shell {
+    border-color: rgb(248 113 113 / 0.34);
+}
+
+[data-theme='light'] .app-toast--warning .app-toast__shell {
+    border-color: rgb(251 191 36 / 0.34);
 }
 
 [data-theme='light'] .portal-msg-warning {
@@ -3613,8 +4423,22 @@
     .glass-sidebar--expanding .nav-item,
     .glass-sidebar--collapsing .phoenix-brand__logo,
     .glass-sidebar--expanding .phoenix-brand__logo,
-    .sidebar-toggle-btn--spin svg {
+    .sidebar-toggle-btn--spin svg,
+    .app-toast-enter-active,
+    .app-toast-leave-active,
+    .app-toast--playing,
+    .app-toast--playing .app-toast__logo-flight,
+    .app-toast--playing .app-toast__logo-trail,
+    .app-toast--playing .app-toast__shell,
+    .app-toast--playing .app-toast__content,
+    .app-toast--playing .app-toast__menu-fx.sidebar-collapse-fx--collapse .sidebar-collapse-fx__beam,
+    .app-toast--playing .app-toast__menu-fx.sidebar-collapse-fx--collapse .sidebar-collapse-fx__glow,
+    .app-toast--playing .app-toast__menu-fx.sidebar-collapse-fx--collapse .sidebar-collapse-fx__scan {
         animation: none !important;
+    }
+
+    .app-toast-move {
+        transition: none;
     }
 
     .glass-sidebar,

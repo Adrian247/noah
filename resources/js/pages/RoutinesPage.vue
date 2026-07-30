@@ -205,7 +205,7 @@ async function createDemoRoutine() {
         toast.success('Rutina demo creada con datos de prueba.');
         await load();
         if (res.data?.id) {
-            window.location.href = `/app/routines/${res.data.id}`;
+            await router.push(`/app/routines/${res.data.id}`);
         }
     } catch (e) {
         toast.error((e as Error).message);

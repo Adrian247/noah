@@ -349,7 +349,7 @@ async function onAvatarSelected(event: Event) {
                     </button>
                 </SidebarNavTooltip>
             </div>
-            <nav class="flex-1 space-y-4 overflow-x-hidden overflow-y-auto px-2 pb-4">
+            <nav class="portal-scroll sidebar-nav-scroll flex-1 space-y-4 px-2 pb-4">
                 <div v-for="group in navGroups" :key="group.label">
                     <p
                         class="nav-section-label"
@@ -474,7 +474,7 @@ async function onAvatarSelected(event: Event) {
             </div>
         </aside>
         <div class="app-main-surface flex flex-col">
-            <main class="app-main-scroll flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6">
+            <main class="portal-scroll app-main-scroll flex-1 p-4 sm:p-6">
                 <RouterView v-slot="{ Component }">
                     <Transition name="phoenix-page" mode="out-in">
                         <component :is="Component" class="phoenix-page-content" />
