@@ -19,12 +19,16 @@ class Company extends Model
         'billing_tax_rate',
         'form_max_image_size_kb',
         'form_allowed_image_mimes',
+        'mobile_require_app_lock',
+        'mobile_allow_biometric_unlock',
     ];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'mobile_require_app_lock' => 'boolean',
+            'mobile_allow_biometric_unlock' => 'boolean',
             'billing_labor_rate_per_hour' => 'decimal:2',
             'billing_tax_rate' => 'decimal:4',
             'form_allowed_image_mimes' => 'array',

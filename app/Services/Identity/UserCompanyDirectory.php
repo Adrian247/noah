@@ -64,6 +64,7 @@ class UserCompanyDirectory
             'assumed' => false,
             'company_is_active' => $company->is_active,
             'billing_contact_email' => $this->billingContactEmailForCompany($company->id),
+            'mobile_policy' => $this->mobilePolicyForCompany($company),
             'permissions' => $this->authorization->permissionsForUser($user, $company->id),
             'modules' => $this->authorization->modulesForMembership($membership),
         ];
@@ -84,8 +85,20 @@ class UserCompanyDirectory
             'assumed' => true,
             'company_is_active' => $company->is_active,
             'billing_contact_email' => $this->billingContactEmailForCompany($company->id),
+            'mobile_policy' => $this->mobilePolicyForCompany($company),
             'permissions' => $this->authorization->permissionsForPlatformAssumption(),
             'modules' => $this->authorization->modulesForPlatformAssumption($user),
+        ];
+    }
+
+    /**
+     * @return array<string, bool>
+     */
+    private function mobilePolicyForCompany(Company $company): array
+    {
+        return [
+            'require_app_lock' => (bool) $company->mobile_require_app_lock,
+            'allow_biometric_unlock' => (bool) $company->mobile_allow_biometric_unlock,
         ];
     }
 

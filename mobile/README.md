@@ -1,15 +1,184 @@
-# Phoenix — App de campo (Fase 3)
+# Phoenix — App de campo (Flutter)
 
-El cliente móvil **Flutter offline-first** está planificado en `openspec/mobile/` y `openspec/design/mobile-field-app.md`.
+Cliente móvil **offline-first** para técnicos: rutinas asignadas, formularios dinámicos, cola de sync y envío de ejecuciones.
 
-## Contrato servidor (implementado)
+Documentación: `openspec/mobile/`, `openspec/design/mobile-field-app.md`.
 
-- `POST /api/v1/sync` con `device_id`, `events[]` (push) y `pull` (catálogo de rutinas asignadas).
-- Evento soportado: `execution.submitted` (idempotente por `event_id`).
-- Evidencias: `POST /api/v1/routines/{routine}/evidences` (multipart).
+## Stack
 
-## Próximo paso Flutter
+| Capa | Tecnología |
+|------|------------|
+| UI | Flutter 3.x |
+| Estado | Riverpod |
+| HTTP | Dio + Sanctum |
+| Local | Drift (SQLite) |
+| Sync | `POST /api/v1/sync` |
 
-1. Proyecto Flutter con SQLite local y cola de eventos.
-2. Pantallas: rutinas asignadas, captura de formulario dinámico, cola de sync.
-3. Usar la guía **docs/PRUEBAS_MANUALES.md** sección F para probar el backend sin app.
+## Estructura
+
+```
+mobile/phoenix_field/
+  lib/
+    core/          # config, theme, router, red
+    data/          # API, SQLite, repos, sesión
+    features/      # auth, rutinas, sync, perfil
+    shared/        # renderer de formulario dinámico
+```
+
+## Requisitos
+
+- Flutter SDK 3.22+ (`flutter doctor`)
+- Backend Phoenix corriendo (Docker: `http://localhost:8888`)
+
+## Arranque rápido
+
+### 1. Ubicación correcta
+
+Desde la raíz del repo **noah**:
+
+```bash
+cd mobile/phoenix_field
+```
+
+Si tu prompt ya dice `phoenix_field`, **no vuelvas a hacer `cd mobile/phoenix_field`** (esa ruta no existe desde ahí). Comprueba que estás en el proyecto con:
+
+```bash
+ls pubspec.yaml
+```
+
+### 2. Flutter en PATH (ya configurado en este equipo)
+
+El SDK está en `~/flutter` y quedó registrado en el sistema:
+
+- `/etc/profile.d/flutter.sh` — PATH para shells de login
+- `/usr/local/bin/flutter` y `/usr/local/bin/dart` — symlinks
+- `~/.zshrc` — PATH para zsh
+
+Abre una **terminal nueva** o ejecuta:
+
+```bash
+source ~/.zshrc
+flutter doctor
+```
+
+Deberías ver **Linux toolchain ✓**. Android Studio/SDK es opcional (para emulador); en desktop usa:
+
+```bash
+flutter run -d linux
+```
+
+Si en otra máquina no tienes Flutter:
+
+```bash
+git clone https://github.com/flutter/flutter.git -b stable --depth 1 ~/flutter
+echo 'export PATH="$HOME/flutter/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+flutter doctor
+```
+
+### 3. Correr la app
+
+```bash
+cd mobile/phoenix_field   # solo si vienes de la raíz del repo
+chmod +x tool/dev.sh
+./tool/dev.sh run
+```
+
+O manualmente:
+
+```bash
+flutter pub get
+dart run build_runner build
+flutter run
+```
+
+### URL de API por plataforma
+
+| Plataforma | URL por defecto |
+|------------|-----------------|
+| **Linux / macOS / Windows** | `http://localhost:8888/api/v1` |
+| Emulador Android | `http://10.0.2.2:8888/api/v1` |
+| Dispositivo físico | IP de tu máquina, ej. `http://192.168.1.10:8888/api/v1` |
+
+También puedes cambiarla en la pantalla de login o con:
+
+```bash
+flutter run --dart-define=API_BASE_URL=http://192.168.1.10:8888/api/v1
+```
+
+## Credenciales demo
+
+Técnico Mein Company:
+
+- Email: `misael.palos@mein-company.com`
+- Contraseña: `phoenix_application` (o `phoenix.2026$` según demo)
+
+Ver `docs/DEMO_ENV.md` y `docs/PRUEBAS_MANUALES.md` (sección F) para probar el backend sin app.
+
+## Flujo v0.5
+
+1. Todo lo de v0.4, más:
+2. **Logout con limpieza**: SQLite, cola outbox, borradores y archivos locales (`media/`)
+3. **Política móvil por empresa** (web → Configuración → App móvil): PIN obligatorio y biometría permitida o no
+4. **APK release firmado** con keystore propio (ver abajo)
+
+## Flujo v0.4
+
+1. Login → token Sanctum + `X-Company-Id`
+2. Pull de rutinas asignadas y catálogos de opciones
+3. Captura de formulario dinámico (texto, número, select, multiselect, duration, **boolean**, **date**, **datetime**, fotos)
+4. **Cronómetro** de tiempo en sitio
+5. **Firma** al finalizar
+6. Envío local → **compresión de fotos** → subida → cola outbox → push `execution.submitted`
+7. Pantalla **Cola** con eventos y medios pendientes
+8. Banner global de estado de sync
+9. **Sync en segundo plano** (Android/iOS, cada ~15 min con red)
+10. **Cámara nativa** en móvil (galería/archivo en desktop)
+11. **Bloqueo con PIN** y **biometría** opcional (Perfil → Seguridad)
+12. **Selector de empresa** en Perfil (multi-tenant; limpia caché local al cambiar)
+
+## Build release (APK firmado)
+
+1. Genera un keystore (una sola vez; **no lo subas al repo**):
+
+```bash
+mkdir -p mobile/phoenix_field/android/keystore
+keytool -genkey -v \
+  -keystore mobile/phoenix_field/android/keystore/phoenix-field.jks \
+  -alias phoenix-field -keyalg RSA -keysize 2048 -validity 10000
+```
+
+2. Copia y edita credenciales:
+
+```bash
+cp mobile/phoenix_field/android/key.properties.example mobile/phoenix_field/android/key.properties
+```
+
+3. Compila:
+
+```bash
+cd mobile/phoenix_field
+chmod +x tool/build_release.sh
+./tool/build_release.sh
+```
+
+Sin `key.properties`, `flutter build apk --release` usa firma debug (solo pruebas locales).
+
+## Flujo v0.3 (base Fase 2)
+
+Ver commits anteriores; v0.4 añade paridad de campos, compresión y selector de empresa.
+
+## Pendiente (siguientes iteraciones)
+
+- Campo `options` como radio (hoy dropdown)
+- Captions en fotos
+- Filtro real “Hoy” por fecha
+- Validaciones avanzadas de formulario
+- Consumos/insumos en ejecución
+- Distribución AAB / Play Store interna
+
+## Contrato servidor
+
+- `POST /api/v1/auth/login`
+- `POST /api/v1/sync` (`device_id`, `events[]`, `pull`)
+- Evento: `execution.submitted` (idempotente por `event_id`)

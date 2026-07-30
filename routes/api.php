@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\FormOptionCatalogController;
 use App\Http\Controllers\Api\V1\GeneratedReportController;
 use App\Http\Controllers\Api\V1\InventoryMetaController;
 use App\Http\Controllers\Api\V1\InventoryMovementController;
+use App\Http\Controllers\Api\V1\MobileSecuritySettingsController;
 use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\InvoiceEvidenceController;
 use App\Http\Controllers\Api\V1\RoutineController;
@@ -123,6 +124,8 @@ Route::prefix('v1')->group(function (): void {
                 Route::get('/company/roles', [CompanyRoleController::class, 'index']);
                 Route::get('/portal/settings', [PortalController::class, 'show']);
                 Route::put('/portal/settings', [PortalController::class, 'update']);
+                Route::get('/mobile/settings', [MobileSecuritySettingsController::class, 'show']);
+                Route::put('/mobile/settings', [MobileSecuritySettingsController::class, 'update']);
             });
 
             Route::post('/sync', [SyncController::class, 'sync']);

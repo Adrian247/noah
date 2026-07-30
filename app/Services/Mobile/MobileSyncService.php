@@ -8,6 +8,7 @@ use App\Models\RoutineType;
 use App\Models\SupplyItem;
 use App\Models\SyncEvent;
 use App\Models\User;
+use App\Services\Forms\FormDesignSettings;
 use App\Services\Inventory\InventoryStockService;
 use App\Services\Workflow\WorkflowRuntime;
 use App\Support\CurrentCompany;
@@ -21,6 +22,8 @@ class MobileSyncService
     public function __construct(
         private WorkflowRuntime $workflow,
         private InventoryStockService $stock,
+        private FormDesignSettings $formDesign,
+        private CurrentCompany $currentCompany,
     ) {}
 
     /**
@@ -110,6 +113,21 @@ class MobileSyncService
             'server_time' => now()->toIso8601String(),
             'routines' => $routines,
             'routine_types' => $routineTypes,
+            'option_catalogs' => $this->formDesign->optionCatalogsForCurrentCompany(),
+            'mobile_policy' => $this->mobilePolicy(),
+        ];
+    }
+
+    /**
+     * @return array<string, bool>
+     */
+    private function mobilePolicy(): array
+    {
+        $company = $this->currentCompany->company;
+
+        return [
+            'require_app_lock' => (bool) ($company?->mobile_require_app_lock ?? false),
+            'allow_biometric_unlock' => (bool) ($company?->mobile_allow_biometric_unlock ?? true),
         ];
     }
 

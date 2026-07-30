@@ -8,6 +8,7 @@ import { useCompanyStore } from '@/stores/company';
 import GlassCard from '@/components/ui/GlassCard.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import BillingSettingsForm from '@/components/settings/BillingSettingsForm.vue';
+import MobileSecuritySettingsForm from '@/components/settings/MobileSecuritySettingsForm.vue';
 
 const { theme, setTheme } = useTheme();
 const { can } = usePermissions();
@@ -41,7 +42,7 @@ function selectTheme(next: AppTheme) {
     <div class="max-w-2xl space-y-8">
         <PageHeader
             title="Configuración"
-            subtitle="Tema de la interfaz, facturación y contenido del portal de acceso."
+            subtitle="Tema, facturación, app móvil y contenido del portal de acceso."
         />
 
         <section id="apariencia">
@@ -77,6 +78,16 @@ function selectTheme(next: AppTheme) {
                     Parámetros por defecto al generar borradores desde rutinas validadas.
                 </p>
                 <BillingSettingsForm />
+            </GlassCard>
+        </section>
+
+        <section v-if="isAdmin" id="app-movil">
+            <GlassCard padding="lg" class="space-y-4">
+                <h2 class="text-portal-heading text-base font-semibold">App móvil (campo)</h2>
+                <p class="text-portal-muted text-sm">
+                    Política de seguridad para técnicos en Phoenix Campo (PIN y biometría).
+                </p>
+                <MobileSecuritySettingsForm />
             </GlassCard>
         </section>
 
