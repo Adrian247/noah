@@ -115,6 +115,14 @@ Técnico Mein Company:
 
 Ver `docs/DEMO_ENV.md` y `docs/PRUEBAS_MANUALES.md` (sección F) para probar el backend sin app.
 
+## Flujo v0.7
+
+1. Todo lo de v0.6, más:
+2. **Cronómetro auto-inicio** al abrir una rutina en estado `assigned` (tiempo en sitio)
+3. Branding Phoenix (logo, animación de entrada, icono de app)
+4. **PIN/biometría** persistente por usuario; bloqueo solo al volver del segundo plano
+5. **APK release** estable (ProGuard WorkManager)
+
 ## Flujo v0.6
 
 1. Todo lo de v0.5, más:
@@ -180,8 +188,8 @@ Ver commits anteriores; v0.4 añade paridad de campos, compresión y selector de
 ## Pendiente (siguientes iteraciones)
 
 - Distribución AAB / Play Store interna
-- Validación de ejecuciones en web (cola supervisor)
 - Reordenar fotos en galería móvil
+- Mostrar `duration_minutes` en reporte PDF con formato hh:mm
 
 ## Contrato servidor
 

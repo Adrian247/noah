@@ -7,10 +7,13 @@ class RoutineTimer extends StatefulWidget {
     super.key,
     required this.onMinutesChanged,
     this.initialMinutes,
+    this.autoStart = false,
   });
 
   final void Function(int minutes) onMinutesChanged;
   final int? initialMinutes;
+  /// Inicia el cronómetro al abrir la rutina (p. ej. ejecución en sitio).
+  final bool autoStart;
 
   @override
   State<RoutineTimer> createState() => _RoutineTimerState();
@@ -27,6 +30,9 @@ class _RoutineTimerState extends State<RoutineTimer> {
     if (widget.initialMinutes != null && widget.initialMinutes! > 0) {
       _elapsed = Duration(minutes: widget.initialMinutes!);
     }
+    if (widget.autoStart) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _start());
+    }
   }
 
   @override
@@ -41,7 +47,13 @@ class _RoutineTimerState extends State<RoutineTimer> {
       setState(() => _running = false);
       return;
     }
+    _start();
+  }
 
+  void _start() {
+    if (_running) {
+      return;
+    }
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() => _elapsed += const Duration(seconds: 1));
       widget.onMinutesChanged(_elapsed.inMinutes);

@@ -228,6 +228,7 @@ class _RoutineDetailPageState extends ConsumerState<RoutineDetailPage> {
           const SizedBox(height: 16),
           RoutineTimer(
             initialMinutes: _durationMinutes > 0 ? _durationMinutes : null,
+            autoStart: _durationMinutes == 0 && status == 'assigned',
             onMinutesChanged: (minutes) {
               _durationMinutes = minutes;
               _persistDraft();
