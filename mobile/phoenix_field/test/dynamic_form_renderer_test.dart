@@ -22,9 +22,9 @@ void main() {
         'notes': 'ok',
       });
 
-      expect(missing, contains('Etiquetas'));
-      expect(missing, contains('Tiempo'));
-      expect(missing, contains('Foto'));
+      expect(missing, contains('Etiquetas es obligatorio'));
+      expect(missing, contains('Tiempo es obligatorio'));
+      expect(missing, contains('Foto es obligatorio'));
       expect(missing, isNot(contains('Notas')));
     });
 
@@ -56,9 +56,9 @@ void main() {
         'ok': false,
       });
 
-      expect(missing, contains('Confirmo'));
-      expect(missing, contains('Fecha'));
-      expect(missing, contains('Inicio'));
+      expect(missing, contains('Confirmo es obligatorio'));
+      expect(missing, contains('Fecha es obligatorio'));
+      expect(missing, contains('Inicio es obligatorio'));
     });
 
     test('accepts valid boolean and date fields', () {

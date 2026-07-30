@@ -115,6 +115,15 @@ Técnico Mein Company:
 
 Ver `docs/DEMO_ENV.md` y `docs/PRUEBAS_MANUALES.md` (sección F) para probar el backend sin app.
 
+## Flujo v0.6
+
+1. Todo lo de v0.5, más:
+2. **Filtro «Hoy»** por `scheduled_at` (segmento Hoy / Todas)
+3. **Campo `options` como radio**; `select` sigue en dropdown
+4. **Captions en fotos** cuando el formulario lo habilita
+5. **Validaciones avanzadas** (min/max numérico, longitud, patrón, catálogos, captions)
+6. **Consumos / insumos** en ejecución (catálogo vía sync pull)
+
 ## Flujo v0.5
 
 1. Todo lo de v0.4, más:
@@ -170,12 +179,9 @@ Ver commits anteriores; v0.4 añade paridad de campos, compresión y selector de
 
 ## Pendiente (siguientes iteraciones)
 
-- Campo `options` como radio (hoy dropdown)
-- Captions en fotos
-- Filtro real “Hoy” por fecha
-- Validaciones avanzadas de formulario
-- Consumos/insumos en ejecución
 - Distribución AAB / Play Store interna
+- Validación de ejecuciones en web (cola supervisor)
+- Reordenar fotos en galería móvil
 
 ## Contrato servidor
 

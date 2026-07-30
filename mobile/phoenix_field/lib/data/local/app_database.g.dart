@@ -801,6 +801,18 @@ class $ExecutionDraftsTable extends ExecutionDrafts
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _consumptionsJsonMeta = const VerificationMeta(
+    'consumptionsJson',
+  );
+  @override
+  late final GeneratedColumn<String> consumptionsJson = GeneratedColumn<String>(
+    'consumptions_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     routineId,
@@ -808,6 +820,7 @@ class $ExecutionDraftsTable extends ExecutionDrafts
     comments,
     durationMinutes,
     signatureLocalId,
+    consumptionsJson,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -862,6 +875,15 @@ class $ExecutionDraftsTable extends ExecutionDrafts
         ),
       );
     }
+    if (data.containsKey('consumptions_json')) {
+      context.handle(
+        _consumptionsJsonMeta,
+        consumptionsJson.isAcceptableOrUnknown(
+          data['consumptions_json']!,
+          _consumptionsJsonMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -891,6 +913,10 @@ class $ExecutionDraftsTable extends ExecutionDrafts
         DriftSqlType.string,
         data['${effectivePrefix}signature_local_id'],
       ),
+      consumptionsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}consumptions_json'],
+      )!,
     );
   }
 
@@ -906,12 +932,14 @@ class ExecutionDraft extends DataClass implements Insertable<ExecutionDraft> {
   final String? comments;
   final int? durationMinutes;
   final String? signatureLocalId;
+  final String consumptionsJson;
   const ExecutionDraft({
     required this.routineId,
     required this.responsesJson,
     this.comments,
     this.durationMinutes,
     this.signatureLocalId,
+    required this.consumptionsJson,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -927,6 +955,7 @@ class ExecutionDraft extends DataClass implements Insertable<ExecutionDraft> {
     if (!nullToAbsent || signatureLocalId != null) {
       map['signature_local_id'] = Variable<String>(signatureLocalId);
     }
+    map['consumptions_json'] = Variable<String>(consumptionsJson);
     return map;
   }
 
@@ -943,6 +972,7 @@ class ExecutionDraft extends DataClass implements Insertable<ExecutionDraft> {
       signatureLocalId: signatureLocalId == null && nullToAbsent
           ? const Value.absent()
           : Value(signatureLocalId),
+      consumptionsJson: Value(consumptionsJson),
     );
   }
 
@@ -957,6 +987,7 @@ class ExecutionDraft extends DataClass implements Insertable<ExecutionDraft> {
       comments: serializer.fromJson<String?>(json['comments']),
       durationMinutes: serializer.fromJson<int?>(json['durationMinutes']),
       signatureLocalId: serializer.fromJson<String?>(json['signatureLocalId']),
+      consumptionsJson: serializer.fromJson<String>(json['consumptionsJson']),
     );
   }
   @override
@@ -968,6 +999,7 @@ class ExecutionDraft extends DataClass implements Insertable<ExecutionDraft> {
       'comments': serializer.toJson<String?>(comments),
       'durationMinutes': serializer.toJson<int?>(durationMinutes),
       'signatureLocalId': serializer.toJson<String?>(signatureLocalId),
+      'consumptionsJson': serializer.toJson<String>(consumptionsJson),
     };
   }
 
@@ -977,6 +1009,7 @@ class ExecutionDraft extends DataClass implements Insertable<ExecutionDraft> {
     Value<String?> comments = const Value.absent(),
     Value<int?> durationMinutes = const Value.absent(),
     Value<String?> signatureLocalId = const Value.absent(),
+    String? consumptionsJson,
   }) => ExecutionDraft(
     routineId: routineId ?? this.routineId,
     responsesJson: responsesJson ?? this.responsesJson,
@@ -987,6 +1020,7 @@ class ExecutionDraft extends DataClass implements Insertable<ExecutionDraft> {
     signatureLocalId: signatureLocalId.present
         ? signatureLocalId.value
         : this.signatureLocalId,
+    consumptionsJson: consumptionsJson ?? this.consumptionsJson,
   );
   ExecutionDraft copyWithCompanion(ExecutionDraftsCompanion data) {
     return ExecutionDraft(
@@ -1001,6 +1035,9 @@ class ExecutionDraft extends DataClass implements Insertable<ExecutionDraft> {
       signatureLocalId: data.signatureLocalId.present
           ? data.signatureLocalId.value
           : this.signatureLocalId,
+      consumptionsJson: data.consumptionsJson.present
+          ? data.consumptionsJson.value
+          : this.consumptionsJson,
     );
   }
 
@@ -1011,7 +1048,8 @@ class ExecutionDraft extends DataClass implements Insertable<ExecutionDraft> {
           ..write('responsesJson: $responsesJson, ')
           ..write('comments: $comments, ')
           ..write('durationMinutes: $durationMinutes, ')
-          ..write('signatureLocalId: $signatureLocalId')
+          ..write('signatureLocalId: $signatureLocalId, ')
+          ..write('consumptionsJson: $consumptionsJson')
           ..write(')'))
         .toString();
   }
@@ -1023,6 +1061,7 @@ class ExecutionDraft extends DataClass implements Insertable<ExecutionDraft> {
     comments,
     durationMinutes,
     signatureLocalId,
+    consumptionsJson,
   );
   @override
   bool operator ==(Object other) =>
@@ -1032,7 +1071,8 @@ class ExecutionDraft extends DataClass implements Insertable<ExecutionDraft> {
           other.responsesJson == this.responsesJson &&
           other.comments == this.comments &&
           other.durationMinutes == this.durationMinutes &&
-          other.signatureLocalId == this.signatureLocalId);
+          other.signatureLocalId == this.signatureLocalId &&
+          other.consumptionsJson == this.consumptionsJson);
 }
 
 class ExecutionDraftsCompanion extends UpdateCompanion<ExecutionDraft> {
@@ -1041,12 +1081,14 @@ class ExecutionDraftsCompanion extends UpdateCompanion<ExecutionDraft> {
   final Value<String?> comments;
   final Value<int?> durationMinutes;
   final Value<String?> signatureLocalId;
+  final Value<String> consumptionsJson;
   const ExecutionDraftsCompanion({
     this.routineId = const Value.absent(),
     this.responsesJson = const Value.absent(),
     this.comments = const Value.absent(),
     this.durationMinutes = const Value.absent(),
     this.signatureLocalId = const Value.absent(),
+    this.consumptionsJson = const Value.absent(),
   });
   ExecutionDraftsCompanion.insert({
     this.routineId = const Value.absent(),
@@ -1054,6 +1096,7 @@ class ExecutionDraftsCompanion extends UpdateCompanion<ExecutionDraft> {
     this.comments = const Value.absent(),
     this.durationMinutes = const Value.absent(),
     this.signatureLocalId = const Value.absent(),
+    this.consumptionsJson = const Value.absent(),
   }) : responsesJson = Value(responsesJson);
   static Insertable<ExecutionDraft> custom({
     Expression<int>? routineId,
@@ -1061,6 +1104,7 @@ class ExecutionDraftsCompanion extends UpdateCompanion<ExecutionDraft> {
     Expression<String>? comments,
     Expression<int>? durationMinutes,
     Expression<String>? signatureLocalId,
+    Expression<String>? consumptionsJson,
   }) {
     return RawValuesInsertable({
       if (routineId != null) 'routine_id': routineId,
@@ -1068,6 +1112,7 @@ class ExecutionDraftsCompanion extends UpdateCompanion<ExecutionDraft> {
       if (comments != null) 'comments': comments,
       if (durationMinutes != null) 'duration_minutes': durationMinutes,
       if (signatureLocalId != null) 'signature_local_id': signatureLocalId,
+      if (consumptionsJson != null) 'consumptions_json': consumptionsJson,
     });
   }
 
@@ -1077,6 +1122,7 @@ class ExecutionDraftsCompanion extends UpdateCompanion<ExecutionDraft> {
     Value<String?>? comments,
     Value<int?>? durationMinutes,
     Value<String?>? signatureLocalId,
+    Value<String>? consumptionsJson,
   }) {
     return ExecutionDraftsCompanion(
       routineId: routineId ?? this.routineId,
@@ -1084,6 +1130,7 @@ class ExecutionDraftsCompanion extends UpdateCompanion<ExecutionDraft> {
       comments: comments ?? this.comments,
       durationMinutes: durationMinutes ?? this.durationMinutes,
       signatureLocalId: signatureLocalId ?? this.signatureLocalId,
+      consumptionsJson: consumptionsJson ?? this.consumptionsJson,
     );
   }
 
@@ -1105,6 +1152,9 @@ class ExecutionDraftsCompanion extends UpdateCompanion<ExecutionDraft> {
     if (signatureLocalId.present) {
       map['signature_local_id'] = Variable<String>(signatureLocalId.value);
     }
+    if (consumptionsJson.present) {
+      map['consumptions_json'] = Variable<String>(consumptionsJson.value);
+    }
     return map;
   }
 
@@ -1115,7 +1165,8 @@ class ExecutionDraftsCompanion extends UpdateCompanion<ExecutionDraft> {
           ..write('responsesJson: $responsesJson, ')
           ..write('comments: $comments, ')
           ..write('durationMinutes: $durationMinutes, ')
-          ..write('signatureLocalId: $signatureLocalId')
+          ..write('signatureLocalId: $signatureLocalId, ')
+          ..write('consumptionsJson: $consumptionsJson')
           ..write(')'))
         .toString();
   }
@@ -2342,6 +2393,7 @@ typedef $$ExecutionDraftsTableCreateCompanionBuilder =
       Value<String?> comments,
       Value<int?> durationMinutes,
       Value<String?> signatureLocalId,
+      Value<String> consumptionsJson,
     });
 typedef $$ExecutionDraftsTableUpdateCompanionBuilder =
     ExecutionDraftsCompanion Function({
@@ -2350,6 +2402,7 @@ typedef $$ExecutionDraftsTableUpdateCompanionBuilder =
       Value<String?> comments,
       Value<int?> durationMinutes,
       Value<String?> signatureLocalId,
+      Value<String> consumptionsJson,
     });
 
 class $$ExecutionDraftsTableFilterComposer
@@ -2383,6 +2436,11 @@ class $$ExecutionDraftsTableFilterComposer
 
   ColumnFilters<String> get signatureLocalId => $composableBuilder(
     column: $table.signatureLocalId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get consumptionsJson => $composableBuilder(
+    column: $table.consumptionsJson,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2420,6 +2478,11 @@ class $$ExecutionDraftsTableOrderingComposer
     column: $table.signatureLocalId,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get consumptionsJson => $composableBuilder(
+    column: $table.consumptionsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ExecutionDraftsTableAnnotationComposer
@@ -2449,6 +2512,11 @@ class $$ExecutionDraftsTableAnnotationComposer
 
   GeneratedColumn<String> get signatureLocalId => $composableBuilder(
     column: $table.signatureLocalId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get consumptionsJson => $composableBuilder(
+    column: $table.consumptionsJson,
     builder: (column) => column,
   );
 }
@@ -2495,12 +2563,14 @@ class $$ExecutionDraftsTableTableManager
                 Value<String?> comments = const Value.absent(),
                 Value<int?> durationMinutes = const Value.absent(),
                 Value<String?> signatureLocalId = const Value.absent(),
+                Value<String> consumptionsJson = const Value.absent(),
               }) => ExecutionDraftsCompanion(
                 routineId: routineId,
                 responsesJson: responsesJson,
                 comments: comments,
                 durationMinutes: durationMinutes,
                 signatureLocalId: signatureLocalId,
+                consumptionsJson: consumptionsJson,
               ),
           createCompanionCallback:
               ({
@@ -2509,12 +2579,14 @@ class $$ExecutionDraftsTableTableManager
                 Value<String?> comments = const Value.absent(),
                 Value<int?> durationMinutes = const Value.absent(),
                 Value<String?> signatureLocalId = const Value.absent(),
+                Value<String> consumptionsJson = const Value.absent(),
               }) => ExecutionDraftsCompanion.insert(
                 routineId: routineId,
                 responsesJson: responsesJson,
                 comments: comments,
                 durationMinutes: durationMinutes,
                 signatureLocalId: signatureLocalId,
+                consumptionsJson: consumptionsJson,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

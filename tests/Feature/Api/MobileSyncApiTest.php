@@ -75,7 +75,7 @@ class MobileSyncApiTest extends TestCase
         $response->assertOk()
             ->assertJsonStructure([
                 'data' => [
-                    'pull' => ['routines', 'routine_types', 'server_time', 'mobile_policy'],
+                    'pull' => ['routines', 'routine_types', 'server_time', 'mobile_policy', 'supply_items'],
                 ],
             ]);
     }

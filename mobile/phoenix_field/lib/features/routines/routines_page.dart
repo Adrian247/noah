@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phoenix_field/data/local/app_database.dart';
 import 'package:phoenix_field/data/repositories/sync_repository.dart';
+import 'package:phoenix_field/shared/routine/routine_schedule_filter.dart';
 import 'package:phoenix_field/shared/routine/routine_status_labels.dart';
 
 class RoutinesPage extends ConsumerStatefulWidget {
@@ -17,6 +18,7 @@ class RoutinesPage extends ConsumerStatefulWidget {
 class _RoutinesPageState extends ConsumerState<RoutinesPage> {
   bool _syncing = false;
   String? _syncError;
+  bool _todayOnly = true;
 
   Future<void> _refresh() async {
     setState(() {
@@ -63,13 +65,30 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
       body: StreamBuilder<List<LocalRoutine>>(
         stream: routinesStream,
         builder: (context, snapshot) {
-          final routines = snapshot.data ?? [];
+          final allRoutines = snapshot.data ?? [];
+          final routines = _todayOnly
+              ? allRoutines.where((routine) {
+                  final payload = _decodePayload(routine.payloadJson);
+                  return RoutineScheduleFilter.isScheduledToday(payload, DateTime.now());
+                }).toList()
+              : allRoutines;
 
           return RefreshIndicator(
             onRefresh: _refresh,
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment(value: true, label: Text('Hoy')),
+                    ButtonSegment(value: false, label: Text('Todas')),
+                  ],
+                  selected: {_todayOnly},
+                  onSelectionChanged: (selection) {
+                    setState(() => _todayOnly = selection.first);
+                  },
+                ),
+                const SizedBox(height: 12),
                 if (_syncError != null)
                   Card(
                     color: Colors.red.withValues(alpha: 0.15),
@@ -79,19 +98,30 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
                     ),
                   ),
                 if (routines.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 48),
-                    child: Center(child: Text('No hay rutinas asignadas. Desliza para sincronizar.')),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 48),
+                    child: Center(
+                      child: Text(
+                        _todayOnly
+                            ? 'No hay rutinas programadas para hoy. Prueba «Todas» o sincroniza.'
+                            : 'No hay rutinas asignadas. Desliza para sincronizar.',
+                      ),
+                    ),
                   ),
                 ...routines.map((routine) {
                   final payload = _decodePayload(routine.payloadJson);
                   final serverStatus = routine.status;
+                  final scheduled = payload['scheduled_at']?.toString();
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: ListTile(
                       title: Text(_routineTitle(payload, routine.id)),
                       subtitle: Text(
-                        'Rutina: ${routineStatusLabel(serverStatus)}',
+                        [
+                          'Rutina: ${routineStatusLabel(serverStatus)}',
+                          if (scheduled != null && scheduled.isNotEmpty)
+                            'Programada: ${_formatScheduled(scheduled)}',
+                        ].join('\n'),
                       ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -127,6 +157,16 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
       return '$type — $asset';
     }
     return 'Rutina #${map['id'] ?? fallbackId}';
+  }
+
+  String _formatScheduled(String iso) {
+    final parsed = DateTime.tryParse(iso);
+    if (parsed == null) {
+      return iso;
+    }
+    final local = parsed.toLocal();
+    final two = (int n) => n.toString().padLeft(2, '0');
+    return '${two(local.day)}/${two(local.month)}/${local.year} ${two(local.hour)}:${two(local.minute)}';
   }
 }
 

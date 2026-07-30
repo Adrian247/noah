@@ -15,6 +15,8 @@ class PhotoFieldWidget extends ConsumerStatefulWidget {
     required this.required,
     required this.allowMultiple,
     required this.maxImages,
+    this.captionEnabled = false,
+    this.captionRequired = false,
     required this.value,
     required this.onChanged,
   });
@@ -25,6 +27,8 @@ class PhotoFieldWidget extends ConsumerStatefulWidget {
   final bool required;
   final bool allowMultiple;
   final int maxImages;
+  final bool captionEnabled;
+  final bool captionRequired;
   final dynamic value;
   final void Function(dynamic value) onChanged;
 
@@ -79,8 +83,12 @@ class _PhotoFieldWidgetState extends ConsumerState<PhotoFieldWidget> {
         routineId: widget.routineId,
         fieldKey: widget.fieldKey,
         sourcePath: path,
+        caption: widget.captionEnabled ? '' : null,
       );
-      updated.add({'path': localRef});
+      updated.add({
+        'path': localRef,
+        if (widget.captionEnabled) 'caption': '',
+      });
     }
 
     widget.onChanged(_normalizeOutput(updated));
@@ -140,6 +148,22 @@ class _PhotoFieldWidgetState extends ConsumerState<PhotoFieldWidget> {
     return items;
   }
 
+  Future<void> _updateCaption(int index, String caption) async {
+    final updated = List<Map<String, dynamic>>.from(_items);
+    if (index >= updated.length) {
+      return;
+    }
+    updated[index] = {
+      ...updated[index],
+      'caption': caption,
+    };
+    final path = updated[index]['path']?.toString();
+    if (path != null && path.startsWith(localMediaPrefix)) {
+      await ref.read(mediaRepositoryProvider).updatePendingCaption(path, caption);
+    }
+    widget.onChanged(_normalizeOutput(updated));
+  }
+
   Future<void> _removeAt(int index) async {
     final updated = List<Map<String, dynamic>>.from(_items)..removeAt(index);
     widget.onChanged(_normalizeOutput(updated));
@@ -168,7 +192,13 @@ class _PhotoFieldWidgetState extends ConsumerState<PhotoFieldWidget> {
                 for (var i = 0; i < items.length; i++)
                   _PhotoThumb(
                     path: items[i]['path']?.toString() ?? '',
+                    caption: items[i]['caption']?.toString(),
+                    captionEnabled: widget.captionEnabled,
+                    captionRequired: widget.captionRequired,
                     media: ref.read(mediaRepositoryProvider),
+                    onCaptionChanged: widget.captionEnabled
+                        ? (value) => _updateCaption(i, value)
+                        : null,
                     onRemove: () => _removeAt(i),
                   ),
               ],
@@ -221,11 +251,19 @@ class _PhotoThumb extends StatelessWidget {
     required this.path,
     required this.media,
     required this.onRemove,
+    this.caption,
+    this.captionEnabled = false,
+    this.captionRequired = false,
+    this.onCaptionChanged,
   });
 
   final String path;
   final MediaRepository media;
   final VoidCallback onRemove;
+  final String? caption;
+  final bool captionEnabled;
+  final bool captionRequired;
+  final ValueChanged<String>? onCaptionChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -235,36 +273,58 @@ class _PhotoThumb extends StatelessWidget {
           : Future.value(path),
       builder: (context, snapshot) {
         final filePath = snapshot.data;
-        return Stack(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: filePath != null && File(filePath).existsSync()
-                  ? Image.file(
-                      File(filePath),
-                      width: 88,
-                      height: 88,
-                      fit: BoxFit.cover,
-                    )
-                  : Container(
-                      width: 88,
-                      height: 88,
-                      color: Colors.white12,
-                      child: const Icon(Icons.image_outlined),
+        return SizedBox(
+          width: widgetCaptionWidth,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: filePath != null && File(filePath).existsSync()
+                        ? Image.file(
+                            File(filePath),
+                            width: 88,
+                            height: 88,
+                            fit: BoxFit.cover,
+                          )
+                        : Container(
+                            width: 88,
+                            height: 88,
+                            color: Colors.white12,
+                            child: const Icon(Icons.image_outlined),
+                          ),
+                  ),
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.close, size: 18),
+                      onPressed: onRemove,
                     ),
-            ),
-            Positioned(
-              top: 0,
-              right: 0,
-              child: IconButton(
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.close, size: 18),
-                onPressed: onRemove,
+                  ),
+                ],
               ),
-            ),
-          ],
+              if (captionEnabled && onCaptionChanged != null) ...[
+                const SizedBox(height: 6),
+                TextFormField(
+                  key: ValueKey('$path-caption'),
+                  initialValue: caption ?? '',
+                  decoration: InputDecoration(
+                    isDense: true,
+                    labelText: 'Descripción${captionRequired ? ' *' : ''}',
+                  ),
+                  onChanged: onCaptionChanged,
+                ),
+              ],
+            ],
+          ),
         );
       },
     );
   }
 }
+
+const double widgetCaptionWidth = 160;

@@ -65,6 +65,16 @@ class MediaRepository {
     return '$localMediaPrefix$id';
   }
 
+  Future<void> updatePendingCaption(String localRef, String caption) async {
+    if (!localRef.startsWith(localMediaPrefix)) {
+      return;
+    }
+    final id = localRef.substring(localMediaPrefix.length);
+    await (_db.update(_db.pendingMedia)..where((t) => t.id.equals(id))).write(
+      PendingMediaCompanion(caption: Value(caption)),
+    );
+  }
+
   Future<File> _targetFile(int routineId, String id, String sourcePath) async {
     final docs = await getApplicationDocumentsDirectory();
     final dir = Directory(p.join(docs.path, 'media', routineId.toString()));

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:phoenix_field/shared/dynamic_form/dynamic_form_validator.dart';
 import 'package:phoenix_field/shared/dynamic_form/date_field_widget.dart';
 import 'package:phoenix_field/shared/dynamic_form/duration_field_widget.dart';
 import 'package:phoenix_field/shared/dynamic_form/photo_field_widget.dart';
@@ -33,69 +34,14 @@ class DynamicFormRenderer extends StatelessWidget {
     Map<String, dynamic> schema,
     Map<String, dynamic> values,
   ) {
-    final missing = <String>[];
-    final sections = schema['sections'] as List<dynamic>? ?? [];
-
-    for (final section in sections) {
-      if (section is! Map) continue;
-      final fields = section['fields'] as List<dynamic>? ?? [];
-      for (final field in fields) {
-        if (field is! Map) continue;
-        final key = field['key']?.toString();
-        final required = field['required'] == true;
-        final type = field['type']?.toString() ?? 'text';
-        if (!required || key == null) continue;
-
-        if (type == 'photo') {
-          if (_photoItems(values[key]).isEmpty) {
-            missing.add(field['label']?.toString() ?? key);
-          }
-          continue;
-        }
-
-        if (type == 'multiselect') {
-          if (_selectedValues(values[key]).isEmpty) {
-            missing.add(field['label']?.toString() ?? key);
-          }
-          continue;
-        }
-
-        if (type == 'duration') {
-          final minutes = _durationMinutes(values[key]);
-          if (minutes == null || minutes <= 0) {
-            missing.add(field['label']?.toString() ?? key);
-          }
-          continue;
-        }
-
-        if (type == 'boolean') {
-          if (values[key] != true) {
-            missing.add(field['label']?.toString() ?? key);
-          }
-          continue;
-        }
-
-        if (type == 'date' || type == 'datetime') {
-          final raw = values[key]?.toString().trim();
-          if (raw == null || raw.isEmpty) {
-            missing.add(field['label']?.toString() ?? key);
-          }
-          continue;
-        }
-
-        if (type == 'signature') {
-          continue;
-        }
-
-        final value = values[key];
-        if (value == null || (value is String && value.trim().isEmpty)) {
-          missing.add(field['label']?.toString() ?? key);
-        }
-      }
-    }
-
-    return missing;
+    return DynamicFormValidator.validate(schema, values);
   }
+
+  static List<Map<String, dynamic>> photoItems(dynamic value) => _photoItems(value);
+
+  static List<String> selectedValues(dynamic value) => _selectedValues(value);
+
+  static int? durationMinutes(dynamic value) => _durationMinutes(value);
 
   static List<Map<String, dynamic>> _photoItems(dynamic value) {
     if (value == null) {
@@ -241,6 +187,8 @@ class _FieldWidget extends StatelessWidget {
         required: required,
         allowMultiple: allowMultiple,
         maxImages: maxImages,
+        captionEnabled: field['caption_enabled'] == true,
+        captionRequired: field['caption_required'] == true,
         value: value,
         onChanged: (v) => onChanged(key, v),
       );
@@ -340,7 +288,45 @@ class _FieldWidget extends StatelessWidget {
       );
     }
 
-    if (type == 'select' || type == 'options') {
+    if (type == 'options') {
+      final options = _catalogOptions(field['option_catalog_id']);
+      if (options.isEmpty) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: TextFormField(
+            initialValue: value?.toString() ?? '',
+            decoration: InputDecoration(labelText: '$label${required ? ' *' : ''}'),
+            onChanged: (v) => onChanged(key, v),
+          ),
+        );
+      }
+
+      final selected = value?.toString();
+
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('$label${required ? ' *' : ''}', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            for (final option in options)
+              RadioListTile<String>(
+                contentPadding: EdgeInsets.zero,
+                title: Text(option['label']?.toString() ?? option['value']?.toString() ?? ''),
+                subtitle: option['description'] != null
+                    ? Text(option['description'].toString())
+                    : null,
+                value: option['value']?.toString() ?? '',
+                groupValue: selected,
+                onChanged: (v) => onChanged(key, v),
+              ),
+          ],
+        ),
+      );
+    }
+
+    if (type == 'select') {
       final options = _catalogOptions(field['option_catalog_id']);
       if (options.isEmpty) {
         return Padding(

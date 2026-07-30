@@ -1,9 +1,13 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phoenix_field/core/sync/background_sync_service.dart';
 import 'package:phoenix_field/data/repositories/media_repository.dart';
 import 'package:phoenix_field/data/repositories/sync_repository.dart';
 import 'package:phoenix_field/shared/dynamic_form/dynamic_form_renderer.dart';
+import 'package:phoenix_field/shared/dynamic_form/dynamic_form_validator.dart';
+import 'package:phoenix_field/shared/routine/consumptions_panel.dart';
 import 'package:phoenix_field/shared/widgets/routine_timer.dart';
 import 'package:phoenix_field/shared/widgets/signature_capture_dialog.dart';
 
@@ -26,6 +30,8 @@ class _RoutineDetailPageState extends ConsumerState<RoutineDetailPage> {
   String? _signatureLocalId;
   Map<String, dynamic>? _routine;
   List<Map<String, dynamic>> _catalogs = [];
+  List<Map<String, dynamic>> _supplies = [];
+  List<ConsumptionLine> _consumptions = [];
 
   @override
   void initState() {
@@ -44,6 +50,7 @@ class _RoutineDetailPageState extends ConsumerState<RoutineDetailPage> {
     try {
       final routine = await repo.getRoutine(widget.routineId);
       final catalogs = await repo.getOptionCatalogs();
+      final supplies = await repo.getSupplyItems();
       final draft = await repo.getDraft(widget.routineId);
 
       if (draft != null) {
@@ -52,11 +59,15 @@ class _RoutineDetailPageState extends ConsumerState<RoutineDetailPage> {
         _commentsController.text = draft.comments ?? '';
         _durationMinutes = draft.durationMinutes ?? 0;
         _signatureLocalId = draft.signatureLocalId;
+        _consumptions = ConsumptionsPanel.decodeList(
+          jsonDecode(draft.consumptionsJson),
+        );
       }
 
       setState(() {
         _routine = routine;
         _catalogs = catalogs;
+        _supplies = supplies;
         _loading = false;
       });
     } catch (e) {
@@ -76,6 +87,7 @@ class _RoutineDetailPageState extends ConsumerState<RoutineDetailPage> {
               : _commentsController.text.trim(),
           durationMinutes: _durationMinutes > 0 ? _durationMinutes : null,
           signatureLocalId: _signatureLocalId,
+          consumptions: _consumptions.map((line) => line.toPayload()).toList(),
         );
   }
 
@@ -102,9 +114,13 @@ class _RoutineDetailPageState extends ConsumerState<RoutineDetailPage> {
       return;
     }
 
-    final missing = DynamicFormRenderer.validateRequired(schema, _responses);
-    if (missing.isNotEmpty) {
-      setState(() => _error = 'Faltan campos: ${missing.join(', ')}');
+    final errors = DynamicFormValidator.validate(
+      schema,
+      _responses,
+      catalogs: _catalogs,
+    );
+    if (errors.isNotEmpty) {
+      setState(() => _error = errors.first);
       return;
     }
 
@@ -138,6 +154,7 @@ class _RoutineDetailPageState extends ConsumerState<RoutineDetailPage> {
             : _commentsController.text.trim(),
         durationMinutes: _durationMinutes > 0 ? _durationMinutes : null,
         signatureLocalId: signatureRef,
+        consumptions: _consumptions.map((line) => line.toPayload()).toList(),
       );
 
       try {
@@ -234,6 +251,15 @@ class _RoutineDetailPageState extends ConsumerState<RoutineDetailPage> {
             )
           else
             const Text('Sin esquema de formulario en cache. Sincroniza de nuevo.'),
+          const SizedBox(height: 16),
+          ConsumptionsPanel(
+            supplies: _supplies,
+            lines: _consumptions,
+            onChanged: (lines) {
+              setState(() => _consumptions = lines);
+              _persistDraft();
+            },
+          ),
           if (_error != null) ...[
             const SizedBox(height: 12),
             Text(_error!, style: const TextStyle(color: Colors.redAccent)),

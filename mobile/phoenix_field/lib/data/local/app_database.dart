@@ -32,6 +32,8 @@ class ExecutionDrafts extends Table {
   TextColumn get comments => text().nullable()();
   IntColumn get durationMinutes => integer().nullable()();
   TextColumn get signatureLocalId => text().nullable()();
+  TextColumn get consumptionsJson =>
+      text().withDefault(const Constant('[]'))();
 
   @override
   Set<Column<Object>> get primaryKey => {routineId};
@@ -73,7 +75,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -86,6 +88,12 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(
               executionDrafts,
               executionDrafts.signatureLocalId,
+            );
+          }
+          if (from < 3) {
+            await m.addColumn(
+              executionDrafts,
+              executionDrafts.consumptionsJson,
             );
           }
         },

@@ -65,6 +65,20 @@ class SyncRepository {
     return [];
   }
 
+  Future<List<Map<String, dynamic>>> getSupplyItems() async {
+    final row = await (_db.select(_db.cachedMeta)
+          ..where((t) => t.key.equals('supply_items')))
+        .getSingleOrNull();
+    if (row == null) {
+      return [];
+    }
+    final decoded = jsonDecode(row.payloadJson);
+    if (decoded is List) {
+      return decoded.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    }
+    return [];
+  }
+
   Future<ExecutionDraft?> getDraft(int routineId) {
     return (_db.select(_db.executionDrafts)
           ..where((t) => t.routineId.equals(routineId)))
@@ -77,6 +91,7 @@ class SyncRepository {
     String? comments,
     int? durationMinutes,
     String? signatureLocalId,
+    List<Map<String, dynamic>> consumptions = const [],
   }) async {
     await _db.into(_db.executionDrafts).insertOnConflictUpdate(
           ExecutionDraftsCompanion(
@@ -85,6 +100,7 @@ class SyncRepository {
             comments: Value(comments),
             durationMinutes: Value(durationMinutes),
             signatureLocalId: Value(signatureLocalId),
+            consumptionsJson: Value(jsonEncode(consumptions)),
           ),
         );
   }
@@ -95,6 +111,7 @@ class SyncRepository {
     String? comments,
     int? durationMinutes,
     String? signatureLocalId,
+    List<Map<String, dynamic>> consumptions = const [],
   }) async {
     final eventId = 'evt-${_uuid.v4()}';
     final payload = {
@@ -102,7 +119,7 @@ class SyncRepository {
       'technician_comments': comments,
       'duration_minutes': durationMinutes,
       'responses': responses,
-      'consumptions': <dynamic>[],
+      'consumptions': consumptions,
     };
 
     await _db.into(_db.outboxEvents).insert(
@@ -124,6 +141,7 @@ class SyncRepository {
       comments: comments,
       durationMinutes: durationMinutes,
       signatureLocalId: signatureLocalId,
+      consumptions: consumptions,
     );
 
     return eventId;
@@ -329,6 +347,14 @@ class SyncRepository {
           CachedMetaCompanion(
             key: const Value('option_catalogs'),
             payloadJson: Value(jsonEncode(catalogs)),
+          ),
+        );
+
+    final supplies = pull['supply_items'] as List<dynamic>? ?? [];
+    await _db.into(_db.cachedMeta).insertOnConflictUpdate(
+          CachedMetaCompanion(
+            key: const Value('supply_items'),
+            payloadJson: Value(jsonEncode(supplies)),
           ),
         );
   }

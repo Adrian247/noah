@@ -114,8 +114,29 @@ class MobileSyncService
             'routines' => $routines,
             'routine_types' => $routineTypes,
             'option_catalogs' => $this->formDesign->optionCatalogsForCurrentCompany(),
+            'supply_items' => $this->supplyItemsForPull(),
             'mobile_policy' => $this->mobilePolicy(),
         ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function supplyItemsForPull(): array
+    {
+        return SupplyItem::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'sku', 'name', 'unit', 'quantity_on_hand', 'standard_cost'])
+            ->map(fn (SupplyItem $item) => [
+                'id' => $item->id,
+                'sku' => $item->sku,
+                'name' => $item->name,
+                'unit' => $item->unit,
+                'quantity_on_hand' => (float) $item->quantity_on_hand,
+                'standard_cost' => (float) $item->standard_cost,
+            ])
+            ->all();
     }
 
     /**
