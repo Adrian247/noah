@@ -308,7 +308,7 @@ const primaryKpis = computed(() => [
         key: 'pending',
         label: 'Pendientes de validación',
         value: summary.value?.routines_pending_validation ?? '—',
-        to: '/app/routines?status=pending_validation',
+        to: '/app/validation',
         icon: 'shield' as NavIconName,
         tone: 'amber' as const,
         hint: 'Requieren tu revisión',

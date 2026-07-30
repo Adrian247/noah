@@ -2,6 +2,7 @@ export type SectionSubnavItem = {
     to: string;
     label: string;
     moduleId?: string;
+    permission?: string;
 };
 
 export const catalogEquipmentSectionNav: SectionSubnavItem[] = [
@@ -19,5 +20,6 @@ export const catalogSuppliesSectionNav: SectionSubnavItem[] = inventorySectionNa
 
 export const routinesSectionNav: SectionSubnavItem[] = [
     { to: '/app/routines', label: 'Rutinas', moduleId: 'routines' },
+    { to: '/app/validation', label: 'Validación', moduleId: 'routines', permission: 'routines.validate' },
     { to: '/app/routines/types', label: 'Tipos de rutina', moduleId: 'design_routine_types' },
 ];

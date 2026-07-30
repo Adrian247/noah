@@ -112,7 +112,10 @@ const rejecting = ref(false);
 
 const formSchema = computed(() => routine.value?.routine_type?.form_version?.schema ?? null);
 const canExecute = computed(() => routine.value?.status === 'assigned');
-const canValidateReject = computed(() => {
+const canValidateReject = computed(
+    () => can('routines.validate') || canValidateRejectByRole.value,
+);
+const canValidateRejectByRole = computed(() => {
     const role = companyStore.current?.role;
     return role === 'supervisor' || role === 'administrator';
 });

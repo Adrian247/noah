@@ -64,6 +64,16 @@ const router = createRouter({
                     meta: { title: 'Rutinas', moduleId: 'routines' },
                 },
                 {
+                    path: 'validation',
+                    name: 'validation-queue',
+                    component: () => import('@/pages/ValidationQueuePage.vue'),
+                    meta: {
+                        title: 'Cola de validación',
+                        moduleId: 'routines',
+                        requiresPermission: 'routines.validate',
+                    },
+                },
+                {
                     path: 'routines/types',
                     name: 'routine-types',
                     component: () => import('@/pages/RoutineTypesPage.vue'),

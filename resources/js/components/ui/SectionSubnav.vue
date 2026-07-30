@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { usePermissions } from '@/composables/usePermissions';
 import type { SectionSubnavItem } from '@/lib/sectionNav';
 
 const props = defineProps<{
@@ -10,9 +11,15 @@ const props = defineProps<{
 
 const route = useRoute();
 const { isVisible } = useModuleAccess();
+const { can } = usePermissions();
 
 const visibleItems = computed(() =>
-    props.items.filter((item) => !item.moduleId || isVisible(item.moduleId)),
+    props.items.filter((item) => {
+        if (item.permission && !can(item.permission)) {
+            return false;
+        }
+        return !item.moduleId || isVisible(item.moduleId);
+    }),
 );
 
 function isActive(to: string): boolean {
