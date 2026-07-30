@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:phoenix_field/core/security/app_lock_provider.dart';
 import 'package:phoenix_field/data/repositories/media_repository.dart';
 import 'package:phoenix_field/shared/dynamic_form/photo_picker_service.dart';
 
@@ -100,11 +101,13 @@ class _PhotoFieldWidgetState extends ConsumerState<PhotoFieldWidget> {
     }
     setState(() => _picking = true);
     try {
-      final paths = await PhotoPickerService.pickPaths(
-        context: context,
-        allowMultiple: widget.allowMultiple,
-      );
-      await _addPaths(paths);
+      await runWithAppLockSuppressed(ref, () async {
+        final paths = await PhotoPickerService.pickPaths(
+          context: context,
+          allowMultiple: widget.allowMultiple,
+        );
+        await _addPaths(paths);
+      });
     } finally {
       if (mounted) {
         setState(() => _picking = false);
@@ -118,12 +121,14 @@ class _PhotoFieldWidgetState extends ConsumerState<PhotoFieldWidget> {
     }
     setState(() => _picking = true);
     try {
-      final paths = await PhotoPickerService.pickPaths(
-        context: context,
-        allowMultiple: false,
-        forcedSource: ImageSource.camera,
-      );
-      await _addPaths(paths);
+      await runWithAppLockSuppressed(ref, () async {
+        final paths = await PhotoPickerService.pickPaths(
+          context: context,
+          allowMultiple: false,
+          forcedSource: ImageSource.camera,
+        );
+        await _addPaths(paths);
+      });
     } finally {
       if (mounted) {
         setState(() => _picking = false);

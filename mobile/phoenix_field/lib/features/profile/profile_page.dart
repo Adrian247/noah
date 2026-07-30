@@ -41,7 +41,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Future<void> _loadBiometrics() async {
-    final canUse = await ref.read(appLockServiceProvider).canUseBiometrics();
+    final canUse = await ref.read(appLockControllerProvider.notifier).service.canUseBiometrics();
     if (mounted) {
       setState(() => _canUseBiometrics = canUse);
     }
@@ -51,6 +51,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     setState(() => _syncing = true);
     try {
       await ref.read(syncRepositoryProvider).syncNow();
+      await ref.read(mobilePolicyEnforcerProvider).applyLocalRules();
       await BackgroundSyncService.requestImmediate();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -71,7 +72,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Future<void> _toggleAppLock(bool enabled) async {
-    final service = ref.read(appLockServiceProvider);
+    final controller = ref.read(appLockControllerProvider.notifier);
     final policy = ref.read(mobilePolicyEnforcerProvider).policy;
 
     if (!enabled && policy.requireAppLock) {
@@ -94,7 +95,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         return;
       }
       try {
-        await service.enablePin(pin);
+        await controller.enablePin(pin);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Bloqueo con PIN activado')),
@@ -108,7 +109,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         }
       }
     } else {
-      await service.disable();
+      await controller.disable();
       ref.read(appLockStateProvider.notifier).state = false;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -128,7 +129,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       return;
     }
     try {
-      await ref.read(appLockServiceProvider).enablePin(pin);
+      await ref.read(appLockControllerProvider.notifier).enablePin(pin);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('PIN actualizado')),
@@ -157,8 +158,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     }
 
     try {
-      await ref.read(appLockServiceProvider).setBiometricEnabled(enabled);
-      setState(() {});
+      await runWithAppLockSuppressed(
+        ref,
+        () => ref.read(appLockControllerProvider.notifier).setBiometricEnabled(enabled),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -240,7 +243,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     ref.watch(profileRefreshProvider);
     final session = ref.watch(sessionStoreProvider);
     final auth = ref.watch(authRepositoryProvider);
-    final lock = ref.watch(appLockServiceProvider);
+    final lock = ref.watch(appLockControllerProvider);
     final policy = ref.watch(mobilePolicyEnforcerProvider).policy;
     final userName = session.user?['name']?.toString() ?? 'Técnico';
     final email = session.user?['email']?.toString() ?? '';
@@ -325,12 +328,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           SwitchListTile(
             title: const Text('Bloqueo con PIN'),
             subtitle: const Text('Al volver a la app o al iniciar con sesión activa'),
-            value: lock.isEnabled,
-            onChanged: policy.requireAppLock && lock.isEnabled
+            value: lock.enabled,
+            onChanged: policy.requireAppLock && lock.enabled
                 ? null
                 : _toggleAppLock,
           ),
-          if (lock.isEnabled) ...[
+          if (lock.enabled) ...[
             ListTile(
               title: const Text('Cambiar PIN'),
               trailing: const Icon(Icons.chevron_right),
@@ -340,7 +343,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               SwitchListTile(
                 title: const Text('Desbloqueo biométrico'),
                 subtitle: const Text('Huella o Face ID además del PIN'),
-                value: lock.isBiometricEnabled,
+                value: lock.biometricEnabled,
                 onChanged: _toggleBiometric,
               ),
           ],

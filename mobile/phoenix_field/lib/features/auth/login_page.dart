@@ -7,8 +7,10 @@ import 'package:phoenix_field/core/network/api_connectivity.dart';
 import 'package:phoenix_field/core/network/dio_provider.dart';
 import 'package:phoenix_field/core/security/app_lock_provider.dart';
 import 'package:phoenix_field/core/security/mobile_policy_enforcer.dart';
+import 'package:phoenix_field/core/system_enter/system_enter_provider.dart';
 import 'package:phoenix_field/data/repositories/auth_repository.dart';
 import 'package:phoenix_field/data/repositories/sync_repository.dart';
+import 'package:phoenix_field/shared/widgets/phoenix_brand_logo.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -131,15 +133,20 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       _error = null;
     });
 
+    final systemEnter = ref.read(systemEnterProvider.notifier);
+    systemEnter.show('Autenticando…');
+
     try {
       await ref.read(authRepositoryProvider).login(
             email: _emailController.text,
             password: _passwordController.text,
             apiBaseUrl: _apiController.text,
           );
+      systemEnter.updateMessage('Entrando al sistema…');
       ref.read(sessionVersionProvider.notifier).state++;
       ref.read(authNavigationVersionProvider.notifier).state++;
       ref.invalidate(dioProvider);
+      await reloadAppLockForSession(ref);
       try {
         await ref.read(syncRepositoryProvider).syncNow();
       } catch (_) {
@@ -159,12 +166,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         }
         return;
       }
+      await systemEnter.waitForMinimumDuration();
       if (mounted) {
         context.go('/routines');
       }
     } catch (e) {
       setState(() => _error = _formatError(e));
     } finally {
+      systemEnter.hide();
       if (mounted) {
         setState(() => _loading = false);
       }
@@ -185,13 +194,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'Phoenix Campo',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                      textAlign: TextAlign.center,
+                    const Center(
+                      child: PhoenixBrandLogo(
+                        size: PhoenixBrandLogoSize.lg,
+                        animated: true,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const PhoenixBrandWordmark(
+                      title: 'Phoenix Campo',
+                      subtitle: 'Pyro Systems',
+                      compact: true,
                     ),
                     const SizedBox(height: 8),
                     Text(

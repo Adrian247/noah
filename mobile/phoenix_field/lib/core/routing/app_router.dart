@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phoenix_field/core/network/dio_provider.dart';
+import 'package:phoenix_field/core/security/app_lock_provider.dart';
 import 'package:phoenix_field/data/repositories/auth_repository.dart';
 import 'package:phoenix_field/features/auth/login_page.dart';
 import 'package:phoenix_field/features/profile/profile_page.dart';
@@ -10,14 +11,16 @@ import 'package:phoenix_field/features/shell/app_shell.dart';
 import 'package:phoenix_field/features/sync/sync_queue_page.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  ref.watch(sessionBootstrapProvider);
   ref.watch(authNavigationVersionProvider);
+  ref.watch(sessionBootstrapProvider);
+  ref.watch(appLockBootstrapProvider);
   final session = ref.read(sessionStoreProvider);
 
   return GoRouter(
     initialLocation: '/login',
     redirect: (context, state) {
-      if (ref.read(sessionBootstrapProvider).isLoading) {
+      if (ref.read(sessionBootstrapProvider).isLoading ||
+          ref.read(appLockBootstrapProvider).isLoading) {
         return null;
       }
 

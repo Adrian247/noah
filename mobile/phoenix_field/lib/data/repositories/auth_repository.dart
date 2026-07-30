@@ -94,7 +94,8 @@ class AuthRepository {
       // Ignorar errores de red al cerrar sesión local.
     }
     await _ref.read(syncRepositoryProvider).purgeAllLocalData();
-    await _ref.read(appLockServiceProvider).disable();
+    _ref.read(appLockControllerProvider.notifier).unlock();
+    _ref.read(appLockStateProvider.notifier).state = false;
     await _session.clear();
   }
 

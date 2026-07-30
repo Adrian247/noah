@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phoenix_field/core/security/app_lock_provider.dart';
+import 'package:phoenix_field/shared/widgets/phoenix_brand_logo.dart';
 
 class AppLockPage extends ConsumerStatefulWidget {
   const AppLockPage({super.key});
@@ -27,7 +28,7 @@ class _AppLockPageState extends ConsumerState<AppLockPage> {
   }
 
   Future<void> _checkBiometrics() async {
-    final service = ref.read(appLockServiceProvider);
+    final service = ref.read(appLockControllerProvider.notifier).service;
     final canUse = await service.canUseBiometrics();
     if (!mounted) {
       return;
@@ -56,7 +57,7 @@ class _AppLockPageState extends ConsumerState<AppLockPage> {
       _error = null;
     });
 
-    final service = ref.read(appLockServiceProvider);
+    final service = ref.read(appLockControllerProvider.notifier).service;
     final ok = await service.unlockWithPin(pin);
     if (!mounted) {
       return;
@@ -78,7 +79,7 @@ class _AppLockPageState extends ConsumerState<AppLockPage> {
       _error = null;
     });
 
-    final service = ref.read(appLockServiceProvider);
+    final service = ref.read(appLockControllerProvider.notifier).service;
     final error = await service.unlockWithBiometrics();
     if (!mounted) {
       return;
@@ -105,16 +106,23 @@ class _AppLockPageState extends ConsumerState<AppLockPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(
-                    Icons.lock_outline,
-                    size: 56,
-                    color: Theme.of(context).colorScheme.primary,
+                  const Center(
+                    child: PhoenixBrandLogo(
+                      size: PhoenixBrandLogoSize.md,
+                      animated: true,
+                    ),
                   ),
                   const SizedBox(height: 16),
-                  Text(
-                    'Phoenix Campo',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                    textAlign: TextAlign.center,
+                  Icon(
+                    Icons.lock_outline,
+                    size: 32,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(height: 12),
+                  const PhoenixBrandWordmark(
+                    title: 'Phoenix Campo',
+                    subtitle: 'Pyro Systems',
+                    compact: true,
                   ),
                   const SizedBox(height: 8),
                   Text(

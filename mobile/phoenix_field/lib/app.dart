@@ -8,10 +8,12 @@ import 'package:phoenix_field/core/routing/app_router.dart';
 import 'package:phoenix_field/core/security/app_lock_provider.dart';
 import 'package:phoenix_field/core/security/mobile_policy_enforcer.dart';
 import 'package:phoenix_field/core/sync/background_sync_service.dart';
+import 'package:phoenix_field/core/system_enter/system_enter_provider.dart';
 import 'package:phoenix_field/core/theme/phoenix_theme.dart';
 import 'package:phoenix_field/data/repositories/auth_repository.dart';
 import 'package:phoenix_field/data/repositories/sync_repository.dart';
 import 'package:phoenix_field/features/security/app_lock_page.dart';
+import 'package:phoenix_field/shared/widgets/phoenix_system_enter_overlay.dart';
 
 class PhoenixFieldApp extends ConsumerStatefulWidget {
   const PhoenixFieldApp({super.key});
@@ -23,6 +25,7 @@ class PhoenixFieldApp extends ConsumerStatefulWidget {
 class _PhoenixFieldAppState extends ConsumerState<PhoenixFieldApp>
     with WidgetsBindingObserver {
   bool _policyPromptPending = false;
+  bool _pendingLockOnResume = false;
 
   @override
   void initState() {
@@ -70,8 +73,8 @@ class _PhoenixFieldAppState extends ConsumerState<PhoenixFieldApp>
   }
 
   void _lockIfNeeded() {
-    final lock = ref.read(appLockServiceProvider);
-    if (ref.read(authRepositoryProvider).isAuthenticated && lock.isEnabled) {
+    final lock = ref.read(appLockControllerProvider.notifier);
+    if (ref.read(authRepositoryProvider).isAuthenticated && lock.service.isEnabled) {
       lock.lock();
       ref.read(appLockStateProvider.notifier).state = true;
     }
@@ -84,14 +87,25 @@ class _PhoenixFieldAppState extends ConsumerState<PhoenixFieldApp>
       return;
     }
 
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.hidden) {
-      _lockIfNeeded();
+    final suppressed = ref.read(appLockSuppressionProvider) > 0;
+    final lockEnabled = ref.read(appLockControllerProvider).enabled;
+
+    // Solo marcar fondo real (paused/hidden). `inactive` ocurre con teclado,
+    // diálogos, picker de fotos y biometría — no debe pedir PIN ahí.
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+      if (!suppressed && lockEnabled) {
+        _pendingLockOnResume = true;
+      }
       return;
     }
 
     if (state == AppLifecycleState.resumed) {
+      if (_pendingLockOnResume && !suppressed) {
+        _pendingLockOnResume = false;
+        _lockIfNeeded();
+      } else {
+        _pendingLockOnResume = false;
+      }
       unawaited(_syncOnResume());
     }
   }
@@ -112,6 +126,7 @@ class _PhoenixFieldAppState extends ConsumerState<PhoenixFieldApp>
     final router = ref.watch(appRouterProvider);
     final locked = ref.watch(appLockStateProvider);
     final authed = ref.watch(authRepositoryProvider).isAuthenticated;
+    final systemEnter = ref.watch(systemEnterProvider);
 
     if (_policyPromptPending && authed && !locked) {
       _policyPromptPending = false;
@@ -136,15 +151,29 @@ class _PhoenixFieldAppState extends ConsumerState<PhoenixFieldApp>
       ],
       routerConfig: router,
       builder: (context, child) {
-        if (!locked) {
-          return child ?? const SizedBox.shrink();
+        Widget content = child ?? const SizedBox.shrink();
+
+        if (locked) {
+          content = Stack(
+            children: [
+              content,
+              const Positioned.fill(child: AppLockPage()),
+            ],
+          );
         }
-        return Stack(
-          children: [
-            if (child != null) child,
-            const Positioned.fill(child: AppLockPage()),
-          ],
-        );
+
+        if (systemEnter.active) {
+          content = Stack(
+            children: [
+              content,
+              Positioned.fill(
+                child: PhoenixSystemEnterOverlay(message: systemEnter.message),
+              ),
+            ],
+          );
+        }
+
+        return content;
       },
     );
   }

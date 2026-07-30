@@ -8,11 +8,13 @@ class MobilePolicyEnforcer {
   MobilePolicyEnforcer({
     required SessionStore session,
     required AppLockService appLock,
+    this.onSettingsChanged,
   })  : _session = session,
         _appLock = appLock;
 
   final SessionStore _session;
   final AppLockService _appLock;
+  final void Function()? onSettingsChanged;
 
   MobileSecurityPolicy get policy => _session.mobilePolicyForCurrentCompany;
 
@@ -31,6 +33,7 @@ class MobilePolicyEnforcer {
 
     if (!policy.allowBiometricUnlock && _appLock.isBiometricEnabled) {
       await _appLock.setBiometricEnabled(false);
+      onSettingsChanged?.call();
     }
   }
 
@@ -59,6 +62,7 @@ class MobilePolicyEnforcer {
       }
 
       await _appLock.enablePin(pin);
+      onSettingsChanged?.call();
     }
 
     return !policy.requireAppLock || _appLock.isEnabled;

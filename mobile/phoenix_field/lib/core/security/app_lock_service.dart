@@ -3,17 +3,20 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:local_auth_android/local_auth_android.dart';
 import 'package:local_auth_darwin/local_auth_darwin.dart';
+import 'package:phoenix_field/core/security/flutter_secure_key_value_store.dart';
+import 'package:phoenix_field/core/security/secure_key_value_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Persistencia de bloqueo con PIN/biometría, con scope por usuario.
 class AppLockService {
   AppLockService({
-    FlutterSecureStorage? secureStorage,
+    SecureKeyValueStore? secureStorage,
     LocalAuthentication? localAuth,
-  })  : _secureStorage = secureStorage ?? const FlutterSecureStorage(),
+  })  : _secureStorage =
+            secureStorage ?? FlutterSecureKeyValueStore(FlutterSecureKeyValueStore.defaultStorage),
         _localAuth = localAuth ?? LocalAuthentication();
 
   static const _enabledKey = 'phoenix_app_lock_enabled';
@@ -42,9 +45,10 @@ class AppLockService {
     ),
   ];
 
-  final FlutterSecureStorage _secureStorage;
+  final SecureKeyValueStore _secureStorage;
   final LocalAuthentication _localAuth;
 
+  String _scope = 'anonymous';
   bool _enabled = false;
   bool _biometricEnabled = false;
   bool _locked = false;
@@ -54,12 +58,90 @@ class AppLockService {
   bool get isEnabled => _enabled;
   bool get isBiometricEnabled => _biometricEnabled;
   bool get isLocked => _locked;
+  String get scope => _scope;
 
-  Future<void> load() async {
+  static String scopeForUser(Map<String, dynamic>? user) {
+    if (user == null) {
+      return 'anonymous';
+    }
+    final id = user['id'];
+    if (id != null) {
+      return 'user_$id';
+    }
+    final email = user['email']?.toString().trim();
+    if (email != null && email.isNotEmpty) {
+      return 'user_${email.toLowerCase()}';
+    }
+    return 'anonymous';
+  }
+
+  String _prefsKey(String base) => '${base}_$_scope';
+
+  String _secureKey(String base) => '${base}_$_scope';
+
+  Future<void> load({required String scope}) async {
+    _scope = scope;
     final prefs = await SharedPreferences.getInstance();
-    _enabled = prefs.getBool(_enabledKey) ?? false;
-    _biometricEnabled = prefs.getBool(_biometricKey) ?? false;
+
+    final scopedEnabled = prefs.getBool(_prefsKey(_enabledKey));
+    final scopedBiometric = prefs.getBool(_prefsKey(_biometricKey));
+
+    if (scopedEnabled != null || scopedBiometric != null) {
+      _enabled = scopedEnabled ?? false;
+      _biometricEnabled = scopedBiometric ?? false;
+    } else {
+      await _migrateLegacySettings(prefs);
+    }
+
+    await _repairIfNeeded(prefs);
     _loaded = true;
+  }
+
+  Future<void> _migrateLegacySettings(SharedPreferences prefs) async {
+    final legacyEnabled = prefs.getBool(_enabledKey);
+    final legacyBiometric = prefs.getBool(_biometricKey);
+    if (legacyEnabled == null && legacyBiometric == null) {
+      _enabled = false;
+      _biometricEnabled = false;
+      return;
+    }
+
+    _enabled = legacyEnabled ?? false;
+    _biometricEnabled = legacyBiometric ?? false;
+
+    final legacyHash = await _secureStorage.read(key: _pinHashKey);
+    final legacySalt = await _secureStorage.read(key: _pinSaltKey);
+    if (legacyHash != null && legacySalt != null) {
+      await _secureStorage.write(key: _secureKey(_pinHashKey), value: legacyHash);
+      await _secureStorage.write(key: _secureKey(_pinSaltKey), value: legacySalt);
+      await _secureStorage.delete(key: _pinHashKey);
+      await _secureStorage.delete(key: _pinSaltKey);
+    }
+
+    await prefs.setBool(_prefsKey(_enabledKey), _enabled);
+    await prefs.setBool(_prefsKey(_biometricKey), _biometricEnabled);
+    await prefs.remove(_enabledKey);
+    await prefs.remove(_biometricKey);
+  }
+
+  Future<void> _repairIfNeeded(SharedPreferences prefs) async {
+    if (!_enabled) {
+      return;
+    }
+
+    final hash = await _secureStorage.read(key: _secureKey(_pinHashKey));
+    final salt = await _secureStorage.read(key: _secureKey(_pinSaltKey));
+    if (hash != null && salt != null) {
+      return;
+    }
+
+    _enabled = false;
+    _biometricEnabled = false;
+    _locked = false;
+    await prefs.setBool(_prefsKey(_enabledKey), false);
+    await prefs.setBool(_prefsKey(_biometricKey), false);
+    await _secureStorage.delete(key: _secureKey(_pinHashKey));
+    await _secureStorage.delete(key: _secureKey(_pinSaltKey));
   }
 
   Future<bool> canUseBiometrics() async {
@@ -81,20 +163,20 @@ class AppLockService {
     _validatePin(pin);
     final salt = _generateSalt();
     final hash = _hashPin(pin, salt);
-    await _secureStorage.write(key: _pinHashKey, value: hash);
-    await _secureStorage.write(key: _pinSaltKey, value: salt);
+    await _secureStorage.write(key: _secureKey(_pinHashKey), value: hash);
+    await _secureStorage.write(key: _secureKey(_pinSaltKey), value: salt);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_enabledKey, true);
+    await prefs.setBool(_prefsKey(_enabledKey), true);
     _enabled = true;
     _locked = false;
   }
 
   Future<void> disable() async {
-    await _secureStorage.delete(key: _pinHashKey);
-    await _secureStorage.delete(key: _pinSaltKey);
+    await _secureStorage.delete(key: _secureKey(_pinHashKey));
+    await _secureStorage.delete(key: _secureKey(_pinSaltKey));
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_enabledKey, false);
-    await prefs.setBool(_biometricKey, false);
+    await prefs.setBool(_prefsKey(_enabledKey), false);
+    await prefs.setBool(_prefsKey(_biometricKey), false);
     _enabled = false;
     _biometricEnabled = false;
     _locked = false;
@@ -103,9 +185,13 @@ class AppLockService {
   Future<void> setBiometricEnabled(bool enabled) async {
     if (!enabled) {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_biometricKey, false);
+      await prefs.setBool(_prefsKey(_biometricKey), false);
       _biometricEnabled = false;
       return;
+    }
+
+    if (!_enabled) {
+      throw StateError('Activa primero el bloqueo con PIN.');
     }
 
     if (!await canUseBiometrics()) {
@@ -120,13 +206,13 @@ class AppLockService {
     }
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_biometricKey, true);
+    await prefs.setBool(_prefsKey(_biometricKey), true);
     _biometricEnabled = true;
   }
 
   Future<bool> verifyPin(String pin) async {
-    final storedHash = await _secureStorage.read(key: _pinHashKey);
-    final salt = await _secureStorage.read(key: _pinSaltKey);
+    final storedHash = await _secureStorage.read(key: _secureKey(_pinHashKey));
+    final salt = await _secureStorage.read(key: _secureKey(_pinSaltKey));
     if (storedHash == null || salt == null) {
       return false;
     }
@@ -141,7 +227,6 @@ class AppLockService {
     return ok;
   }
 
-  /// Devuelve `null` si desbloqueó correctamente; si no, mensaje de error.
   Future<String?> unlockWithBiometrics() async {
     if (!_enabled || !_biometricEnabled) {
       return 'Biometría no está activada';
