@@ -126,6 +126,20 @@ class PhoenixModuleCatalog
                 'write' => [],
             ],
             [
+                'id' => 'insights',
+                'label' => 'Insights IA',
+                'nav_routes' => ['/app/insights'],
+                'read' => ['insights.use'],
+                'write' => ['insights.use'],
+            ],
+            [
+                'id' => 'integrations',
+                'label' => 'Integraciones',
+                'nav_routes' => ['/app/integrations', '/app/automation'],
+                'read' => ['integrations.view', 'integrations.manage', 'automation.manage'],
+                'write' => ['integrations.manage', 'automation.manage'],
+            ],
+            [
                 'id' => 'company_users',
                 'label' => 'Usuarios',
                 'nav_routes' => ['/app/admin/users'],

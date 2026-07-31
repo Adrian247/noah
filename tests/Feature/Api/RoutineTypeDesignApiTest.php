@@ -24,7 +24,7 @@ class RoutineTypeDesignApiTest extends TestCase
 
         $formVersion = FormVersion::query()
             ->where('status', 'published')
-            ->whereHas('definition', fn ($q) => $q->where('slug', 'inspeccion-vehiculo-v1'))
+            ->whereHas('definition', fn ($q) => $q->where('slug', 'revision-mayor-vehiculo-premium'))
             ->first();
         $this->assertNotNull($formVersion);
 

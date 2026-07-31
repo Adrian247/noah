@@ -21,6 +21,8 @@ class Company extends Model
         'form_allowed_image_mimes',
         'mobile_require_app_lock',
         'mobile_allow_biometric_unlock',
+        'ai_monthly_token_quota',
+        'ai_monthly_vision_quota',
     ];
 
     protected function casts(): array
@@ -32,6 +34,8 @@ class Company extends Model
             'billing_labor_rate_per_hour' => 'decimal:2',
             'billing_tax_rate' => 'decimal:4',
             'form_allowed_image_mimes' => 'array',
+            'ai_monthly_token_quota' => 'integer',
+            'ai_monthly_vision_quota' => 'integer',
         ];
     }
 

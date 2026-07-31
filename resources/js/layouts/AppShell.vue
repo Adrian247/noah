@@ -9,7 +9,6 @@ import { useModuleAccess } from '@/composables/useModuleAccess';
 import UserAvatar from '@/components/ui/UserAvatar.vue';
 import NavIcon, { type NavIconName } from '@/components/ui/NavIcon.vue';
 import PhoenixBrand from '@/components/ui/PhoenixBrand.vue';
-import BacteriumNetwork from '@/components/BacteriumNetwork.vue';
 import AppAtmosphere from '@/components/AppAtmosphere.vue';
 import PortalLightFrost from '@/components/PortalLightFrost.vue';
 import ProductTour from '@/components/onboarding/ProductTour.vue';
@@ -101,6 +100,23 @@ const navGroups = computed(() => {
                     match: 'exact',
                     moduleId: 'billing',
                     tourAnchor: 'nav-billing',
+                },
+            ]),
+        },
+        {
+            label: 'Plataforma avanzada',
+            items: filterNavItems([
+                {
+                    to: '/app/insights',
+                    label: 'Insights IA',
+                    icon: 'chart-bar',
+                    moduleId: 'insights',
+                },
+                {
+                    to: '/app/integrations',
+                    label: 'Integraciones',
+                    icon: 'workflow',
+                    moduleId: 'integrations',
                 },
             ]),
         },
@@ -300,9 +316,8 @@ async function onAvatarSelected(event: Event) {
         ]"
     >
         <ProductTour />
-        <BacteriumNetwork subdued warm :light="!isDark" />
-        <AppAtmosphere />
-        <PortalLightFrost v-if="!isDark" />
+        <AppAtmosphere v-if="isDark" />
+        <PortalLightFrost v-else />
 
         <aside
             class="glass-sidebar phoenix-sidebar-enter"

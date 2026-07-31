@@ -26,6 +26,8 @@ class RolePermissionTemplateService
                 PhoenixPermission::CatalogSuppliersManage->value,
                 PhoenixPermission::InventoryView->value,
                 PhoenixPermission::InventoryManage->value,
+                PhoenixPermission::IntegrationsView->value,
+                PhoenixPermission::InsightsUse->value,
             ],
             MembershipRole::Technician->value => [
                 PhoenixPermission::RoutinesExecute->value,

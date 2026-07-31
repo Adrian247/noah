@@ -28,6 +28,7 @@
 | **Tipos de equipo e insumo** (`equipment_types`, `supply_types`, fichas por tipo) | Implementado — cambio 037 |
 | **Formularios por uso** (`FormUsage`: rutina, equipo, insumo) | Implementado — cambio 039 |
 | **Inventario Dom-G** (seed desde Excel promocional/textil) | Implementado — `DomGInventorySpreadsheetSeeder` |
+| **Fase 4 plataforma** (webhooks, automatización, dashboard prefs, insights IA) | Implementado MVP — cambio 040 |
 | **Portal cliente** (`/portal/*`, API `portal/*`, rol `client`) | Implementado v1 |
 | **Multi-tenant plataforma** (`/platform/tenants`, assume) | Implementado — cambio 036-platform-tenant-admin |
 | **Vinculación activo–cliente** por serie | Implementado |
@@ -45,16 +46,19 @@
 | Tipos de rutina | Implementado |
 | Facturación, auditoría, **usuarios (admin, rol + permisos extra)** | Implementado |
 | **Portal cliente** (facturas, rutinas, detalle) | Implementado |
-| Detalle rutina: **timeline auditoría por `correlation_id`** (roles con `audit.view`) | Implementado |
+| Detalle rutina: **timeline auditoría** + **evidencias fotográficas** | Implementado |
+| **Integraciones** (webhooks + automatización) | Implementado — `/app/integrations` |
+| **Insights IA** (asistente, OCR, narrativa, costos) | Implementado — `/app/insights` |
+| Dashboard: **widgets configurables** por usuario | Implementado |
 | **Tour de inicio** (spotlight + voz MP3 precargada) | Implementado — ver [ONBOARDING_TOUR.md](ONBOARDING_TOUR.md) |
 
 ## Pruebas
 
 - Automatizadas: `docker compose exec app php artisan test`
 - Ciclo rutina / portal / auditoría: `RoutineLifecycleCycleTest`
-- Diseñador workflow bloques: `WorkflowBlockDesignerApiTest`
+- Fase 4 plataforma: `Phase4PlatformCapabilitiesTest`
 - Manuales: [PRUEBAS_MANUALES.md](PRUEBAS_MANUALES.md)
 
 ## Cambios archivados
 
-Ver [openspec/archive/README.md](../openspec/archive/README.md) (001–039).
+Ver [openspec/archive/README.md](../openspec/archive/README.md) (001–040).

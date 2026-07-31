@@ -84,6 +84,37 @@ Route::prefix('v1')->group(function (): void {
 
         Route::middleware('company')->group(function (): void {
             Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
+            Route::get('/dashboard/preferences', [\App\Http\Controllers\Api\V1\DashboardPreferenceController::class, 'show']);
+            Route::put('/dashboard/preferences', [\App\Http\Controllers\Api\V1\DashboardPreferenceController::class, 'update']);
+
+            Route::get('/integrations/webhooks', [\App\Http\Controllers\Api\V1\WebhookSubscriptionController::class, 'index'])
+                ->middleware('company.module:integrations,read');
+            Route::post('/integrations/webhooks', [\App\Http\Controllers\Api\V1\WebhookSubscriptionController::class, 'store'])
+                ->middleware('company.module:integrations,write');
+            Route::put('/integrations/webhooks/{webhookSubscription}', [\App\Http\Controllers\Api\V1\WebhookSubscriptionController::class, 'update'])
+                ->middleware('company.module:integrations,write');
+            Route::delete('/integrations/webhooks/{webhookSubscription}', [\App\Http\Controllers\Api\V1\WebhookSubscriptionController::class, 'destroy'])
+                ->middleware('company.module:integrations,write');
+
+            Route::get('/automation/rules', [\App\Http\Controllers\Api\V1\AutomationRuleController::class, 'index'])
+                ->middleware('company.module:integrations,read');
+            Route::post('/automation/rules', [\App\Http\Controllers\Api\V1\AutomationRuleController::class, 'store'])
+                ->middleware('company.module:integrations,write');
+            Route::put('/automation/rules/{automationRule}', [\App\Http\Controllers\Api\V1\AutomationRuleController::class, 'update'])
+                ->middleware('company.module:integrations,write');
+            Route::delete('/automation/rules/{automationRule}', [\App\Http\Controllers\Api\V1\AutomationRuleController::class, 'destroy'])
+                ->middleware('company.module:integrations,write');
+
+            Route::post('/insights/assistant', [\App\Http\Controllers\Api\V1\InsightsController::class, 'assistant'])
+                ->middleware('company.permission:insights.use');
+            Route::post('/insights/ocr', [\App\Http\Controllers\Api\V1\InsightsController::class, 'ocr'])
+                ->middleware('company.permission:insights.use');
+            Route::get('/insights/routines/{routine}/narrative', [\App\Http\Controllers\Api\V1\InsightsController::class, 'routineNarrative'])
+                ->middleware('company.permission:insights.use');
+            Route::get('/insights/routines/{routine}/cost-estimate', [\App\Http\Controllers\Api\V1\InsightsController::class, 'routineCostEstimate'])
+                ->middleware('company.permission:insights.use');
+            Route::get('/insights/assets/{asset}/supply-suggestions', [\App\Http\Controllers\Api\V1\InsightsController::class, 'assetSupplySuggestions'])
+                ->middleware('company.permission:insights.use');
 
             Route::get('/sites', [SiteController::class, 'index'])
                 ->middleware('company.module:sites,read');

@@ -2,25 +2,54 @@
 
 ## Estado
 
-Placeholder — sin integraciones activas en fase documental.
+**MVP Fase 4 implementado** — webhooks salientes y reglas de automatización operativa.
+
+## Webhooks salientes
+
+| Evento | Cuándo se dispara |
+|--------|-------------------|
+| `routine.validated` | Supervisor valida rutina |
+| `routine.rejected` | Supervisor rechaza rutina |
+| `invoice.issued` | Emisión de factura |
+| `inventory.low_stock` | Movimiento deja insumo bajo mínimo |
+| `*` | Todos los eventos (suscripción comodín) |
+
+**Entrega HTTP POST** con cuerpo JSON:
+
+```json
+{
+  "event": "routine.validated",
+  "occurred_at": "2026-08-01T12:00:00+00:00",
+  "data": { "routine_id": 1, "status": "validated", "asset_tag": "TAG-001" }
+}
+```
+
+Cabeceras: `X-Phoenix-Event`, `X-Phoenix-Delivery`, `X-Phoenix-Signature` (HMAC-SHA256 del cuerpo con el secreto de la suscripción).
+
+API: `GET/POST/PUT/DELETE /api/v1/integrations/webhooks` (módulo `integrations`).
+
+## Automatización
+
+Reglas por empresa con `trigger_type` (mismos eventos) y acciones JSON:
+
+- `log` — registro en log de aplicación
+- `webhook` — reenvío vía `WebhookDispatcher`
+
+API: `GET/POST/PUT/DELETE /api/v1/automation/rules`.
 
 ## Principio
 
-Phoenix no depende de sistemas externos para su MVP. Cualquier integración futura:
+Integraciones viven en adapters/servicios (`OperationalEventBridge`, `WebhookDispatcher`); agregados de dominio no dependen de URLs externas.
 
-1. Se documenta aquí con contrato (API, eventos, datos).
-2. Vive detrás de adapters en el monolito.
-3. No introduce acoplamiento en agregados de Maintenance o Billing.
-
-## Candidatos futuros (no comprometidos)
+## Candidatos futuros
 
 | Sistema | Propósito |
 |---------|-----------|
-| Proveedor PAC / SAT | Timbrado fiscal (México u otro país) |
+| Proveedor PAC / SAT | Timbrado fiscal |
 | ERP contable | Exportación de facturas |
-| Email transaccional | Envío de reportes y facturas |
 | SSO corporativo | SAML/OIDC |
 
-## Referencias cruzadas
+## Referencias
 
-Ninguna integración con otros productos internos está planificada; Phoenix es dominio propio.
+- Cambio OpenSpec: `openspec/archive/040-phase-4-platform/`
+- Eventos de dominio: [domain-events.md](domain-events.md)

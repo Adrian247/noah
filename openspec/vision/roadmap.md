@@ -54,12 +54,17 @@ Roadmap orientativo; las fechas se fijan al iniciar implementación.
 
 ## Fase 4 — Plataforma y capacidades avanzadas
 
-- Multitenancy SaaS endurecido
-- Rule engine y dashboards configurables
-- Integraciones documentadas
-- Capacidades IA, visión y analítica según [future-capabilities.md](future-capabilities.md) (OCR, reconocimiento equipo, fugas/corrosión, chatbot, predicción, costos, refacciones, etc.)
+**Estado:** **MVP completado** (webhooks, automatización, dashboard configurable, insights IA, cuotas IA).
 
-Diagrama: [../diagrams/future-ai-vision.md](../diagrams/future-ai-vision.md).
+| Entrega | Descripción |
+|---------|-------------|
+| Webhooks salientes | Suscripciones por evento con firma HMAC |
+| Automatización | Reglas por disparador (`log`, `webhook`) |
+| Dashboard configurable | Preferencias por usuario/empresa |
+| Insights IA | Asistente, narrativa, costos, OCR, sugerencias refacciones |
+| Integraciones UI | `/app/integrations`, `/app/insights` |
+
+Pendiente roadmap: rule engine visual, RAG avanzado, PAC fiscal producción.
 
 ## Dependencias entre fases
 

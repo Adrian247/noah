@@ -228,6 +228,18 @@ const router = createRouter({
                     meta: { title: 'Auditoría', moduleId: 'audit' },
                 },
                 {
+                    path: 'integrations',
+                    name: 'integrations',
+                    component: () => import('@/pages/IntegrationsPage.vue'),
+                    meta: { title: 'Integraciones', moduleId: 'integrations' },
+                },
+                {
+                    path: 'insights',
+                    name: 'insights',
+                    component: () => import('@/pages/InsightsPage.vue'),
+                    meta: { title: 'Insights IA', moduleId: 'insights' },
+                },
+                {
                     path: 'admin/users',
                     name: 'company-users',
                     component: () => import('@/pages/CompanyUsersPage.vue'),

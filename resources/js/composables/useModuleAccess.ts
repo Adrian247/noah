@@ -26,6 +26,8 @@ const ROUTE_MODULE_PAIRS: [string, string][] = [
     ['/app/assets', 'assets'],
     ['/app/sites', 'sites'],
     ['/app/billing', 'billing'],
+    ['/app/integrations', 'integrations'],
+    ['/app/insights', 'insights'],
     ['/app/audit', 'audit'],
     ['/app/dashboard', 'dashboard'],
 ];

@@ -11,6 +11,7 @@ use App\Services\Audit\AuditLogger;
 use App\Services\Forms\FormResponseValidator;
 use App\Services\Inventory\InventoryStockService;
 use App\Services\Workflow\WorkflowRuntime;
+use App\Services\Integrations\OperationalEventBridge;
 use App\Support\InventoryTaxonomy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -120,6 +121,7 @@ class RoutineExecutionController extends Controller
         Routine $routine,
         WorkflowRuntime $workflow,
         AuditLogger $audit,
+        OperationalEventBridge $integrations,
     ): JsonResponse {
         $this->authorizeSupervisor($request);
 
@@ -139,6 +141,9 @@ class RoutineExecutionController extends Controller
         $audit->fromRequest($request, 'routine.rejected', Routine::class, $routine->id, [
             'reason' => $validated['reason'],
         ]);
+
+        $routine->loadMissing('asset');
+        $integrations->routineRejected($routine, $validated['reason']);
 
         return response()->json(['data' => $routine->fresh(['workflowInstance.transitions'])]);
     }

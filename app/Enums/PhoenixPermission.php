@@ -37,6 +37,11 @@ enum PhoenixPermission: string
     case InventoryView = 'inventory.view';
     case InventoryManage = 'inventory.manage';
 
+    case IntegrationsView = 'integrations.view';
+    case IntegrationsManage = 'integrations.manage';
+    case AutomationManage = 'automation.manage';
+    case InsightsUse = 'insights.use';
+
     /**
      * @return list<string>
      */

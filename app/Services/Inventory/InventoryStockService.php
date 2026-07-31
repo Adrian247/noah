@@ -4,12 +4,16 @@ namespace App\Services\Inventory;
 
 use App\Models\InventoryMovement;
 use App\Models\SupplyItem;
+use App\Services\Integrations\OperationalEventBridge;
 use App\Support\InventoryTaxonomy;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class InventoryStockService
 {
+    public function __construct(
+        private readonly OperationalEventBridge $operationalEvents,
+    ) {}
     /**
      * @param  array{
      *     movement_type: string,
@@ -43,6 +47,8 @@ class InventoryStockService
             }
 
             $locked->update(['quantity_on_hand' => $newBalance]);
+            $locked->refresh();
+            $this->operationalEvents->inventoryLowStock($locked);
 
             return InventoryMovement::query()->create([
                 'company_id' => $locked->company_id,

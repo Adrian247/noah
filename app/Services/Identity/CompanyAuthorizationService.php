@@ -509,6 +509,10 @@ class CompanyAuthorizationService
             'portal.invoices.view' => 'Portal: ver facturas',
             'portal.invoices.download' => 'Portal: descargar facturas',
             'portal.routines.view' => 'Portal: ver rutinas',
+            'integrations.view' => 'Ver integraciones',
+            'integrations.manage' => 'Gestionar integraciones',
+            'automation.manage' => 'Gestionar automatización',
+            'insights.use' => 'Usar insights IA',
         ];
     }
 

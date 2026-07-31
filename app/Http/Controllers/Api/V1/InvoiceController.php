@@ -209,6 +209,8 @@ class InvoiceController extends Controller
             'delivery_deferred' => $deferred,
         ]);
 
+        app(\App\Services\Integrations\OperationalEventBridge::class)->invoiceIssued($invoice->fresh());
+
         $fresh = $invoice->fresh(['lines', 'client', 'company']);
 
         if ($notify && ! $deferred && $fresh->client?->billing_email) {

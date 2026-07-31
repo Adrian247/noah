@@ -27,6 +27,7 @@ let animationId = 0;
 let width = 0;
 let height = 0;
 let resizeObserver: ResizeObserver | null = null;
+let visibilityHandler: (() => void) | null = null;
 const mouse = { x: -1000, y: -1000, radius: 120 };
 let time = 0;
 let transitionLevel = 0;
@@ -89,7 +90,9 @@ function initCanvas() {
 
 function createParticles() {
     particles = [];
-    const numParticles = Math.max(24, Math.floor((width * height) / 12000));
+    const densityDivisor = props.subdued ? 28_000 : 12_000;
+    const maxParticles = props.subdued ? 48 : 96;
+    const numParticles = Math.min(maxParticles, Math.max(24, Math.floor((width * height) / densityDivisor)));
     for (let i = 0; i < numParticles; i++) {
         particles.push({
             x: Math.random() * width,
@@ -136,6 +139,7 @@ function animate() {
     const speedMultiplier = 1 + transitionLevel * 3.5;
     const connectionDistance = 120 + transitionLevel * 40;
     const drawFactor = intensityFactor();
+    const drawConnections = !props.subdued;
 
     for (let i = 0; i < particles.length; i++) {
         const p = particles[i];
@@ -171,22 +175,24 @@ function animate() {
         ctx.fill();
     }
 
-    ctx.lineWidth = 1;
-    for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-            const p1 = particles[i];
-            const p2 = particles[j];
-            const dx = p1.x - p2.x;
-            const dy = p1.y - p2.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < connectionDistance) {
-                const lineOpacity =
-                    (1 - dist / connectionDistance) * (0.2 + transitionLevel * 0.35) * drawFactor;
-                ctx.beginPath();
-                ctx.strokeStyle = `rgba(${currentColor}, ${lineOpacity})`;
-                ctx.moveTo(p1.x, p1.y);
-                ctx.lineTo(p2.x, p2.y);
-                ctx.stroke();
+    if (drawConnections) {
+        ctx.lineWidth = 1;
+        for (let i = 0; i < particles.length; i++) {
+            for (let j = i + 1; j < particles.length; j++) {
+                const p1 = particles[i];
+                const p2 = particles[j];
+                const dx = p1.x - p2.x;
+                const dy = p1.y - p2.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < connectionDistance) {
+                    const lineOpacity =
+                        (1 - dist / connectionDistance) * (0.2 + transitionLevel * 0.35) * drawFactor;
+                    ctx.beginPath();
+                    ctx.strokeStyle = `rgba(${currentColor}, ${lineOpacity})`;
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+                }
             }
         }
     }
@@ -221,8 +227,23 @@ function setupResizeObserver() {
     resizeObserver.observe(canvasWrapper.value);
 }
 
+function stopAnimation() {
+    running = false;
+    cancelAnimationFrame(animationId);
+}
+
+function onVisibilityChange() {
+    if (document.hidden) {
+        stopAnimation();
+        return;
+    }
+    startAnimation();
+}
+
 onMounted(() => {
     window.addEventListener('resize', onWindowResize);
+    visibilityHandler = onVisibilityChange;
+    document.addEventListener('visibilitychange', visibilityHandler);
     canvasWrapper.value?.addEventListener('mousemove', onMouseMove);
     canvasWrapper.value?.addEventListener('mouseleave', onMouseLeave);
     setupResizeObserver();
@@ -235,8 +256,11 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-    running = false;
+    stopAnimation();
     window.removeEventListener('resize', onWindowResize);
+    if (visibilityHandler) {
+        document.removeEventListener('visibilitychange', visibilityHandler);
+    }
     resizeObserver?.disconnect();
     cancelAnimationFrame(animationId);
 });

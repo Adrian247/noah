@@ -165,10 +165,31 @@ curl -s -X POST http://localhost:8888/api/v1/sync \
 
 | # | Pasos | Resultado esperado |
 |---|--------|-------------------|
-| G1 | Tras enviar ejecución, subir foto (API `POST /api/v1/routines/{id}/evidences` multipart `file`) | 201 + registro |
-| G2 | `GET /api/v1/evidences/{id}/download` | Imagen descargada |
+| G1 | Rutina asignada → detalle → **Adjuntar foto** (o API `POST /api/v1/routines/{id}/evidences`) | 201 + aparece en listado |
+| G2 | **Descargar** en la evidencia (o `GET /api/v1/evidences/{id}/download`) | Imagen descargada |
 
-*(UI web de subida: usar API o ampliar en siguiente iteración; almacenamiento local `storage/app/private/evidence`.)*
+Almacenamiento local: `storage/app/private/evidence`.
+
+---
+
+## I. Integraciones y automatización (Fase 4)
+
+| # | Usuario | Pasos | Resultado esperado |
+|---|---------|--------|-------------------|
+| I1 | admin / supervisor (lectura) | Menú **Integraciones** → pestaña Webhooks | Listado (vacío o existente) |
+| I2 | admin | Crear webhook con evento `routine.validated` | 201 + secreto HMAC mostrado una vez |
+| I3 | admin | Pestaña **Automatización** → regla con `trigger_type` + acción `log` | Regla guardada |
+| I4 | supervisor | Validar rutina con webhook activo | Entrega HTTP al destino (revisar logs del receptor) |
+
+---
+
+## J. Insights IA y dashboard (Fase 4)
+
+| # | Usuario | Pasos | Resultado esperado |
+|---|---------|--------|-------------------|
+| J1 | admin / supervisor | **Insights IA** → preguntar «¿Qué rutinas hay?» | Respuesta con rutinas recientes |
+| J2 | admin | Insights → ID rutina → **Analizar** | Narrativa + estimación de costo |
+| J3 | admin | Dashboard → **Personalizar** → ocultar paneles | Solo widgets seleccionados visibles |
 
 ---
 
@@ -177,8 +198,9 @@ curl -s -X POST http://localhost:8888/api/v1/sync \
 - [ ] `docker compose exec app php artisan test` — suite completa verde
 - [ ] Cola `queue` activa — PDF async
 - [ ] Credenciales demo tras BD vacía — auto-seed al levantar `app`
-- [ ] Ciclo rutina 032 (rechazo → reenvío → factura portal/email → auditoría): cubierto por `Tests\Feature\Api\RoutineLifecycleCycleTest`
-- [ ] Diseñador workflow por bloques (migración v1→v2 + compilación): `Tests\Feature\Api\WorkflowBlockDesignerApiTest`
+- [ ] Ciclo rutina 032 (rechazo → reenvío → factura portal/email → auditoría): `RoutineLifecycleCycleTest`
+- [ ] Diseñador workflow por bloques: `WorkflowBlockDesignerApiTest`
+- [ ] Fase 4 plataforma: `Phase4PlatformCapabilitiesTest`
 
 ---
 
@@ -186,4 +208,4 @@ curl -s -X POST http://localhost:8888/api/v1/sync \
 
 - App **Flutter** (Fase 3 UI): contrato sync listo; ver `mobile/README.md`
 - Facturación fiscal / PAC
-- SSO, invitaciones, rule engine, IA visión (Fase 4)
+- SSO, invitaciones, rule engine visual avanzado, RAG/chatbot completo

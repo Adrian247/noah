@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 import { api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { useCompanyStore } from '@/stores/company';
 import { useModuleAccess } from '@/composables/useModuleAccess';
 import { useProductTour } from '@/composables/useProductTour';
+import { useToast } from '@/composables/useToast';
 import { auditActionLabel } from '@/lib/auditLabels';
 import GlassCard from '@/components/ui/GlassCard.vue';
 import AppButton from '@/components/ui/AppButton.vue';
@@ -15,6 +16,7 @@ import NavIcon, { type NavIconName } from '@/components/ui/NavIcon.vue';
 import DashboardStatCard from '@/components/dashboard/DashboardStatCard.vue';
 
 const { hasCompleted, start } = useProductTour();
+const toast = useToast();
 const showTourInvite = ref(false);
 
 type LowStockItem = {
@@ -94,6 +96,99 @@ const summary = ref<Summary | null>(null);
 const apiOk = ref(false);
 const loading = ref(true);
 const loadError = ref(false);
+const widgetLayout = ref<string[]>(['operations', 'catalog', 'inventory', 'design', 'activity']);
+const DEFAULT_WIDGET_CATALOG = [
+    { id: 'operations', label: 'Operaciones' },
+    { id: 'catalog', label: 'Catálogo' },
+    { id: 'inventory', label: 'Inventario' },
+    { id: 'design', label: 'Diseño' },
+    { id: 'activity', label: 'Actividad reciente' },
+] as const;
+const widgetCatalog = ref<{ id: string; label: string }[]>([...DEFAULT_WIDGET_CATALOG]);
+const showWidgetModal = ref(false);
+const widgetDraft = ref<string[]>([]);
+const savingWidgets = ref(false);
+
+const enabledWidgets = computed(() => new Set(widgetLayout.value));
+
+function openWidgetModal() {
+    widgetDraft.value = [...widgetLayout.value];
+    showWidgetModal.value = true;
+}
+
+function toggleWidgetDraft(id: string) {
+    const set = new Set(widgetDraft.value);
+    if (set.has(id)) {
+        set.delete(id);
+    } else {
+        set.add(id);
+    }
+    widgetDraft.value = [...set];
+}
+
+async function loadWidgetPreferences() {
+    try {
+        const res = await api<{ data: { layout: string[]; catalog: { id: string; label: string }[] } }>(
+            '/dashboard/preferences',
+        );
+        if (res.data.layout?.length) {
+            widgetLayout.value = res.data.layout;
+        }
+        if (res.data.catalog?.length) {
+            widgetCatalog.value = res.data.catalog;
+        }
+    } catch {
+        widgetCatalog.value = [...DEFAULT_WIDGET_CATALOG];
+    }
+}
+
+async function loadDashboard() {
+    loading.value = true;
+    loadError.value = false;
+
+    const healthPromise = fetch('/api/v1/health')
+        .then((r) => r.json())
+        .then((body) => {
+            apiOk.value = body.status === 'ok';
+        })
+        .catch(() => {
+            apiOk.value = false;
+        });
+
+    const summaryPromise = api<{ data: Summary }>('/dashboard/summary')
+        .then((res) => {
+            summary.value = res.data;
+        })
+        .catch(() => {
+            summary.value = null;
+            loadError.value = true;
+        });
+
+    const prefsPromise = loadWidgetPreferences();
+
+    await Promise.all([healthPromise, summaryPromise, prefsPromise]);
+    loading.value = false;
+}
+
+async function saveWidgetPreferences() {
+    if (widgetDraft.value.length === 0) {
+        toast.error('Selecciona al menos un widget.');
+        return;
+    }
+    savingWidgets.value = true;
+    try {
+        await api('/dashboard/preferences', {
+            method: 'PUT',
+            body: JSON.stringify({ widgets: widgetDraft.value }),
+        });
+        widgetLayout.value = [...widgetDraft.value];
+        showWidgetModal.value = false;
+    } catch (e) {
+        toast.error((e as Error).message);
+    } finally {
+        savingWidgets.value = false;
+    }
+}
 
 const greeting = computed(() => {
     const hour = new Date().getHours();
@@ -259,26 +354,6 @@ function formatScheduled(iso?: string | null): string {
     });
 }
 
-async function loadDashboard() {
-    loading.value = true;
-    loadError.value = false;
-    try {
-        const health = await fetch('/api/v1/health').then((r) => r.json());
-        apiOk.value = health.status === 'ok';
-    } catch {
-        apiOk.value = false;
-    }
-    try {
-        const res = await api<{ data: Summary }>('/dashboard/summary');
-        summary.value = res.data;
-    } catch {
-        summary.value = null;
-        loadError.value = true;
-    } finally {
-        loading.value = false;
-    }
-}
-
 function maybeOfferTour() {
     if (!company.current?.modules || hasCompleted()) {
         return;
@@ -288,9 +363,12 @@ function maybeOfferTour() {
 
 watch(
     () => company.current?.id,
-    () => {
-        void loadDashboard();
+    (id) => {
+        if (id != null) {
+            void loadDashboard();
+        }
     },
+    { immediate: true },
 );
 
 watch(
@@ -298,10 +376,6 @@ watch(
     () => maybeOfferTour(),
     { immediate: true },
 );
-
-onMounted(() => {
-    void loadDashboard();
-});
 
 const primaryKpis = computed(() => [
     {
@@ -361,6 +435,9 @@ const primaryKpis = computed(() => [
                     <span class="dashboard-hero__status-dot" />
                     API {{ apiOk ? 'operativa' : 'sin conexión' }}
                 </div>
+                <AppButton type="button" variant="secondary" class="shrink-0" @click="openWidgetModal">
+                    Personalizar
+                </AppButton>
                 <AppButton type="button" variant="secondary" class="shrink-0" @click="start(0)">
                     Tour guiado
                 </AppButton>
@@ -386,7 +463,7 @@ const primaryKpis = computed(() => [
         </section>
 
         <div class="dashboard-main-grid">
-            <GlassCard class="dashboard-panel dashboard-panel--pipeline" padding="lg">
+            <GlassCard v-if="enabledWidgets.has('operations')" class="dashboard-panel dashboard-panel--pipeline" padding="lg">
                 <div class="dashboard-panel__head">
                     <div>
                         <h2 class="dashboard-panel__title">Flujo de rutinas</h2>
@@ -450,7 +527,7 @@ const primaryKpis = computed(() => [
         </div>
 
         <div class="dashboard-secondary-grid">
-            <GlassCard v-if="isVisible('routines') && (summary?.focus_routines?.length ?? 0) > 0" padding="lg" class="dashboard-panel">
+            <GlassCard v-if="enabledWidgets.has('operations') && isVisible('routines') && (summary?.focus_routines?.length ?? 0) > 0" padding="lg" class="dashboard-panel">
                 <div class="dashboard-panel__head">
                     <div>
                         <h2 class="dashboard-panel__title">Prioridad operativa</h2>
@@ -476,7 +553,7 @@ const primaryKpis = computed(() => [
             </GlassCard>
 
             <GlassCard
-                v-if="isVisible('inventory') && (summary?.inventory?.low_stock_count ?? 0) > 0"
+                v-if="enabledWidgets.has('inventory') && isVisible('inventory') && (summary?.inventory?.low_stock_count ?? 0) > 0"
                 padding="lg"
                 class="dashboard-panel dashboard-panel--alert"
             >
@@ -500,7 +577,7 @@ const primaryKpis = computed(() => [
                 </ul>
             </GlassCard>
 
-            <GlassCard v-if="catalogTiles.length" padding="lg" class="dashboard-panel">
+            <GlassCard v-if="enabledWidgets.has('catalog') && catalogTiles.length" padding="lg" class="dashboard-panel">
                 <h2 class="dashboard-panel__title">Catálogo</h2>
                 <p class="dashboard-panel__desc mb-4">Registros maestros de la empresa</p>
                 <div class="dashboard-catalog-grid">
@@ -517,7 +594,7 @@ const primaryKpis = computed(() => [
                 </div>
             </GlassCard>
 
-            <GlassCard v-if="designTiles.length" padding="lg" class="dashboard-panel">
+            <GlassCard v-if="enabledWidgets.has('design') && designTiles.length" padding="lg" class="dashboard-panel">
                 <h2 class="dashboard-panel__title">Estudio de diseño</h2>
                 <p class="dashboard-panel__desc mb-4">Formularios, reportes y automatización</p>
                 <div class="dashboard-design-grid">
@@ -534,7 +611,7 @@ const primaryKpis = computed(() => [
             </GlassCard>
 
             <GlassCard
-                v-if="isVisible('audit') && (summary?.recent_activity?.length ?? 0) > 0"
+                v-if="enabledWidgets.has('activity') && isVisible('audit') && (summary?.recent_activity?.length ?? 0) > 0"
                 padding="lg"
                 class="dashboard-panel dashboard-panel--activity"
             >
@@ -562,6 +639,30 @@ const primaryKpis = computed(() => [
         <p v-if="summary?.generated_at" class="dashboard-footer-meta text-portal-muted text-xs">
             Actualizado {{ formatRelativeTime(summary.generated_at) }}
         </p>
+
+        <AppModal :open="showWidgetModal" title="Widgets del inicio" size="sm" @close="showWidgetModal = false">
+            <p class="text-portal-muted mb-3 text-sm">Elige qué paneles mostrar en tu dashboard.</p>
+            <div class="space-y-2">
+                <label
+                    v-for="w in widgetCatalog"
+                    :key="w.id"
+                    class="text-portal-muted flex items-center gap-2 text-sm"
+                >
+                    <input
+                        type="checkbox"
+                        :checked="widgetDraft.includes(w.id)"
+                        @change="toggleWidgetDraft(w.id)"
+                    />
+                    {{ w.label }}
+                </label>
+            </div>
+            <template #footer>
+                <AppButton type="button" variant="ghost" @click="showWidgetModal = false">Cancelar</AppButton>
+                <AppButton type="button" :disabled="savingWidgets" @click="saveWidgetPreferences">
+                    {{ savingWidgets ? 'Guardando…' : 'Guardar' }}
+                </AppButton>
+            </template>
+        </AppModal>
 
         <AppModal :open="showTourInvite" title="Tour de Phoenix" size="sm" @close="showTourInvite = false">
             <p class="text-portal-muted text-sm leading-relaxed">

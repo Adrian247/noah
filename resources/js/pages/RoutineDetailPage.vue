@@ -31,6 +31,13 @@ type ConsumptionLine = {
     supply_item?: SupplyItem;
 };
 
+type ExecutionEvidence = {
+    id: number;
+    original_name?: string | null;
+    mime?: string | null;
+    size_bytes?: number;
+};
+
 type Execution = {
     technician_comments?: string;
     corrected_comments?: string;
@@ -39,6 +46,7 @@ type Execution = {
     consumptions?: ConsumptionLine[];
     rejection_reason?: string | null;
     rejected_at?: string | null;
+    evidences?: ExecutionEvidence[];
 };
 
 type WorkflowTransition = {
@@ -109,6 +117,8 @@ const consumptionLines = ref<{ supply_item_id: string; quantity: string }[]>([
 const showRejectPanel = ref(false);
 const rejectReason = ref('');
 const rejecting = ref(false);
+const evidenceUploading = ref(false);
+const evidenceInput = ref<HTMLInputElement | null>(null);
 
 const formSchema = computed(() => routine.value?.routine_type?.form_version?.schema ?? null);
 const canExecute = computed(() => routine.value?.status === 'assigned');
@@ -165,7 +175,7 @@ function startReportPoll() {
         } else {
             stopReportPoll();
         }
-    }, 3000);
+    }, 5000);
 }
 
 function stopReportPoll() {
@@ -200,7 +210,9 @@ async function load(options: { silent?: boolean } = {}) {
         } else {
             stopReportPoll();
         }
-        await loadAuditTimeline();
+        if (!options.silent && can('audit.view') && res.data.workflow_instance?.correlation_id) {
+            void loadAuditTimeline();
+        }
     } catch (e) {
         toast.error((e as Error).message);
     } finally {
@@ -282,6 +294,75 @@ async function downloadReport(reportId: number) {
     a.click();
     URL.revokeObjectURL(url);
 }
+
+function formatBytes(bytes?: number): string {
+    if (!bytes) {
+        return '—';
+    }
+    if (bytes < 1024) {
+        return `${bytes} B`;
+    }
+    return `${(bytes / 1024).toFixed(1)} KB`;
+}
+
+function triggerEvidenceUpload() {
+    evidenceInput.value?.click();
+}
+
+async function downloadEvidence(evidenceId: number, filename?: string | null) {
+    const res = await fetch(`/api/v1/evidences/${evidenceId}/download`, {
+        headers: {
+            Authorization: `Bearer ${getToken()}`,
+            'X-Company-Id': getCompanyId() ?? '',
+        },
+    });
+    if (!res.ok) {
+        toast.error('No se pudo descargar la evidencia.');
+        return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename ?? `evidencia-${evidenceId}.jpg`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+async function onEvidenceSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file || !routine.value) {
+        return;
+    }
+    evidenceUploading.value = true;
+    const form = new FormData();
+    form.append('file', file);
+    try {
+        const res = await fetch(`/api/v1/routines/${routine.value.id}/evidences`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${getToken()}`,
+                'X-Company-Id': getCompanyId() ?? '',
+            },
+            body: form,
+        });
+        const json = await res.json();
+        if (!res.ok) {
+            throw new Error(json.message ?? 'Error al subir evidencia');
+        }
+        toast.success('Evidencia adjuntada.');
+        await load({ silent: true });
+    } catch (e) {
+        toast.error((e as Error).message);
+    } finally {
+        evidenceUploading.value = false;
+    }
+}
+
+const routineEvidences = computed(() => routine.value?.latest_execution?.evidences ?? []);
+const canUploadEvidence = computed(() => canExecute.value || can('routines.execute'));
 
 async function validateRoutine() {
     try {
@@ -668,6 +749,49 @@ async function deleteRoutine() {
                     {{ c.supply_item?.name ?? 'Insumo' }} × {{ c.quantity }}
                 </li>
             </ul>
+            <div v-if="routineEvidences.length || canUploadEvidence" class="space-y-2 border-t border-white/10 pt-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <p class="text-portal-heading font-medium">Evidencias fotográficas</p>
+                    <AppButton
+                        v-if="canUploadEvidence"
+                        type="button"
+                        variant="secondary"
+                        :disabled="evidenceUploading"
+                        @click="triggerEvidenceUpload"
+                    >
+                        {{ evidenceUploading ? 'Subiendo…' : 'Adjuntar foto' }}
+                    </AppButton>
+                    <input
+                        ref="evidenceInput"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        class="hidden"
+                        @change="onEvidenceSelected"
+                    />
+                </div>
+                <p v-if="!routineEvidences.length" class="text-portal-muted text-xs">
+                    Sin evidencias en esta ejecución.
+                </p>
+                <ul v-else class="space-y-2">
+                    <li
+                        v-for="ev in routineEvidences"
+                        :key="ev.id"
+                        class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-black/10 px-3 py-2"
+                    >
+                        <span class="text-portal-heading text-xs">
+                            {{ ev.original_name ?? `Evidencia #${ev.id}` }}
+                            <span class="text-portal-muted"> · {{ formatBytes(ev.size_bytes) }}</span>
+                        </span>
+                        <button
+                            type="button"
+                            class="text-portal-link text-xs underline"
+                            @click="downloadEvidence(ev.id, ev.original_name)"
+                        >
+                            Descargar
+                        </button>
+                    </li>
+                </ul>
+            </div>
         </div>
 
         <div

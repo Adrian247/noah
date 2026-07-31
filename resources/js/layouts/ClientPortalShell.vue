@@ -9,7 +9,6 @@ import { useTheme } from '@/composables/useTheme';
 import { usePortalPublicContent } from '@/composables/usePortalPublicContent';
 import { clientPortalSessionFooter } from '@/lib/clientPortalFooter';
 import AppAtmosphere from '@/components/AppAtmosphere.vue';
-import BacteriumNetwork from '@/components/BacteriumNetwork.vue';
 import PortalLightFrost from '@/components/PortalLightFrost.vue';
 import PhoenixBrand from '@/components/ui/PhoenixBrand.vue';
 import NavIcon from '@/components/ui/NavIcon.vue';
@@ -75,9 +74,8 @@ async function logout() {
 
 <template>
     <div class="client-portal-shell" :class="{ 'client-portal-shell--dark': isDark }">
-        <BacteriumNetwork subdued warm :light="!isDark" />
-        <AppAtmosphere class="client-portal-shell__atmosphere" />
-        <PortalLightFrost v-if="!isDark" />
+        <AppAtmosphere v-if="isDark" class="client-portal-shell__atmosphere" />
+        <PortalLightFrost v-else />
 
         <div class="client-portal-shell__frame">
             <header class="client-portal-header">
