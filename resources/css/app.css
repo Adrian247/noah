@@ -960,8 +960,7 @@
         align-items: center;
         justify-content: center;
         pointer-events: all;
-        background: rgb(7 8 12 / 0.92);
-        backdrop-filter: blur(8px);
+        background: rgb(7 8 12 / 0.96);
         --phoenix-enter-duration: 1.15s;
         --phoenix-enter-glow-duration: 2.2s;
     }
@@ -991,7 +990,7 @@
     }
 
     .phoenix-system-enter__fx--play .phoenix-system-enter__beam {
-        animation: sidebar-fx-beam var(--phoenix-enter-duration) cubic-bezier(0.32, 0.72, 0, 1) infinite;
+        animation: sidebar-fx-beam var(--phoenix-enter-duration) cubic-bezier(0.32, 0.72, 0, 1) 2 forwards;
     }
 
     .phoenix-system-enter__glow {
@@ -1004,13 +1003,11 @@
         border-radius: 999px;
         background: radial-gradient(
             circle at 50% 50%,
-            rgb(245 158 11 / 0.55) 0%,
-            rgb(251 191 36 / 0.28) 28%,
-            rgb(251 191 36 / 0.12) 48%,
-            rgb(251 191 36 / 0.04) 68%,
-            transparent 85%
+            rgb(245 158 11 / 0.5) 0%,
+            rgb(251 191 36 / 0.22) 32%,
+            rgb(251 191 36 / 0.08) 52%,
+            transparent 78%
         );
-        filter: blur(36px);
         opacity: 0;
         pointer-events: none;
     }
@@ -1039,11 +1036,12 @@
         border: 1px solid rgb(251 191 36 / 0.18);
         box-shadow: 0 0 20px rgb(245 158 11 / 0.12);
         opacity: 0;
-        animation: phoenix-enter-wave 5.5s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+        will-change: transform, opacity;
+        animation: phoenix-enter-wave 2.75s cubic-bezier(0.22, 1, 0.36, 1) 2 forwards;
     }
 
     .phoenix-system-enter__wave--delay-1 {
-        animation-delay: 2.75s;
+        animation-delay: 0.9s;
     }
 
     .phoenix-system-enter__logo {
@@ -3938,7 +3936,7 @@
 
 [data-theme='light'] .app-portal-shell {
     @apply text-slate-900;
-    background: #e2e8f0;
+    background: linear-gradient(160deg, #e8eef5 0%, #dde4ed 42%, #e2e8f0 100%);
 }
 
 .portal-light-frost {
@@ -3946,12 +3944,40 @@
     inset: 0;
     z-index: 3;
     pointer-events: none;
+    overflow: hidden;
+}
+
+.portal-light-frost__wash {
+    position: absolute;
+    inset: 0;
     background: linear-gradient(
         165deg,
-        rgb(248 250 252 / 0.96) 0%,
-        rgb(226 232 240 / 0.98) 45%,
-        rgb(241 245 249 / 0.97) 100%
+        rgb(248 250 252 / 0.72) 0%,
+        rgb(226 232 240 / 0.78) 48%,
+        rgb(241 245 249 / 0.74) 100%
     );
+}
+
+.portal-light-frost__blob {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.portal-light-frost__blob--warm {
+    top: -12%;
+    right: -8%;
+    width: min(48vw, 520px);
+    height: min(48vw, 520px);
+    background: radial-gradient(circle, rgb(245 158 11 / 0.16) 0%, transparent 68%);
+}
+
+.portal-light-frost__blob--cool {
+    bottom: -10%;
+    left: 18%;
+    width: min(40vw, 420px);
+    height: min(40vw, 420px);
+    background: radial-gradient(circle, rgb(99 102 241 / 0.1) 0%, transparent 70%);
 }
 
 [data-theme='light'] .app-atmosphere .app-atmosphere__vignette {

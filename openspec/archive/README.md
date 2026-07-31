@@ -44,3 +44,5 @@ Propuestas cerradas (histórico). El flujo activo está en [../changes/README.md
 | [037-catalog-equipment-supply-types](037-catalog-equipment-supply-types/) | Catálogo | Tipos equipo/insumo, formulario L200, demo seed |
 | [038-onboarding-product-tour](038-onboarding-product-tour/) | UX | Tour producto con spotlight y audio |
 | [039-form-usage-and-field-config](039-form-usage-and-field-config/) | Diseño | `FormUsage`, fichas por tipo, config campos |
+| [040-phase-4-platform](040-phase-4-platform/) | Plataforma | Webhooks, automatización, insights IA, dashboard prefs |
+| [041-integrations-insights-polish](041-integrations-insights-polish/) | Plataforma / UX | Webhook JSON único, perf UI login/claro |

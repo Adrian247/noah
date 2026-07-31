@@ -26,6 +26,8 @@
 
 Cabeceras: `X-Phoenix-Event`, `X-Phoenix-Delivery`, `X-Phoenix-Signature` (HMAC-SHA256 del cuerpo con el secreto de la suscripción).
 
+Destinos recomendados: endpoint propio, n8n, Zapier/Make o herramientas de inspección como webhook.site. Cada consumidor transforma el JSON a su formato (Slack, Teams, ERP, etc.).
+
 API: `GET/POST/PUT/DELETE /api/v1/integrations/webhooks` (módulo `integrations`).
 
 ## Automatización

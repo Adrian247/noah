@@ -49,6 +49,7 @@ const email = ref('admin@pyro-systems.com');
 const password = ref('pyro.2026$');
 const passwordReadonly = ref(true);
 const loading = ref(false);
+const showNeuralBg = ref(false);
 const portal = ref<PortalContent | null>(null);
 
 const router = useRouter();
@@ -123,6 +124,9 @@ function onPasswordFocus() {
 }
 
 onMounted(() => {
+    requestAnimationFrame(() => {
+        showNeuralBg.value = true;
+    });
     void loadPortal();
     void loadDemoHealth();
     applyDemoCredentials();
@@ -134,7 +138,7 @@ onMounted(() => {
 <template>
     <div class="login-shell relative min-h-dvh text-slate-100 lg:h-dvh lg:overflow-hidden">
 
-        <BacteriumNetwork subdued warm />
+        <BacteriumNetwork v-if="showNeuralBg && !loading" subdued warm />
 
         <AppAtmosphere />
 

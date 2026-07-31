@@ -44,6 +44,7 @@ class DispatchWebhookJob implements ShouldQueue
 
         $request = Http::timeout(15)->withHeaders([
             'Content-Type' => 'application/json',
+            'User-Agent' => 'Phoenix-Webhook/1.0',
             'X-Phoenix-Event' => $this->event,
             'X-Phoenix-Delivery' => (string) Str::uuid(),
         ]);

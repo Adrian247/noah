@@ -7,6 +7,7 @@ import { useCompanyStore } from '@/stores/company';
 import { useModuleAccess } from '@/composables/useModuleAccess';
 import { useProductTour } from '@/composables/useProductTour';
 import { useToast } from '@/composables/useToast';
+import { useSystemEnterStore } from '@/stores/systemEnter';
 import { auditActionLabel } from '@/lib/auditLabels';
 import GlassCard from '@/components/ui/GlassCard.vue';
 import AppButton from '@/components/ui/AppButton.vue';
@@ -90,6 +91,7 @@ type QuickLink = {
 
 const auth = useAuthStore();
 const company = useCompanyStore();
+const systemEnter = useSystemEnterStore();
 const { isVisible } = useModuleAccess();
 
 const summary = ref<Summary | null>(null);
@@ -362,9 +364,9 @@ function maybeOfferTour() {
 }
 
 watch(
-    () => company.current?.id,
-    (id) => {
-        if (id != null) {
+    () => [company.current?.id, systemEnter.active] as const,
+    ([id, entering]) => {
+        if (id != null && !entering) {
             void loadDashboard();
         }
     },

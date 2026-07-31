@@ -90,9 +90,7 @@ function initCanvas() {
 
 function createParticles() {
     particles = [];
-    const densityDivisor = props.subdued ? 28_000 : 12_000;
-    const maxParticles = props.subdued ? 48 : 96;
-    const numParticles = Math.min(maxParticles, Math.max(24, Math.floor((width * height) / densityDivisor)));
+    const numParticles = Math.max(24, Math.floor((width * height) / 12000));
     for (let i = 0; i < numParticles; i++) {
         particles.push({
             x: Math.random() * width,
@@ -139,7 +137,6 @@ function animate() {
     const speedMultiplier = 1 + transitionLevel * 3.5;
     const connectionDistance = 120 + transitionLevel * 40;
     const drawFactor = intensityFactor();
-    const drawConnections = !props.subdued;
 
     for (let i = 0; i < particles.length; i++) {
         const p = particles[i];
@@ -175,24 +172,22 @@ function animate() {
         ctx.fill();
     }
 
-    if (drawConnections) {
-        ctx.lineWidth = 1;
-        for (let i = 0; i < particles.length; i++) {
-            for (let j = i + 1; j < particles.length; j++) {
-                const p1 = particles[i];
-                const p2 = particles[j];
-                const dx = p1.x - p2.x;
-                const dy = p1.y - p2.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < connectionDistance) {
-                    const lineOpacity =
-                        (1 - dist / connectionDistance) * (0.2 + transitionLevel * 0.35) * drawFactor;
-                    ctx.beginPath();
-                    ctx.strokeStyle = `rgba(${currentColor}, ${lineOpacity})`;
-                    ctx.moveTo(p1.x, p1.y);
-                    ctx.lineTo(p2.x, p2.y);
-                    ctx.stroke();
-                }
+    ctx.lineWidth = 1;
+    for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+            const p1 = particles[i];
+            const p2 = particles[j];
+            const dx = p1.x - p2.x;
+            const dy = p1.y - p2.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < connectionDistance) {
+                const lineOpacity =
+                    (1 - dist / connectionDistance) * (0.2 + transitionLevel * 0.35) * drawFactor;
+                ctx.beginPath();
+                ctx.strokeStyle = `rgba(${currentColor}, ${lineOpacity})`;
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.stroke();
             }
         }
     }
