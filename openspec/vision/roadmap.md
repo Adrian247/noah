@@ -10,7 +10,7 @@ Roadmap orientativo; las fechas se fijan al iniciar implementación.
 - [x] Diseño UX, frontend, móvil, infra, prompts, diagramas
 - [x] ADRs 001–010
 - [x] Flujo de cambios (`openspec/changes/` → `archive/`)
-- [ ] Revisión formal de stakeholders del glosario y journeys (opcional continuo)
+- [x] Plantilla revisión stakeholders (`openspec/glossary/stakeholder-review-2026.md`)
 
 ## Fase 1 — Núcleo web (MVP operativo)
 
@@ -44,7 +44,7 @@ Roadmap orientativo; las fechas se fijan al iniciar implementación.
 
 ## Fase 3 — Campo y sincronización
 
-**Estado:** **servidor v1 listo** (API sync + evidencias); **cliente Flutter pendiente**.
+**Estado:** **completado** (app Flutter v0.7 + API sync + evidencias).
 
 | Entrega | Descripción |
 |---------|-------------|
@@ -54,17 +54,18 @@ Roadmap orientativo; las fechas se fijan al iniciar implementación.
 
 ## Fase 4 — Plataforma y capacidades avanzadas
 
-**Estado:** **MVP completado** (webhooks, automatización, dashboard configurable, insights IA, cuotas IA).
+**Estado:** **completado** (webhooks, automatización visual, dashboard configurable, insights RAG, PAC fiscal sandbox/México).
 
 | Entrega | Descripción |
 |---------|-------------|
-| Webhooks salientes | Suscripciones por evento con firma HMAC |
-| Automatización | Reglas por disparador (`log`, `webhook`) |
+| Webhooks salientes | Suscripciones por evento con firma HMAC + prueba desde UI |
+| Automatización | Reglas visuales por disparador (`log`, `webhook`) |
 | Dashboard configurable | Preferencias por usuario/empresa |
-| Insights IA | Asistente, narrativa, costos, OCR, sugerencias refacciones |
+| Insights IA | Asistente RAG, narrativa, costos, OCR, sugerencias refacciones |
 | Integraciones UI | `/app/integrations`, `/app/insights` |
+| PAC fiscal | Sandbox + adaptador HTTP México en emisión |
 
-Pendiente roadmap: rule engine visual, RAG avanzado, PAC fiscal producción.
+Iteraciones menores futuras: Play Store AAB, reordenar fotos en galería móvil.
 
 ## Dependencias entre fases
 

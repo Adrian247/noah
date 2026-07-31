@@ -30,6 +30,67 @@ class AiGateway
         return $output;
     }
 
+    public function answerOperationalQuestion(
+        string $question,
+        string $context,
+        ?int $companyId = null,
+        ?int $userId = null,
+    ): ?string {
+        $provider = config('phoenix.ai.default_provider', 'local');
+        if ($provider !== 'openai' || ! config('phoenix.ai.openai.api_key')) {
+            return null;
+        }
+
+        $model = config('phoenix.ai.openai.model', 'gpt-4o-mini');
+        $system = <<<'PROMPT'
+Eres un asistente operativo de Phoenix. Responde en español, de forma breve y factual.
+Usa SOLO la información del contexto proporcionado. Si no hay datos suficientes, dilo explícitamente.
+No inventes rutinas, activos ni montos. Cita IDs cuando existan en el contexto.
+PROMPT;
+
+        try {
+            $response = Http::withToken(config('phoenix.ai.openai.api_key'))
+                ->timeout(45)
+                ->post(rtrim(config('phoenix.ai.openai.base_url'), '/').'/chat/completions', [
+                    'model' => $model,
+                    'temperature' => 0.2,
+                    'messages' => [
+                        ['role' => 'system', 'content' => $system],
+                        ['role' => 'user', 'content' => "Contexto operativo:\n{$context}\n\nPregunta:\n{$question}"],
+                    ],
+                ]);
+
+            if (! $response->successful()) {
+                throw new \RuntimeException($response->body());
+            }
+
+            $output = trim($response->json('choices.0.message.content', ''));
+            if ($output === '') {
+                return null;
+            }
+
+            $this->logInvocation(
+                $companyId,
+                $userId,
+                'insights_assistant',
+                'openai',
+                $model,
+                $question,
+                $output,
+                'success',
+                $response->json('usage.prompt_tokens'),
+                $response->json('usage.completion_tokens'),
+            );
+
+            return $output;
+        } catch (\Throwable $e) {
+            $this->logInvocation($companyId, $userId, 'insights_assistant', 'openai', $model, $question, null, 'failed');
+            report($e);
+
+            return null;
+        }
+    }
+
     private function invokeOpenAi(string $text, ?PromptTemplate $template, ?int $companyId, ?int $userId): string
     {
         $system = $template?->system_prompt ?? 'Corrige gramática sin agregar datos.';

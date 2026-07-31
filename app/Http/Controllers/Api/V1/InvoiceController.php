@@ -11,6 +11,7 @@ use App\Mail\ClientInvoiceIssuedMail;
 use App\Models\GeneratedReport;
 use App\Models\Invoice;
 use App\Services\Audit\AuditLogger;
+use App\Services\Billing\FiscalIssuanceService;
 use App\Services\Billing\InvoiceClientDeliveryService;
 use App\Services\Billing\InvoiceDeliveryPackageBuilder;
 use App\Services\Billing\InvoiceDraftEditor;
@@ -33,6 +34,7 @@ class InvoiceController extends Controller
         private readonly InvoiceEvidenceService $invoiceEvidences,
         private readonly InvoiceDeliveryPackageBuilder $deliveryPackage,
         private readonly InvoiceClientDeliveryService $clientDelivery,
+        private readonly FiscalIssuanceService $fiscalIssuance,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -180,6 +182,20 @@ class InvoiceController extends Controller
         if ($notify && empty($invoice->client?->billing_email)) {
             throw ValidationException::withMessages([
                 'notify_client_on_issue' => ['El cliente no tiene email de facturación.'],
+            ]);
+        }
+
+        $fiscal = $this->fiscalIssuance->stampBeforeIssue($invoice->fresh(['company', 'lines', 'client']));
+        if (! $fiscal['ok']) {
+            throw ValidationException::withMessages([
+                'fiscal' => [$fiscal['error'] ?? 'No se pudo timbrar la factura.'],
+            ]);
+        }
+
+        $invoice->refresh();
+        if ($invoice->status === InvoiceStatus::FiscalError) {
+            throw ValidationException::withMessages([
+                'fiscal' => [$invoice->fiscal_error ?? 'Error fiscal.'],
             ]);
         }
 

@@ -46,3 +46,4 @@ Propuestas cerradas (histórico). El flujo activo está en [../changes/README.md
 | [039-form-usage-and-field-config](039-form-usage-and-field-config/) | Diseño | `FormUsage`, fichas por tipo, config campos |
 | [040-phase-4-platform](040-phase-4-platform/) | Plataforma | Webhooks, automatización, insights IA, dashboard prefs |
 | [041-integrations-insights-polish](041-integrations-insights-polish/) | Plataforma / UX | Webhook JSON único, perf UI login/claro |
+| [042-roadmap-pending-completion](042-roadmap-pending-completion/) | Roadmap | PAC fiscal, RAG insights, rule engine visual, probar webhook |

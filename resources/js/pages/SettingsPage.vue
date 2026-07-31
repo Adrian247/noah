@@ -86,7 +86,7 @@ function selectTheme(next: AppTheme) {
             <GlassCard padding="lg" class="space-y-4">
                 <h2 class="text-portal-heading text-base font-semibold">Facturación</h2>
                 <p class="text-portal-muted text-sm">
-                    Parámetros por defecto al generar borradores desde rutinas validadas.
+                    Parámetros de borradores (mano de obra, IVA) y timbrado fiscal PAC al emitir.
                 </p>
                 <BillingSettingsForm />
             </GlassCard>

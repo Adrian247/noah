@@ -21,7 +21,7 @@ class InsightsController extends Controller
         ]);
 
         $companyId = (int) app(CurrentCompany::class)->id();
-        $result = $assistant->answer($companyId, $data['question']);
+        $result = $assistant->answer($companyId, $data['question'], $request->user()?->id);
 
         return response()->json(['data' => $result]);
     }

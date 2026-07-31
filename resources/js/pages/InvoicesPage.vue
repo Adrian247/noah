@@ -74,7 +74,7 @@ onMounted(load);
         />
         <div class="mb-4 flex flex-wrap gap-2">
             <RouterLink v-if="canManage" to="/app/settings#facturacion">
-                <AppButton variant="secondary">IVA y mano de obra</AppButton>
+                <AppButton variant="secondary">Configuración (IVA, PAC)</AppButton>
             </RouterLink>
         </div>
         <div class="mb-4 flex max-w-md flex-wrap items-end gap-2">

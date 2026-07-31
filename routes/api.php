@@ -95,6 +95,8 @@ Route::prefix('v1')->group(function (): void {
                 ->middleware('company.module:integrations,write');
             Route::delete('/integrations/webhooks/{webhookSubscription}', [\App\Http\Controllers\Api\V1\WebhookSubscriptionController::class, 'destroy'])
                 ->middleware('company.module:integrations,write');
+            Route::post('/integrations/webhooks/{webhookSubscription}/test', [\App\Http\Controllers\Api\V1\WebhookSubscriptionController::class, 'test'])
+                ->middleware('company.module:integrations,write');
 
             Route::get('/automation/rules', [\App\Http\Controllers\Api\V1\AutomationRuleController::class, 'index'])
                 ->middleware('company.module:integrations,read');

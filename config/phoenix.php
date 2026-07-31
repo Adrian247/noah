@@ -38,5 +38,13 @@ return [
         'labor_rate_per_hour' => (float) env('PHOENIX_BILLING_LABOR_RATE', 0),
         'tax_rate' => (float) env('PHOENIX_BILLING_TAX_RATE', 0.16),
         'evidence_max_kb' => (int) env('PHOENIX_BILLING_EVIDENCE_MAX_KB', 10240),
+        'evidence_disk' => env('PHOENIX_BILLING_EVIDENCE_DISK', 'local'),
+        'fiscal' => [
+            'default_provider' => env('PHOENIX_FISCAL_PROVIDER', 'sandbox'),
+            'mexico_pac' => [
+                'base_url' => env('PHOENIX_PAC_BASE_URL'),
+                'api_key' => env('PHOENIX_PAC_API_KEY'),
+            ],
+        ],
     ],
 ];

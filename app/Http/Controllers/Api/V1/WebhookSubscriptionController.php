@@ -56,4 +56,14 @@ class WebhookSubscriptionController extends Controller
 
         return response()->json(['message' => 'Deleted']);
     }
+
+    public function test(WebhookSubscription $webhookSubscription, \App\Services\Integrations\WebhookDeliveryService $delivery): JsonResponse
+    {
+        $result = $delivery->deliver($webhookSubscription, 'webhook.test', [
+            'message' => 'Prueba de entrega Phoenix',
+            'subscription_id' => $webhookSubscription->id,
+        ]);
+
+        return response()->json(['data' => $result]);
+    }
 }

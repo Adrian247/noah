@@ -61,4 +61,4 @@
 
 ## Cambios archivados
 
-Ver [openspec/archive/README.md](../openspec/archive/README.md) (001–041).
+Ver [openspec/archive/README.md](../openspec/archive/README.md) (001–042).

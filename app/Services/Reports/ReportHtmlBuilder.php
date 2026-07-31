@@ -1154,6 +1154,7 @@ body.report-preview { margin: 0; padding: 12px 0 28px; background: #e5e7eb; over
             'corrected_comments' => 'Comentario corregido (IA)',
             'technician_comments' => 'Comentario técnico',
             'asset_tag' => 'Etiqueta de activo',
+            'duration_minutes' => 'Tiempo en sitio',
         ];
         $catalogLabels = [];
         $photoMeta = [];
@@ -1307,6 +1308,18 @@ body.report-preview { margin: 0; padding: 12px 0 28px; background: #e5e7eb; over
 
     private function fieldDisplayValue(string $field, RoutineExecution $execution, ?string $assetTag, array $fieldContext = []): string
     {
+        if ($field === 'duration_minutes') {
+            if ($execution->duration_minutes !== null) {
+                return $this->formatDurationMinutes((int) $execution->duration_minutes);
+            }
+            $responses = $execution->responses ?? [];
+            if (isset($responses['duration_minutes']) && is_numeric($responses['duration_minutes'])) {
+                return $this->formatDurationMinutes((int) $responses['duration_minutes']);
+            }
+
+            return $this->formatDurationMinutes(null);
+        }
+
         $responses = $execution->responses ?? [];
         if (is_array($responses) && array_key_exists($field, $responses)) {
             $raw = $responses[$field];
@@ -1314,6 +1327,10 @@ body.report-preview { margin: 0; padding: 12px 0 28px; background: #e5e7eb; over
                 return '';
             }
             if (is_scalar($raw)) {
+                if ($field === 'duration_minutes' || str_ends_with($field, '_duration_minutes')) {
+                    return $this->formatDurationMinutes(is_numeric($raw) ? (int) $raw : null);
+                }
+
                 return (string) $raw;
             }
             if (is_array($raw)) {
@@ -1335,6 +1352,18 @@ body.report-preview { margin: 0; padding: 12px 0 28px; background: #e5e7eb; over
         };
 
         return $fallback !== '' ? $fallback : '—';
+    }
+
+    private function formatDurationMinutes(?int $minutes): string
+    {
+        if ($minutes === null || $minutes < 0) {
+            return '—';
+        }
+
+        $hours = intdiv($minutes, 60);
+        $mins = $minutes % 60;
+
+        return sprintf('%02d:%02d', $hours, $mins);
     }
 
     private function renderHeaderFooter(?array $block, string $companyName, int $routineId, string $position, string $assetTag = '', bool $isPreview = false): string

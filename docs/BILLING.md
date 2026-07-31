@@ -66,7 +66,7 @@ Descargas:
 El adjunto del correo `ClientInvoiceIssuedMail` usa el mismo paquete ZIP.
 
 
-En **Facturación → Configuración** (`billing.settings`):
+En **Configuración → Facturación** (`/app/settings#facturacion`; también accesible desde Facturación con el botón «Configuración (IVA, PAC)»):
 
 - **Tarifa sugerida mano de obra** — prellena líneas MO al crear borrador; `0` = sin línea MO automática.
 - **Tasa IVA** — usada en snapshot del borrador.
@@ -88,3 +88,30 @@ Fallback: `PHOENIX_BILLING_LABOR_RATE`, `PHOENIX_BILLING_TAX_RATE` en `config/ph
 ## Emitir
 
 `POST /api/v1/billing/invoices/{id}/issue` asigna número, marca `issued` y la rutina pasa a estado facturado.
+
+### Timbrado fiscal (PAC)
+
+En **Configuración → Facturación** puede habilitarse el timbrado al emitir:
+
+| Proveedor | Uso |
+|-----------|-----|
+| `sandbox` | Genera CFDI XML de prueba y lo adjunta como evidencia `sat_cfdi` (listo para demo/local) |
+| `mexico_pac` | Adaptador HTTP genérico: requiere un servicio intermedio que exponga `POST /stamp` y `POST /cancel` (ver abajo) |
+
+**No hay integración nativa** con un PAC comercial concreto (Facturama, SW Sapien, Finkok, etc.). El adaptador `mexico_pac` envía JSON a la URL configurada y espera respuesta:
+
+```http
+POST {base_url}/stamp
+Authorization: Bearer {api_key}
+Content-Type: application/json
+
+{ "invoice_id", "emitter_rfc", "receiver_rfc", "lines", ... }
+
+→ 200 { "xml": "<cfdi...>", "uuid": "...", "series": "...", "folio": "..." }
+```
+
+Para un PAC real suele hacer falta un **microservicio o flujo n8n** que traduzca este contrato al API del proveedor elegido.
+
+Si el timbrado falla, la factura queda en `fiscal_error` y la API responde 422 con el detalle.
+
+Variables globales opcionales: `PHOENIX_FISCAL_PROVIDER`, `PHOENIX_PAC_BASE_URL`, `PHOENIX_PAC_API_KEY`.

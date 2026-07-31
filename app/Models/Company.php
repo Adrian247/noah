@@ -23,6 +23,9 @@ class Company extends Model
         'mobile_allow_biometric_unlock',
         'ai_monthly_token_quota',
         'ai_monthly_vision_quota',
+        'fiscal_enabled',
+        'fiscal_provider',
+        'fiscal_settings',
     ];
 
     protected function casts(): array
@@ -36,6 +39,8 @@ class Company extends Model
             'form_allowed_image_mimes' => 'array',
             'ai_monthly_token_quota' => 'integer',
             'ai_monthly_vision_quota' => 'integer',
+            'fiscal_enabled' => 'boolean',
+            'fiscal_settings' => 'array',
         ];
     }
 

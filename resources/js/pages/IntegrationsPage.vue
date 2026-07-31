@@ -10,6 +10,10 @@ import MaterialField from '@/components/ui/MaterialField.vue';
 import IconActionButton from '@/components/ui/IconActionButton.vue';
 import ConfigurableDataTable from '@/components/ui/ConfigurableDataTable.vue';
 import ReadOnlyNotice from '@/components/ui/ReadOnlyNotice.vue';
+import AutomationRuleBuilder, {
+    type AutomationAction,
+    type AutomationCondition,
+} from '@/components/integrations/AutomationRuleBuilder.vue';
 import { tableActionsColumn, type TableColumnDef } from '@/lib/tableColumns';
 
 const EVENT_OPTIONS = [
@@ -58,11 +62,13 @@ const showRuleForm = ref(false);
 const ruleForm = ref({
     name: '',
     trigger_type: 'routine.validated',
-    conditionsJson: '',
-    actionsJson: '[{"type":"log","message":"Regla ejecutada"}]',
     is_active: true,
 });
+const ruleConditions = ref<AutomationCondition[]>([]);
+const ruleActions = ref<AutomationAction[]>([{ type: 'log', message: 'Regla ejecutada' }]);
+const ruleBuilderRef = ref<InstanceType<typeof AutomationRuleBuilder> | null>(null);
 const editingRuleId = ref<number | null>(null);
+const testingWebhookId = ref<number | null>(null);
 
 const webhookColumns = computed((): TableColumnDef[] => {
     const cols: TableColumnDef[] = [
@@ -180,14 +186,34 @@ async function deleteWebhook(row: Webhook) {
     }
 }
 
+async function testWebhook(row: Webhook) {
+    testingWebhookId.value = row.id;
+    try {
+        const res = await api<{ data: { success: boolean; status: string; http_status?: number } }>(
+            `/integrations/webhooks/${row.id}/test`,
+            { method: 'POST' },
+        );
+        if (res.data.success) {
+            toast.success(`Prueba enviada (${res.data.status}).`);
+        } else {
+            toast.error(`Prueba fallida: ${res.data.status}`);
+        }
+        await load();
+    } catch (e) {
+        toast.error((e as Error).message);
+    } finally {
+        testingWebhookId.value = null;
+    }
+}
+
 function resetRuleForm() {
     ruleForm.value = {
         name: '',
         trigger_type: 'routine.validated',
-        conditionsJson: '',
-        actionsJson: '[{"type":"log","message":"Regla ejecutada"}]',
         is_active: true,
     };
+    ruleConditions.value = [];
+    ruleActions.value = [{ type: 'log', message: 'Regla ejecutada' }];
     editingRuleId.value = null;
 }
 
@@ -201,26 +227,42 @@ function openRuleEdit(row: AutomationRule) {
     ruleForm.value = {
         name: row.name,
         trigger_type: row.trigger_type,
-        conditionsJson: row.conditions ? JSON.stringify(row.conditions, null, 2) : '',
-        actionsJson: JSON.stringify(row.actions, null, 2),
         is_active: row.is_active,
     };
+    ruleConditions.value = conditionsToBuilder(row.conditions);
+    ruleActions.value = row.actions.length
+        ? row.actions.map((action) => ({
+              type: action.type as 'log' | 'webhook',
+              message: action.message,
+              event: action.event,
+          }))
+        : [{ type: 'log', message: 'Regla ejecutada' }];
     showRuleForm.value = true;
 }
 
+function conditionsToBuilder(conditions?: Record<string, unknown> | null): AutomationCondition[] {
+    if (!conditions) {
+        return [];
+    }
+
+    return Object.entries(conditions).map(([field, value]) => {
+        if (value !== null && typeof value === 'object' && 'min' in (value as Record<string, unknown>)) {
+            return {
+                field,
+                operator: 'min' as const,
+                value: String((value as { min: number }).min),
+            };
+        }
+
+        return { field, operator: 'eq' as const, value: String(value) };
+    });
+}
+
 async function saveRule() {
-    let conditions: Record<string, unknown> | null = null;
-    let actions: unknown[];
-    try {
-        actions = JSON.parse(ruleForm.value.actionsJson);
-        if (!Array.isArray(actions) || actions.length === 0) {
-            throw new Error('Acciones inválidas');
-        }
-        if (ruleForm.value.conditionsJson.trim()) {
-            conditions = JSON.parse(ruleForm.value.conditionsJson);
-        }
-    } catch {
-        toast.error('JSON de condiciones o acciones inválido.');
+    const conditions = ruleBuilderRef.value?.toApiConditions() ?? null;
+    const actions = ruleBuilderRef.value?.toApiActions() ?? [];
+    if (actions.length === 0) {
+        toast.error('Agrega al menos una acción.');
         return;
     }
 
@@ -315,6 +357,12 @@ onMounted(load);
                     </span>
                 </template>
                 <template #actions="{ row }">
+                    <IconActionButton
+                        icon="send"
+                        label="Probar webhook"
+                        :disabled="testingWebhookId === (row as Webhook).id"
+                        @click="testWebhook(row as Webhook)"
+                    />
                     <IconActionButton icon="pencil" label="Editar" @click="openWebhookEdit(row as Webhook)" />
                     <IconActionButton icon="trash" label="Eliminar" @click="deleteWebhook(row as Webhook)" />
                 </template>
@@ -408,18 +456,18 @@ onMounted(load);
                         </option>
                     </select>
                 </label>
-                <label class="text-portal-heading block text-sm">
-                    Condiciones (JSON opcional)
-                    <textarea v-model="ruleForm.conditionsJson" rows="3" class="field-input mt-1 w-full font-mono text-xs" />
-                </label>
-                <label class="text-portal-heading block text-sm">
-                    Acciones (JSON)
-                    <textarea v-model="ruleForm.actionsJson" rows="5" class="field-input mt-1 w-full font-mono text-xs" required />
-                </label>
                 <label class="text-portal-muted flex items-center gap-2 text-sm">
                     <input v-model="ruleForm.is_active" type="checkbox" />
                     Activa
                 </label>
+                <AutomationRuleBuilder
+                    ref="ruleBuilderRef"
+                    :trigger-type="ruleForm.trigger_type"
+                    :conditions="ruleConditions"
+                    :actions="ruleActions"
+                    @update:conditions="ruleConditions = $event"
+                    @update:actions="ruleActions = $event"
+                />
             </form>
             <template #footer>
                 <AppButton type="button" variant="ghost" @click="showRuleForm = false">Cancelar</AppButton>

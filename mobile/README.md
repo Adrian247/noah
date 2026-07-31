@@ -189,7 +189,8 @@ Ver commits anteriores; v0.4 añade paridad de campos, compresión y selector de
 
 - Distribución AAB / Play Store interna
 - Reordenar fotos en galería móvil
-- Mostrar `duration_minutes` en reporte PDF con formato hh:mm
+
+> `duration_minutes` en reporte PDF: formato hh:mm implementado en servidor (ReportHtmlBuilder).
 
 ## Contrato servidor
 

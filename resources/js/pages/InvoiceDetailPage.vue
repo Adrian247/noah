@@ -8,6 +8,7 @@ import GlassCard from '@/components/ui/GlassCard.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
 import AppButton from '@/components/ui/AppButton.vue';
+import AlertBanner from '@/components/ui/AlertBanner.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
 import IconActionButton from '@/components/ui/IconActionButton.vue';
 
@@ -97,6 +98,8 @@ const notifyClient = ref(false);
 const portalVisible = ref(false);
 const deliveryDeferred = ref(false);
 const issueActionLabel = ref('Emitir factura');
+const fiscalEnabled = ref(false);
+const fiscalProvider = ref<'sandbox' | 'mexico_pac'>('sandbox');
 
 const supportingInput = ref<HTMLInputElement | null>(null);
 const satInput = ref<HTMLInputElement | null>(null);
@@ -105,6 +108,18 @@ const evidenceUploading = ref(false);
 const supportingEvidences = computed(() => evidences.value.filter((e) => e.kind === 'supporting'));
 const routineReportEvidences = computed(() => evidences.value.filter((e) => e.kind === 'routine_report'));
 const satEvidence = computed(() => evidences.value.find((e) => e.kind === 'sat_cfdi') ?? null);
+
+const fiscalProviderLabel = computed(() =>
+    fiscalProvider.value === 'mexico_pac' ? 'PAC México' : 'Sandbox',
+);
+
+const showFiscalReplaceWarning = computed(
+    () => isDraft.value && fiscalEnabled.value && satEvidence.value != null,
+);
+
+const showFiscalAutoStampNote = computed(
+    () => isDraft.value && fiscalEnabled.value && !satEvidence.value,
+);
 
 const isDraft = computed(() => invoice.value?.status === 'draft');
 const canDeliverToClient = computed(
@@ -324,7 +339,7 @@ async function downloadDeliveryPackage() {
 async function load() {
     loading.value = true;
     try {
-        const [invRes, clientsRes] = await Promise.all([
+        const [invRes, clientsRes, billingRes] = await Promise.all([
             api<{
                 data: Invoice;
                 evidences?: InvoiceEvidenceRow[];
@@ -332,12 +347,18 @@ async function load() {
                 workflow_action_labels?: { invoice_issued?: string };
             }>(`/billing/invoices/${route.params.id}`),
             api<{ data: ClientOption[] }>('/clients').catch(() => ({ data: [] as ClientOption[] })),
+            api<{ data: { fiscal_enabled?: boolean; fiscal_provider?: string } }>('/billing/settings').catch(
+                () => ({ data: {} }),
+            ),
         ]);
         invoice.value = invRes.data;
         evidences.value = invRes.evidences ?? [];
         routineReportsAvailable.value = invRes.routine_reports_available ?? [];
         selectedRoutineReportId.value = routineReportsAvailable.value[0]?.id ?? null;
         issueActionLabel.value = invRes.workflow_action_labels?.invoice_issued?.trim() || 'Emitir factura';
+        fiscalEnabled.value = Boolean(billingRes.data.fiscal_enabled);
+        fiscalProvider.value =
+            billingRes.data.fiscal_provider === 'mexico_pac' ? 'mexico_pac' : 'sandbox';
         clients.value = clientsRes.data.filter((c) => c.is_active);
         clientId.value = invRes.data.client_id ?? invRes.data.client?.id ?? null;
         customReference.value = invRes.data.custom_reference ?? '';
@@ -658,6 +679,16 @@ onMounted(load);
                         <p class="text-portal-muted mt-1 text-xs">
                             Un solo archivo por prefactura: PDF o XML del comprobante fiscal timbrado.
                         </p>
+                        <AlertBanner v-if="showFiscalReplaceWarning" variant="warning" class="mt-3">
+                            El timbrado fiscal (<strong>{{ fiscalProviderLabel }}</strong>) está activo. Al emitir,
+                            Phoenix generará un CFDI nuevo y <strong>reemplazará</strong> el archivo SAT que subiste
+                            manualmente.
+                        </AlertBanner>
+                        <AlertBanner v-else-if="showFiscalAutoStampNote" variant="info" class="mt-3">
+                            El timbrado fiscal (<strong>{{ fiscalProviderLabel }}</strong>) está activo: al emitir se
+                            adjuntará el CFDI automáticamente. Si timbras fuera de Phoenix, desactiva el timbrado en
+                            Configuración → Facturación.
+                        </AlertBanner>
                         <div
                             v-if="satEvidence"
                             class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm"
@@ -807,6 +838,9 @@ onMounted(load);
                             <span>Diferir envío (guardar intención para después)</span>
                         </label>
                     </div>
+                    <AlertBanner v-if="showFiscalReplaceWarning" variant="warning" class="mb-2">
+                        Al emitir se timbrará con {{ fiscalProviderLabel }} y se sustituirá el CFDI manual adjunto.
+                    </AlertBanner>
                     <div class="flex flex-wrap gap-2 pt-2">
                         <AppButton type="button" :disabled="saving" @click="saveDraft">
                             {{ saving ? 'Guardando…' : 'Guardar prefactura' }}

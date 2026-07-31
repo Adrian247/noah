@@ -35,7 +35,7 @@ class DispatchWebhookJobTest extends TestCase
             'routine_id' => 99,
             'status' => 'validated',
         ]);
-        $job->handle();
+        $job->handle(app(\App\Services\Integrations\WebhookDeliveryService::class));
 
         Http::assertSent(function ($request) {
             $body = json_decode($request->body(), true);
