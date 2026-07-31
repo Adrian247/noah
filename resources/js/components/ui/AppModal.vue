@@ -41,7 +41,7 @@ const sizeClass: Record<string, string> = {
                         {{ title }}
                     </h3>
                 </div>
-                <div class="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+                <div class="portal-scroll min-h-0 flex-1 px-6 py-4">
                     <slot />
                 </div>
                 <div

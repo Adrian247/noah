@@ -49,6 +49,11 @@ final class TenantDemoProfile
         );
     }
 
+    public function isDomG(): bool
+    {
+        return $this->companyName === 'Dom-G';
+    }
+
     public static function domG(): self
     {
         return new self(

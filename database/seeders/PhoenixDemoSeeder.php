@@ -30,6 +30,7 @@ use App\Services\Reports\ReportPresetApplier;
 use App\Services\Workflow\WorkflowRuntime;
 use App\Services\Identity\CompanyAuthorizationService;
 use Database\Seeders\Support\DemoClientLogoGenerator;
+use Database\Seeders\Support\DomGInventorySpreadsheetSeeder;
 use Database\Seeders\Support\DemoDesignDraftVersions;
 use Database\Seeders\Support\NormalizedSupplyFormSchemas;
 use Database\Seeders\Support\NormalizedVehicleFormSchema;
@@ -510,12 +511,15 @@ class PhoenixDemoSeeder extends Seeder
             ]
         );
 
-        SupplyItem::query()
-            ->where('company_id', $company->id)
-            ->where('sku', 'FIL-ACE-PREM')
-            ->delete();
+        if (! $profile->isDomG()) {
+            SupplyItem::query()
+                ->where('company_id', $company->id)
+                ->where('sku', 'FIL-ACE-PREM')
+                ->delete();
+        }
 
-        foreach ([
+        if (! $profile->isDomG()) {
+            foreach ([
             [
                 'sku' => 'FIL-1230A153-OEM',
                 'supply_type_id' => $supplyTypeFiltros->id,
@@ -574,18 +578,19 @@ class PhoenixDemoSeeder extends Seeder
                     'notas_mercado' => 'Precio estimado $1,698 MXN (par).',
                 ],
             ],
-        ] as $supplySeed) {
-            SupplyItem::query()->updateOrCreate(
-                ['company_id' => $company->id, 'sku' => $supplySeed['sku']],
-                [
-                    'supply_type_id' => $supplySeed['supply_type_id'],
-                    'name' => $supplySeed['name'],
-                    'unit' => $supplySeed['unit'],
-                    'standard_cost' => $supplySeed['standard_cost'],
-                    'specifications' => $supplySeed['specifications'],
-                    'supplier_id' => $supplier->id,
-                ]
-            );
+            ] as $supplySeed) {
+                SupplyItem::query()->updateOrCreate(
+                    ['company_id' => $company->id, 'sku' => $supplySeed['sku']],
+                    [
+                        'supply_type_id' => $supplySeed['supply_type_id'],
+                        'name' => $supplySeed['name'],
+                        'unit' => $supplySeed['unit'],
+                        'standard_cost' => $supplySeed['standard_cost'],
+                        'specifications' => $supplySeed['specifications'],
+                        'supplier_id' => $supplier->id,
+                    ]
+                );
+            }
         }
 
         $formDef = FormDefinition::query()->updateOrCreate(
@@ -852,51 +857,55 @@ class PhoenixDemoSeeder extends Seeder
             ]
         );
 
-        foreach ([
-            [
-                'sku' => 'FLT-AIR-01',
-                'supply_type_id' => $supplyTypeFiltros->id,
-                'name' => 'Filtro de aire motor',
-                'sector' => 'mechanical',
-                'material_kind' => 'spare_part',
-                'unit' => 'pza',
-                'standard_cost' => 320.00,
-                'quantity_on_hand' => 18,
-                'min_stock' => 6,
-                'storage_location' => 'Rack M-12',
-                'is_active' => true,
-            ],
-            [
-                'sku' => 'LUB-5W30',
-                'supply_type_id' => $supplyTypeFiltros->id,
-                'name' => 'Aceite sintético 5W-30',
-                'sector' => 'mechanical',
-                'material_kind' => 'chemical',
-                'unit' => 'lt',
-                'standard_cost' => 180.00,
-                'quantity_on_hand' => 42,
-                'min_stock' => 15,
-                'storage_location' => 'Bodega fluidos',
-                'is_active' => true,
-            ],
-            [
-                'sku' => 'EPP-GLOVE',
-                'supply_type_id' => $supplyTypeFiltros->id,
-                'name' => 'Guantes nitrilo industrial',
-                'sector' => 'safety',
-                'material_kind' => 'consumable',
-                'unit' => 'pqt',
-                'standard_cost' => 95.00,
-                'quantity_on_hand' => 8,
-                'min_stock' => 10,
-                'storage_location' => 'EPP entrada',
-                'is_active' => true,
-            ],
-        ] as $stockSeed) {
-            SupplyItem::query()->updateOrCreate(
-                ['company_id' => $company->id, 'sku' => $stockSeed['sku']],
-                array_merge($stockSeed, ['supplier_id' => $supplier->id]),
-            );
+        if ($profile->isDomG()) {
+            app(DomGInventorySpreadsheetSeeder::class)->seed($company, $supplier);
+        } else {
+            foreach ([
+                [
+                    'sku' => 'FLT-AIR-01',
+                    'supply_type_id' => $supplyTypeFiltros->id,
+                    'name' => 'Filtro de aire motor',
+                    'sector' => 'mechanical',
+                    'material_kind' => 'spare_part',
+                    'unit' => 'pza',
+                    'standard_cost' => 320.00,
+                    'quantity_on_hand' => 18,
+                    'min_stock' => 6,
+                    'storage_location' => 'Rack M-12',
+                    'is_active' => true,
+                ],
+                [
+                    'sku' => 'LUB-5W30',
+                    'supply_type_id' => $supplyTypeFiltros->id,
+                    'name' => 'Aceite sintético 5W-30',
+                    'sector' => 'mechanical',
+                    'material_kind' => 'chemical',
+                    'unit' => 'lt',
+                    'standard_cost' => 180.00,
+                    'quantity_on_hand' => 42,
+                    'min_stock' => 15,
+                    'storage_location' => 'Bodega fluidos',
+                    'is_active' => true,
+                ],
+                [
+                    'sku' => 'EPP-GLOVE',
+                    'supply_type_id' => $supplyTypeFiltros->id,
+                    'name' => 'Guantes nitrilo industrial',
+                    'sector' => 'safety',
+                    'material_kind' => 'consumable',
+                    'unit' => 'pqt',
+                    'standard_cost' => 95.00,
+                    'quantity_on_hand' => 8,
+                    'min_stock' => 10,
+                    'storage_location' => 'EPP entrada',
+                    'is_active' => true,
+                ],
+            ] as $stockSeed) {
+                SupplyItem::query()->updateOrCreate(
+                    ['company_id' => $company->id, 'sku' => $stockSeed['sku']],
+                    array_merge($stockSeed, ['supplier_id' => $supplier->id]),
+                );
+            }
         }
 
         $this->ensureDemonstrationRoutine($company, $profile);

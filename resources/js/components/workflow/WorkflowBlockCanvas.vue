@@ -61,6 +61,8 @@ const edges = ref<Edge[]>([]);
 const selectedNodeId = ref<string | null>(null);
 const selectedEdgeId = ref<string | null>(null);
 const pendingAction = ref<BlockAction | null>(null);
+const skipDefinitionSync = ref(false);
+const edgeLabelDraft = ref('');
 
 const recipientOptions: { value: ActionEmailRecipientKey; label: string }[] = [
     { value: 'executing_technician', label: 'Técnico ejecutor' },
@@ -143,10 +145,19 @@ function rebuildFlow() {
     })) as Edge[];
 }
 
-watch(() => props.definition, (d) => syncFromDefinition(d), { immediate: true, deep: true });
+watch(() => props.definition, (def) => {
+    if (skipDefinitionSync.value) {
+        return;
+    }
+    syncFromDefinition(def);
+}, { immediate: true, deep: true });
 
 function emitCompiled() {
+    skipDefinitionSync.value = true;
     emit('update:definition', compileBlockGraph(graph.value, props.definition));
+    void nextTick(() => {
+        skipDefinitionSync.value = false;
+    });
 }
 
 function onNodeDragStop() {
@@ -220,6 +231,10 @@ function onConnect(connection: Connection) {
 
 const selectedNode = computed(() => graph.value.nodes.find((n) => n.id === selectedNodeId.value) ?? null);
 const selectedEdge = computed(() => graph.value.edges.find((e) => e.id === selectedEdgeId.value) ?? null);
+
+watch(selectedEdge, (edge) => {
+    edgeLabelDraft.value = edge?.label ?? '';
+});
 
 const roleCatalogOptions = WORKFLOW_ROLE_CATALOG.map((r) => ({ value: r.value, label: r.label }));
 
@@ -305,7 +320,10 @@ function updateEdgeLabel(value: string) {
         return;
     }
     edge.label = value;
-    rebuildFlow();
+    const flowEdge = edges.value.find((e) => e.id === edge.id);
+    if (flowEdge) {
+        flowEdge.label = value;
+    }
     emitCompiled();
 }
 
@@ -497,10 +515,11 @@ ensureEnd();
             <template v-if="selectedEdge">
                 <label class="text-portal-muted mb-1 block text-xs">Nombre de la acción</label>
                 <input
+                    v-model="edgeLabelDraft"
                     class="mb-2 w-full rounded border border-portal-border bg-transparent px-2 py-1 text-xs"
-                    :value="selectedEdge.label"
                     :readonly="!editable"
-                    @input="updateEdgeLabel(($event.target as HTMLInputElement).value)"
+                    @keydown.stop
+                    @input="updateEdgeLabel(edgeLabelDraft)"
                 />
                 <label v-if="selectedEdge.action === 'approve' && editable" class="mt-1 flex items-center gap-2 text-xs">
                     <input type="checkbox" :checked="selectedEdge.routine_validated" @change="toggleEdgeRoutineValidated" />

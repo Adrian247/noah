@@ -39,6 +39,28 @@ class WorkflowBlockCompilerTest extends TestCase
         $this->assertNotEmpty($definition['steps']['field_execution']['assignment_notify']['enabled'] ?? false);
     }
 
+    public function test_transition_labels_preserve_spaces(): void
+    {
+        $graph = WorkflowBlockCompiler::defaultGraph();
+        foreach ($graph['edges'] as $index => $edge) {
+            if (($edge['action'] ?? '') === 'submit') {
+                $graph['edges'][$index]['label'] = 'Enviar a revisión';
+            }
+        }
+
+        $definition = app(WorkflowBlockCompiler::class)->compile($graph);
+
+        $submit = collect($definition['transitions'])->first(
+            fn (array $t) => ($t['trigger'] ?? '') === 'execution_submitted',
+        );
+        $this->assertSame('Enviar a revisión', $submit['label'] ?? '');
+
+        $storedEdge = collect($definition['meta']['block_graph']['edges'] ?? [])->first(
+            fn (array $edge) => ($edge['action'] ?? '') === 'submit',
+        );
+        $this->assertSame('Enviar a revisión', $storedEdge['label'] ?? '');
+    }
+
     public function test_reject_to_non_routine_fails(): void
     {
         $compiler = app(WorkflowBlockCompiler::class);

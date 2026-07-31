@@ -283,7 +283,7 @@ function hydrateEdgeMetaFromTransitions(graph: BlockGraph, transitions: Workflow
         if (!match) {
             continue;
         }
-        if (typeof match.label === 'string' && match.label.trim()) {
+        if (typeof match.label === 'string' && match.label !== '') {
             edge.label = match.label;
         }
         if (match.actions?.includes('routine_validated')) {
