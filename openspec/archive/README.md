@@ -34,3 +34,13 @@ Propuestas cerradas (histórico). El flujo activo está en [../changes/README.md
 | [028-modal-sticky-actions](028-modal-sticky-actions/) | UX/UI | Modales CRUD y acciones ancladas |
 | [029-report-preview-and-editor](029-report-preview-and-editor/) | Diseño | Miniaturas listado, editor enriquecido, PDF |
 | [030-material-field-label-fix](030-material-field-label-fix/) | UX/UI | Etiquetas Material, toasts globales, contraste UI |
+| [031-workflows-design-module](031-workflows-design-module/) | Diseño | Workflows: alta, duplicar, validador, UI diseñador |
+| [032-routine-lifecycle-client-portal](032-routine-lifecycle-client-portal/) | Operación | Workflow v2, portal cliente, correlación auditoría, rutina demo |
+| [033-workflow-templates-custom](033-workflow-templates-custom/) | Diseño | Plantillas workflow, configurar, publicar |
+| [034-rbac-role-plus-grants](034-rbac-role-plus-grants/) | Identidad | Rol + permisos adicionales por usuario (ADR-012) |
+| [035-platform-role-template](035-platform-role-template/) | Plataforma | Plantilla global de permisos por rol |
+| [036-platform-tenant-admin](036-platform-tenant-admin/) | Plataforma | Multi-tenant: root, tenants API, Mein + Dom-G |
+| [036-workflow-block-designer](036-workflow-block-designer/) | Diseño | Diseñador por bloques, compilador, email TipTap |
+| [037-catalog-equipment-supply-types](037-catalog-equipment-supply-types/) | Catálogo | Tipos equipo/insumo, formulario L200, demo seed |
+| [038-onboarding-product-tour](038-onboarding-product-tour/) | UX | Tour producto con spotlight y audio |
+| [039-form-usage-and-field-config](039-form-usage-and-field-config/) | Diseño | `FormUsage`, fichas por tipo, config campos |

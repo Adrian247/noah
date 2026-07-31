@@ -24,4 +24,4 @@
 ## Cierre
 
 - [x] Actualizar `docs/IMPLEMENTATION.md` (breve)
-- [ ] Archivar change al merge
+- [x] Archivar change al merge

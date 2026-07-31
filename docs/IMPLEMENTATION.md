@@ -25,7 +25,11 @@
 | **`phoenix:refresh-demo`** (seed + permisos + credenciales) | Implementado — ver `docs/DEMO_ENV.md` |
 | **RBAC global** (rol + `extra_permissions`; menú derivado; ADR-012) | Implementado — cambio 034 |
 | **Plantilla de roles (plataforma)** | `GET/PUT /platform/role-permissions`, UI Plataforma — cambio 035 |
+| **Tipos de equipo e insumo** (`equipment_types`, `supply_types`, fichas por tipo) | Implementado — cambio 037 |
+| **Formularios por uso** (`FormUsage`: rutina, equipo, insumo) | Implementado — cambio 039 |
+| **Inventario Dom-G** (seed desde Excel promocional/textil) | Implementado — `DomGInventorySpreadsheetSeeder` |
 | **Portal cliente** (`/portal/*`, API `portal/*`, rol `client`) | Implementado v1 |
+| **Multi-tenant plataforma** (`/platform/tenants`, assume) | Implementado — cambio 036-platform-tenant-admin |
 | **Vinculación activo–cliente** por serie | Implementado |
 | **Rutina demo** (`POST /routines/demo`, sin rutina en seed) | Implementado |
 
@@ -51,4 +55,4 @@
 
 ## Cambios archivados
 
-Ver [openspec/archive/README.md](../openspec/archive/README.md) (001–015).
+Ver [openspec/archive/README.md](../openspec/archive/README.md) (001–039).

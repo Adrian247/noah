@@ -8,3 +8,5 @@ Flujo para implementación alineada con `openspec/`:
 4. **Git** — commit (y push) por cambio archivado o por hito coherente.
 
 Los archivos en `archive/` son registro histórico; la spec vigente sigue en `vision/`, `domain/`, `design/`, etc.
+
+**Cambios activos:** ninguno (todos archivados en `openspec/archive/`).

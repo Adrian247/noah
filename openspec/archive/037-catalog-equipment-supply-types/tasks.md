@@ -29,7 +29,7 @@
 
 - [x] `CatalogItemController`: validar `equipment_type_id`, incluir tipo en JSON index/show.
 - [x] `SupplyItemController`: validar `supply_type_id`, incluir tipo en JSON.
-- [ ] Actualizar tests existentes de catálogo/insumos.
+- [x] Actualizar tests existentes de catálogo/insumos.
 
 ## Fase 4 — Frontend
 
@@ -60,6 +60,6 @@
 
 ## Fase 7 — Documentación y cierre
 
-- [ ] Actualizar `openspec/domain/catalogs.md` y glosario.
-- [ ] Actualizar `docs/IMPLEMENTATION.md`.
-- [ ] Marcar tareas y archivar change a `openspec/archive/037-...` al merge.
+- [x] Actualizar `openspec/domain/catalogs.md` y glosario.
+- [x] Actualizar `docs/IMPLEMENTATION.md`.
+- [x] Marcar tareas y archivar change a `openspec/archive/037-...` al merge.

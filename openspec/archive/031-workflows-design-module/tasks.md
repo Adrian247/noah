@@ -32,4 +32,4 @@
 ## Cierre
 
 - [x] Manual rápido en `docs/PRUEBAS_MANUALES.md` (opcional): crear workflow, asignar en tipo de rutina, ejecutar rutina.
-- [ ] Archivar a `openspec/archive/031-workflows-design-module/` al mergear.
+- [x] Archivar a `openspec/archive/031-workflows-design-module/` al mergear.
