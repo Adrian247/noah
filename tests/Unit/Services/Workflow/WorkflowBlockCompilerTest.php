@@ -78,4 +78,18 @@ class WorkflowBlockCompilerTest extends TestCase
         $this->expectException(\Illuminate\Validation\ValidationException::class);
         $compiler->compile($graph);
     }
+
+    public function test_ensure_editor_definition_upgrades_legacy_payload(): void
+    {
+        $compiler = app(WorkflowBlockCompiler::class);
+        $legacy = app(WorkflowBlockCompiler::class)->compile(WorkflowBlockCompiler::defaultGraph());
+        unset($legacy['meta']['block_graph']);
+        $legacy['meta']['block_editor_version'] = 1;
+
+        $upgraded = $compiler->ensureEditorDefinition($legacy);
+
+        $this->assertSame(2, $upgraded['meta']['block_editor_version'] ?? null);
+        $this->assertNotEmpty($upgraded['meta']['block_graph']['nodes'] ?? []);
+        $this->assertTrue($compiler->needsBlockGraphUpgrade($upgraded) === false);
+    }
 }

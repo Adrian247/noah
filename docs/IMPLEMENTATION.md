@@ -51,6 +51,8 @@
 ## Pruebas
 
 - Automatizadas: `docker compose exec app php artisan test`
+- Ciclo rutina / portal / auditoría: `RoutineLifecycleCycleTest`
+- Diseñador workflow bloques: `WorkflowBlockDesignerApiTest`
 - Manuales: [PRUEBAS_MANUALES.md](PRUEBAS_MANUALES.md)
 
 ## Cambios archivados

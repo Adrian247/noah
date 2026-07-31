@@ -174,9 +174,11 @@ curl -s -X POST http://localhost:8888/api/v1/sync \
 
 ## H. Checklist de regresión rápida
 
-- [ ] `docker compose exec app php artisan test` — 38 tests verdes
+- [ ] `docker compose exec app php artisan test` — suite completa verde
 - [ ] Cola `queue` activa — PDF async
 - [ ] Credenciales demo tras BD vacía — auto-seed al levantar `app`
+- [ ] Ciclo rutina 032 (rechazo → reenvío → factura portal/email → auditoría): cubierto por `Tests\Feature\Api\RoutineLifecycleCycleTest`
+- [ ] Diseñador workflow por bloques (migración v1→v2 + compilación): `Tests\Feature\Api\WorkflowBlockDesignerApiTest`
 
 ---
 

@@ -31,6 +31,6 @@
 
 ## Pendiente / mejoras
 
-- [ ] Migración automática al abrir diseñador (parcial: `graphFromDefinition`)
-- [ ] Vista HTML en email (blade) para cuerpo enriquecido
-- [ ] Tests Feature diseño workflow por bloques
+- [x] Migración automática al abrir diseñador (`GET /design/workflows/{id}` + `ensureEditorDefinition`)
+- [x] Vista HTML en email (blade) para cuerpo enriquecido (`mail.workflow-step-html`)
+- [x] Tests Feature diseño workflow por bloques (`WorkflowBlockDesignerApiTest`)

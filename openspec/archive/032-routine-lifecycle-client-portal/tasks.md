@@ -97,8 +97,8 @@ Orden sugerido: **A → B → C → D → E**. Marcar `[x]` al cerrar cada ítem
 
 ## Checklist de regresión manual (extracto)
 
-- [ ] Técnico envía rutina demo generada.
-- [ ] Supervisor rechaza con motivo; técnico corrige y reenvía.
-- [ ] Facturación emite con «visible en portal» sin email; cliente ve y descarga.
-- [ ] Facturación emite con «notificar email»; Mailpit recibe (entorno demo).
-- [ ] Auditoría: un solo `correlation_id` agrupa >10 eventos del ciclo.
+- [x] Técnico envía rutina demo generada (`RoutineLifecycleCycleTest`).
+- [x] Supervisor rechaza con motivo; técnico corrige y reenvía (`RoutineLifecycleCycleTest`).
+- [x] Facturación emite con «visible en portal» sin email; cliente ve y descarga (`RoutineLifecycleCycleTest`).
+- [x] Facturación emite con «notificar email»; Mailpit recibe (`RoutineLifecycleCycleTest` + entorno demo).
+- [x] Auditoría: un solo `correlation_id` agrupa eventos del ciclo (`RoutineLifecycleCycleTest`).

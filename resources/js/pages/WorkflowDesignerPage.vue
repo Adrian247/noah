@@ -10,7 +10,7 @@ import IconActionButton from '@/components/ui/IconActionButton.vue';
 import ReadOnlyNotice from '@/components/ui/ReadOnlyNotice.vue';
 import WorkflowBlockCanvas from '@/components/workflow/WorkflowBlockCanvas.vue';
 import type { WorkflowDefinition } from '@/lib/workflowFlowMapper';
-import { compileBlockGraph, graphFromDefinition, definitionNeedsBlockGraphUpgrade, cloneJson } from '@/lib/workflowBlockModel';
+import { compileBlockGraph, graphFromDefinition, cloneJson } from '@/lib/workflowBlockModel';
 
 type Workflow = {
     id: number;
@@ -45,23 +45,8 @@ async function load() {
         if (!def.layout?.nodes) {
             def.layout = { nodes: {} };
         }
-        const needsUpgrade = definitionNeedsBlockGraphUpgrade(def);
         const graph = graphFromDefinition(def);
-        def = compileBlockGraph(graph, def);
-        definition.value = def;
-
-        if (needsUpgrade && canWrite.value && res.data.status === 'draft') {
-            try {
-                await api(`/design/workflows/${route.params.id}/definition`, {
-                    method: 'PUT',
-                    body: JSON.stringify({ definition: def }),
-                });
-                toast.success('Workflow actualizado al diseño estándar acordado.');
-                workflow.value = (await api<{ data: Workflow }>(`/design/workflows/${route.params.id}`)).data;
-            } catch {
-                /* el usuario puede guardar manualmente */
-            }
-        }
+        definition.value = compileBlockGraph(graph, def);
     } catch (e) {
         toast.error((e as Error).message || 'No se pudo cargar el workflow.');
         definition.value = null;
