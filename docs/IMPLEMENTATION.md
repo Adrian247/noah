@@ -13,7 +13,7 @@
 | **Workflow v3** (plantillas, configuración, borrador/publicado, transiciones editables) | Implementado |
 | **Workflow block designer** (036) | Implementado (bloques + compilador + cliente en borrador) |
 | Evento `RoutineValidated` → PDF (cola) + borrador factura | Implementado |
-| Reportes PDF (DomPDF, job `GenerateRoutineReportJob`) | Implementado v1 async |
+| Reportes PDF (Browsershot/Chromium + fallback DomPDF, job `GenerateRoutineReportJob`) | Implementado — ADR-005 |
 | Ejecución con `responses`, `consumptions`, **evidencias** | Implementado |
 | **Mobile Sync API** (`POST /sync`) | Implementado v1 |
 | Facturación borrador / emitir + **módulo** (config, detalle, `docs/BILLING.md`) | Implementado v1 |

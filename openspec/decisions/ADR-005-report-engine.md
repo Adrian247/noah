@@ -16,3 +16,4 @@ Plantillas como árbol JSON de componentes; render HTML → PDF vía Chromium (B
 
 - Inversión en diseñador visual web.
 - Calidad PDF superior y alineada a CSS.
+- Implementación: `ReportPdfRenderer` (Browsershot) con fallback DomPDF; Chromium en imagen Docker (`PHOENIX_REPORTS_*`).

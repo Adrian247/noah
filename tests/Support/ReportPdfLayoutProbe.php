@@ -2,6 +2,7 @@
 
 namespace Tests\Support;
 
+use App\Services\Reports\ReportPdfRenderer;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 /**
@@ -18,11 +19,14 @@ final class ReportPdfLayoutProbe
 
     public static function fromHtml(string $html, bool $enablePhp = false): self
     {
+        // Probes de layout usan DomPDF para estabilidad en CI sin Chromium.
+        config(['phoenix.reports.pdf_driver' => 'dompdf']);
+        $raw = app(ReportPdfRenderer::class)->htmlToPdf($html);
+        // page count via DomPDF canvas for probes
         $pdf = Pdf::loadHTML($html)->setPaper('a4');
         $dom = $pdf->getDomPDF();
         $dom->set_option('isPhpEnabled', $enablePhp);
         $dom->render();
-        $raw = $pdf->output();
         $pageCount = $dom->getCanvas()->get_page_count();
 
         $tmp = tempnam(sys_get_temp_dir(), 'noah-pdf-');

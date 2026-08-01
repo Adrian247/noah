@@ -6,7 +6,6 @@ use App\Jobs\GenerateRoutineReportJob;
 use App\Models\GeneratedReport;
 use App\Models\Routine;
 use App\Models\RoutineExecution;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -14,6 +13,7 @@ class ReportGenerationService
 {
     public function __construct(
         private ReportHtmlBuilder $htmlBuilder,
+        private ReportPdfRenderer $pdfRenderer,
     ) {}
 
     public function queueForRoutine(Routine $routine, RoutineExecution $execution): GeneratedReport
@@ -56,18 +56,13 @@ class ReportGenerationService
         $templateVersion = $routine->routineType?->reportTemplateVersion;
 
         try {
-            $html = $this->htmlBuilder->build(
+            $document = $this->htmlBuilder->buildPdfDocument(
                 $routine,
                 $execution,
                 $templateVersion?->components ?? [],
                 $templateVersion?->page_settings ?? [],
-                $templateVersion?->id,
+                $templateVersion?->report_template_id,
             );
-
-            $enablePhp = str_contains($html, 'type="text/php"');
-            $pdf = Pdf::loadHTML($html)->setPaper('a4');
-            $pdf->getDomPDF()->set_option('isPhpEnabled', $enablePhp);
-            $pdf->getDomPDF()->set_option('isRemoteEnabled', false);
 
             $path = config('phoenix.reports.path_prefix').'/'.Str::uuid().'.pdf';
             $disk = Storage::disk($report->disk);
@@ -75,7 +70,7 @@ class ReportGenerationService
             if (! $disk->exists($prefix)) {
                 $disk->makeDirectory($prefix);
             }
-            $contents = $pdf->output();
+            $contents = $this->pdfRenderer->renderDocument($document);
             $written = $disk->put($path, $contents);
 
             if ($written === false || ! $disk->exists($path)) {

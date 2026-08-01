@@ -35,6 +35,14 @@ return [
         'disk' => env('PHOENIX_REPORTS_DISK', 'local'),
         'path_prefix' => 'reports',
         'async' => filter_var(env('PHOENIX_REPORTS_ASYNC', true), FILTER_VALIDATE_BOOL),
+        /** auto | browsershot | dompdf — auto usa Chromium si está instalado (ADR-005). */
+        'pdf_driver' => env('PHOENIX_REPORTS_PDF_DRIVER', 'auto'),
+        'pdf_fallback_dompdf' => filter_var(env('PHOENIX_REPORTS_PDF_FALLBACK_DOMPDF', true), FILTER_VALIDATE_BOOL),
+        'chrome_path' => env('PHOENIX_REPORTS_CHROME_PATH', ''),
+        'chrome_no_sandbox' => filter_var(env('PHOENIX_REPORTS_CHROME_NO_SANDBOX', true), FILTER_VALIDATE_BOOL),
+        'node_binary' => env('PHOENIX_REPORTS_NODE_BINARY', ''),
+        'npm_binary' => env('PHOENIX_REPORTS_NPM_BINARY', ''),
+        'browsershot_timeout' => (int) env('PHOENIX_REPORTS_BROWSERSHOT_TIMEOUT', 60),
     ],
     'evidence' => [
         'disk' => env('PHOENIX_EVIDENCE_DISK', 'evidence'),

@@ -37,7 +37,262 @@ class ReportHtmlBuilder
             $reportTemplateId = $version?->report_template_id;
         }
 
-        return $this->renderDocument($routine, $execution, $components, $pageSettings, false, false, $reportTemplateId);
+        return $this->composePdfDocument(
+            $routine,
+            $execution,
+            $components,
+            $pageSettings,
+            $reportTemplateId,
+            'dompdf',
+        )->html;
+    }
+
+    /**
+     * Documento tipado para ReportPdfRenderer (portada separada en Chromium).
+     *
+     * @param  array<int, array<string, mixed>>  $components
+     * @param  array<string, mixed>  $pageSettings
+     */
+    public function buildPdfDocument(
+        Routine $routine,
+        RoutineExecution $execution,
+        array $components,
+        array $pageSettings = [],
+        ?int $reportTemplateId = null,
+    ): ReportPdfDocument {
+        $routine->loadMissing(['routineType.formVersion', 'company', 'asset']);
+
+        return $this->composePdfDocument(
+            $routine,
+            $execution,
+            $components,
+            $pageSettings,
+            $reportTemplateId,
+            app(ReportPdfRenderer::class)->driver(),
+        );
+    }
+
+    /**
+     * HTML listo para inspección / DomPDF (portada + cuerpo ensamblados).
+     *
+     * @param  array<int, array<string, mixed>>  $components
+     * @param  array<string, mixed>  $pageSettings
+     */
+    public function buildPreviewPdfHtml(array $components, array $pageSettings = [], ?int $reportTemplateId = null): string
+    {
+        return $this->buildPreviewPdfDocument($components, $pageSettings, $reportTemplateId, 'dompdf')->html;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $components
+     * @param  array<string, mixed>  $pageSettings
+     */
+    public function buildPreviewPdfDocument(
+        array $components,
+        array $pageSettings = [],
+        ?int $reportTemplateId = null,
+        ?string $engine = null,
+    ): ReportPdfDocument {
+        $sampleResponses = [];
+        if ($reportTemplateId !== null) {
+            $sampleResponses = app(ReportSampleDataFactory::class)->buildForPreview($components, $reportTemplateId);
+        }
+
+        $routine = new Routine([
+            'id' => 0,
+            'company_id' => 0,
+        ]);
+        $company = null;
+
+        if ($reportTemplateId !== null) {
+            $template = ReportTemplate::query()->find($reportTemplateId);
+            if ($template !== null) {
+                $routine->company_id = $template->company_id;
+                $company = Company::query()->find($template->company_id);
+            }
+        }
+
+        if ($company === null) {
+            $company = new Company(['name' => 'Empresa demo']);
+        }
+
+        $routine->setRelation('company', $company);
+        $routine->setRelation('asset', (object) ['tag' => 'DEMO-001']);
+
+        $execution = new RoutineExecution([
+            'responses' => $sampleResponses,
+            'technician_comments' => (string) ($sampleResponses['technician_comments'] ?? 'Texto técnico de muestra.'),
+            'corrected_comments' => (string) ($sampleResponses['corrected_comments'] ?? 'Comentario corregido de ejemplo.'),
+        ]);
+
+        return $this->composePdfDocument(
+            $routine,
+            $execution,
+            $components,
+            $pageSettings,
+            $reportTemplateId,
+            $engine ?? app(ReportPdfRenderer::class)->driver(),
+        );
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $components
+     * @param  array<string, mixed>  $pageSettings
+     */
+    private function composePdfDocument(
+        Routine $routine,
+        RoutineExecution $execution,
+        array $components,
+        array $pageSettings,
+        ?int $reportTemplateId,
+        string $engine,
+    ): ReportPdfDocument {
+        $pageSettings = $this->pageSettingsNormalizer->normalize($pageSettings);
+        $company = $routine->company;
+        $companyForLogo = $company instanceof Company ? $company : null;
+        $asset = $routine->asset;
+        $body = '';
+
+        if ($components === []) {
+            $components = [
+                ['type' => 'title', 'text' => 'Reporte de mantenimiento'],
+                ['type' => 'paragraph', 'field' => 'corrected_comments'],
+            ];
+        }
+
+        $typography = $pageSettings['typography'] ?? [];
+        $bodyPt = (int) ($typography['body_pt'] ?? 11);
+        $titlePt = (int) ($typography['title_pt'] ?? 22);
+        $subtitlePt = (int) ($typography['subtitle_pt'] ?? 16);
+
+        $font = $this->fontFamily($pageSettings['font_family'] ?? 'roboto');
+        $this->documentTheme = is_array($pageSettings['theme'] ?? null) ? $pageSettings['theme'] : null;
+        $routineId = (int) ($routine->id ?? 0);
+        $fieldContext = $this->resolveFieldContext($routine, $reportTemplateId);
+
+        $coverHtmlFragment = $this->coverRenderer->render(
+            $pageSettings['cover_page'] ?? null,
+            $company?->name ?? 'Phoenix',
+            $asset?->tag ?? 'DEMO-001',
+            $routineId,
+            $font,
+            $titlePt,
+            $subtitlePt,
+            $pageSettings,
+            $companyForLogo,
+            $execution,
+        );
+
+        foreach ($components as $component) {
+            $body .= $this->renderComponent($component, $routine, $execution, $company?->name ?? 'Phoenix', $asset?->tag ?? null, $pageSettings, $fieldContext);
+        }
+
+        $coverSettings = is_array($pageSettings['cover_page'] ?? null) ? $pageSettings['cover_page'] : [];
+        $coverEnabled = ! empty($coverSettings['enabled']) && $coverHtmlFragment !== '';
+        $omitHeaderOnCover = $this->coverRenderer->omitsHeaderFooter($coverSettings);
+        $useBrowsershot = $engine === 'browsershot';
+        $useDompdfScriptChrome = ! $useBrowsershot && $this->shouldUsePdfChrome($pageSettings);
+
+        $headerPlain = '';
+        if (! empty($pageSettings['header']['enabled'])) {
+            $headerPlain = $this->plainTextFromTemplate(
+                (string) ($pageSettings['header']['text'] ?? ''),
+                $company?->name ?? 'Phoenix',
+                $routineId,
+                $asset?->tag ?? '',
+            );
+        }
+        $footerPlain = '';
+        if (! empty($pageSettings['footer']['enabled'])) {
+            $footerPlain = $this->plainTextFromTemplate(
+                (string) ($pageSettings['footer']['text'] ?? ''),
+                $company?->name ?? 'Phoenix',
+                $routineId,
+                $asset?->tag ?? '',
+            );
+        }
+        $pageNumber = $pageSettings['page_number'] ?? ['enabled' => false, 'start_at' => 1];
+        $skipCoverPageForChrome = $coverEnabled && $omitHeaderOnCover;
+        $isolatePdfCoverPage = $coverEnabled && $this->coverRenderer->hasThemedCoverBackground($this->documentTheme);
+        $metaLine = 'Phoenix · '.$this->e($company?->name ?? 'Phoenix').' · Rutina #'.$routineId;
+
+        $chrome = [
+            'header' => $headerPlain,
+            'footer' => $footerPlain,
+            'page_numbers' => ! empty($pageNumber['enabled']),
+            'page_number_start_at' => max(1, (int) ($pageNumber['start_at'] ?? 1)),
+            'skip_first_page_chrome' => $skipCoverPageForChrome,
+        ];
+
+        if ($useBrowsershot && $coverEnabled && $omitHeaderOnCover) {
+            $coverDocument = $this->wrapHtmlDocument(
+                $font,
+                $bodyPt,
+                $titlePt,
+                $subtitlePt,
+                '<body class="report-pdf report-pdf--with-cover report-pdf--cover-omit-hf">'.$coverHtmlFragment.'</body>',
+                false,
+                false,
+                $isolatePdfCoverPage,
+            );
+            $bodyInner = $this->assembleProductionBody(
+                '',
+                false,
+                false,
+                '',
+                '',
+                $metaLine,
+                $body,
+                $pageSettings,
+                $pageNumber,
+                false,
+                $company?->name ?? 'Phoenix',
+                $routineId,
+                $asset?->tag ?? '',
+                false,
+            );
+            $bodyDocument = $this->wrapHtmlDocument(
+                $font,
+                $bodyPt,
+                $titlePt,
+                $subtitlePt,
+                $bodyInner,
+                false,
+                false,
+                false,
+            );
+
+            return new ReportPdfDocument($bodyDocument, $coverDocument, $chrome);
+        }
+
+        $fullInner = $this->assembleProductionBody(
+            $coverHtmlFragment,
+            $coverEnabled,
+            $omitHeaderOnCover,
+            '',
+            '',
+            $metaLine,
+            $body,
+            $pageSettings,
+            $pageNumber,
+            $skipCoverPageForChrome,
+            $company?->name ?? 'Phoenix',
+            $routineId,
+            $asset?->tag ?? '',
+            $useDompdfScriptChrome,
+        );
+        $fullHtml = $this->wrapHtmlDocument(
+            $font,
+            $bodyPt,
+            $titlePt,
+            $subtitlePt,
+            $fullInner,
+            false,
+            false,
+            $isolatePdfCoverPage,
+        );
+
+        return new ReportPdfDocument($fullHtml, null, $chrome);
     }
 
     /**
@@ -80,48 +335,6 @@ class ReportHtmlBuilder
         return $this->renderDocument($routine, $execution, $components, $pageSettings, true, $thumbnail, $reportTemplateId);
     }
 
-    /**
-     * HTML listo para DomPDF (misma salida que un informe generado), con datos de ejemplo.
-     *
-     * @param  array<int, array<string, mixed>>  $components
-     * @param  array<string, mixed>  $pageSettings
-     */
-    public function buildPreviewPdfHtml(array $components, array $pageSettings = [], ?int $reportTemplateId = null): string
-    {
-        $sampleResponses = [];
-        if ($reportTemplateId !== null) {
-            $sampleResponses = app(ReportSampleDataFactory::class)->buildForPreview($components, $reportTemplateId);
-        }
-
-        $routine = new Routine([
-            'id' => 0,
-            'company_id' => 0,
-        ]);
-        $company = null;
-
-        if ($reportTemplateId !== null) {
-            $template = ReportTemplate::query()->find($reportTemplateId);
-            if ($template !== null) {
-                $routine->company_id = $template->company_id;
-                $company = Company::query()->find($template->company_id);
-            }
-        }
-
-        if ($company === null) {
-            $company = new Company(['name' => 'Empresa demo']);
-        }
-
-        $routine->setRelation('company', $company);
-        $routine->setRelation('asset', (object) ['tag' => 'DEMO-001']);
-
-        $execution = new RoutineExecution([
-            'responses' => $sampleResponses,
-            'technician_comments' => (string) ($sampleResponses['technician_comments'] ?? 'Texto técnico de muestra.'),
-            'corrected_comments' => (string) ($sampleResponses['corrected_comments'] ?? 'Comentario corregido de ejemplo.'),
-        ]);
-
-        return $this->renderDocument($routine, $execution, $components, $pageSettings, false, false, $reportTemplateId);
-    }
 
     /**
      * @param  array<int, array<string, mixed>>  $components
