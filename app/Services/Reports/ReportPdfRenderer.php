@@ -26,7 +26,6 @@ class ReportPdfRenderer
             return 'dompdf';
         }
 
-        // auto
         return $this->browsershotAvailable() ? 'browsershot' : 'dompdf';
     }
 
@@ -48,7 +47,7 @@ class ReportPdfRenderer
 
     public function htmlToPdf(string $html): string
     {
-        return $this->renderDocument(new ReportPdfDocument($html, null, []));
+        return $this->renderDocument(new ReportPdfDocument($html));
     }
 
     public function renderDocument(ReportPdfDocument $document): string
@@ -71,12 +70,8 @@ class ReportPdfRenderer
 
     private function renderWithDompdf(ReportPdfDocument $document): string
     {
+        // Siempre el HTML completo (incluye portada + cuerpo).
         $html = $document->html;
-        if ($document->hasSeparateCover() && $document->coverHtml !== null) {
-            // DomPDF espera un único documento (portada + cuerpo ya ensamblados en html).
-            $html = $document->html;
-        }
-
         $enablePhp = str_contains($html, 'type="text/php"');
         $pdf = Pdf::loadHTML($html)->setPaper('a4');
         $pdf->getDomPDF()->set_option('isPhpEnabled', $enablePhp);
@@ -87,9 +82,21 @@ class ReportPdfRenderer
 
     private function renderWithBrowsershot(ReportPdfDocument $document): string
     {
-        if ($document->hasSeparateCover() && $document->coverHtml !== null) {
-            $coverPdf = $this->browsershotPdf($document->coverHtml, withChrome: false);
-            $bodyPdf = $this->browsershotPdf($document->html, withChrome: true, document: $document);
+        if ($document->hasSeparateCover()) {
+            $coverPdf = $this->browsershotPdf(
+                (string) $document->coverHtml,
+                withChrome: false,
+                coverSheet: true,
+            );
+            $bodyPdf = $this->browsershotPdf(
+                (string) $document->bodyHtml,
+                withChrome: true,
+                document: $document,
+            );
+
+            // Evitar páginas fantasma de portada (bleed/overflow).
+            $coverPdf = $this->keepFirstPdfPageOnly($coverPdf);
+
             $merger = new Merger;
             $merger->addRaw($coverPdf);
             $merger->addRaw($bodyPdf);
@@ -100,14 +107,24 @@ class ReportPdfRenderer
         return $this->browsershotPdf($document->html, withChrome: true, document: $document);
     }
 
-    private function browsershotPdf(string $html, bool $withChrome, ?ReportPdfDocument $document = null): string
-    {
+    private function browsershotPdf(
+        string $html,
+        bool $withChrome,
+        ?ReportPdfDocument $document = null,
+        bool $coverSheet = false,
+    ): string {
         $shot = Browsershot::html($html)
             ->format('A4')
             ->showBackground()
-            ->margins(18, 14, 22, 14)
             ->timeout((int) config('phoenix.reports.browsershot_timeout', 60))
             ->setOption('args', ['--disable-dev-shm-usage']);
+
+        if ($coverSheet) {
+            // Portada a sangre: sin márgenes de página (el CSS fija 210×297mm).
+            $shot->margins(0, 0, 0, 0);
+        } else {
+            $shot->margins(18, 14, 22, 14);
+        }
 
         if ((bool) config('phoenix.reports.chrome_no_sandbox', true)) {
             $shot->noSandbox();
@@ -128,11 +145,10 @@ class ReportPdfRenderer
             $shot->setNpmBinary($npm);
         }
 
-        if ($withChrome && $document !== null && $this->documentNeedsChrome($document)) {
+        if ($withChrome && ! $coverSheet && $document !== null && $this->documentNeedsChrome($document)) {
             $shot->showBrowserHeaderAndFooter();
             $shot->headerHtml($this->chromeHeaderTemplate($document));
             $shot->footerHtml($this->chromeFooterTemplate($document));
-            // Más margen superior/inferior para no solapar chrome del navegador.
             $shot->margins(22, 14, 24, 14);
         }
 
@@ -142,6 +158,21 @@ class ReportPdfRenderer
         }
 
         return $pdf;
+    }
+
+    /**
+     * Si la portada Chromium genera >1 página por overflow, conserva solo la primera.
+     */
+    private function keepFirstPdfPageOnly(string $pdf): string
+    {
+        try {
+            $merger = new Merger;
+            $merger->addRaw($pdf, [1]);
+
+            return $merger->merge();
+        } catch (Throwable) {
+            return $pdf;
+        }
     }
 
     private function documentNeedsChrome(ReportPdfDocument $document): bool
@@ -171,15 +202,14 @@ class ReportPdfRenderer
             $parts[] = '<span>'.$footer.'</span>';
         }
         if ($document->pageNumbersEnabled()) {
-            // Puppeteer classes: pageNumber / totalPages (no offset nativo; start_at se documenta como 1-based del cuerpo).
             $parts[] = '<span>Página <span class="pageNumber"></span> de <span class="totalPages"></span></span>';
         }
         if ($parts === []) {
             return '<div></div>';
         }
 
-        return '<div style="font-size:9px;width:100%;padding:0 14mm;color:#666;font-family:DejaVu Sans,sans-serif;display:flex;justify-content:space-between;">'
-            .implode('', $parts)
+        return '<div style="font-size:9px;width:100%;padding:0 14mm;color:#666;font-family:DejaVu Sans,sans-serif;">'
+            .implode('&nbsp;&nbsp;', $parts)
             .'</div>';
     }
 

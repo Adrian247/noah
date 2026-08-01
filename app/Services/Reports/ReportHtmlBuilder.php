@@ -230,10 +230,11 @@ class ReportHtmlBuilder
                 $bodyPt,
                 $titlePt,
                 $subtitlePt,
-                '<body class="report-pdf report-pdf--with-cover report-pdf--cover-omit-hf">'.$coverHtmlFragment.'</body>',
+                '<body class="report-pdf report-pdf--cover-sheet-only">'.$coverHtmlFragment.'</body>',
                 false,
                 false,
-                $isolatePdfCoverPage,
+                false,
+                'chromium_cover',
             );
             $bodyInner = $this->assembleProductionBody(
                 '',
@@ -262,7 +263,34 @@ class ReportHtmlBuilder
                 false,
             );
 
-            return new ReportPdfDocument($bodyDocument, $coverDocument, $chrome);
+            $fullInner = $this->assembleProductionBody(
+                $coverHtmlFragment,
+                true,
+                true,
+                '',
+                '',
+                $metaLine,
+                $body,
+                $pageSettings,
+                $pageNumber,
+                true,
+                $company?->name ?? 'Phoenix',
+                $routineId,
+                $asset?->tag ?? '',
+                false,
+            );
+            $fullHtml = $this->wrapHtmlDocument(
+                $font,
+                $bodyPt,
+                $titlePt,
+                $subtitlePt,
+                $fullInner,
+                false,
+                false,
+                $isolatePdfCoverPage,
+            );
+
+            return new ReportPdfDocument($fullHtml, $coverDocument, $bodyDocument, $chrome);
         }
 
         $fullInner = $this->assembleProductionBody(
@@ -292,7 +320,7 @@ class ReportHtmlBuilder
             $isolatePdfCoverPage,
         );
 
-        return new ReportPdfDocument($fullHtml, null, $chrome);
+        return new ReportPdfDocument($fullHtml, null, null, $chrome);
     }
 
     /**
@@ -737,15 +765,75 @@ HTML;
         bool $isPreview,
         bool $thumbnail,
         bool $isolatePdfCoverPage = false,
+        string $layout = 'default',
     ): string {
         $previewCss = $isPreview ? $this->previewStyles($thumbnail) : '';
-        $themedCoverPdfCss = (! $isPreview && $isolatePdfCoverPage)
+        $chromiumCoverCss = (! $isPreview && $layout === 'chromium_cover')
+            ? '
+html, body.report-pdf--cover-sheet-only {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 210mm;
+  height: 297mm;
+  overflow: hidden;
+  background: #fff;
+}
+@page { margin: 0 !important; size: A4 portrait; }
+body.report-pdf--cover-sheet-only .report-cover-page--sheet,
+body.report-pdf--cover-sheet-only .report-cover.report-cover--sheet {
+  position: relative;
+  margin: 0 !important;
+  width: 210mm;
+  height: 297mm;
+  min-height: 297mm;
+  max-height: 297mm;
+  padding: 0;
+  overflow: hidden;
+  page-break-after: avoid !important;
+  page-break-inside: avoid !important;
+  box-sizing: border-box;
+}
+body.report-pdf--cover-sheet-only .report-cover.report-cover--sheet {
+  padding: 28mm 18mm 22mm;
+  box-sizing: border-box;
+}
+body.report-pdf--cover-sheet-only .report-cover-page__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+body.report-pdf--cover-sheet-only .report-cover-page__content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 297mm;
+  text-align: center;
+}
+body.report-pdf--cover-sheet-only .report-cover-layout {
+  width: 100%;
+  height: 297mm;
+  border-collapse: collapse;
+}
+body.report-pdf--cover-sheet-only .report-cover-hero-cell {
+  height: 297mm;
+  text-align: center;
+  vertical-align: middle;
+  padding: 18mm 14mm;
+  box-sizing: border-box;
+}
+'
+            : '';
+        $themedCoverPdfCss = (! $isPreview && $isolatePdfCoverPage && $layout === 'default')
             ? '
 body.report-pdf .report-cover-page--sheet {
   position: relative;
   margin: -18mm -14mm -22mm -14mm;
   width: calc(100% + 28mm);
+  height: 297mm;
   min-height: 297mm;
+  max-height: 297mm;
   padding: 0;
   overflow: hidden;
   page-break-after: always;
@@ -793,7 +881,10 @@ body.report-pdf .report-cover-page--sheet .report-cover-body p {
 }
 '
             : '';
-        $pdfCss = $isPreview ? '' : '
+        $pdfCss = match (true) {
+            $isPreview => '',
+            $layout === 'chromium_cover' => $chromiumCoverCss,
+            default => '
 @page { margin: 18mm 14mm 22mm 14mm; size: A4 portrait; }
 body.report-pdf { margin: 0; padding: 0; font-family: DejaVu Sans, sans-serif; }
 .report-field-line { margin: 0 0 8px; line-height: 1.45; }
@@ -820,7 +911,8 @@ body.report-pdf .report-cover-body div,
 body.report-pdf .report-cover-body span { text-align: center !important; margin: 0.35em 0; }
 body.report-pdf .report-cover-image { display: block; max-width: 120px; max-height: 120px; margin: 0 auto 16px; }
 body.report-pdf .report-pdf-main { margin: 0; padding: 0; }
-'.$themedCoverPdfCss;
+'.$themedCoverPdfCss,
+        };
 
         $previewHeaderCss = $isPreview ? '
 .report-preview .report-header,

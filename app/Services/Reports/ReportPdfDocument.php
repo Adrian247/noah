@@ -4,6 +4,9 @@ namespace App\Services\Reports;
 
 /**
  * Documento PDF listo para renderizar (Chromium o DomPDF).
+ *
+ * - html: siempre el documento completo (fallback DomPDF / inspección).
+ * - coverHtml + bodyHtml: hoja de portada y cuerpo separados (Browsershot).
  */
 final class ReportPdfDocument
 {
@@ -18,13 +21,15 @@ final class ReportPdfDocument
      */
     public function __construct(
         public readonly string $html,
-        public readonly ?string $coverHtml,
+        public readonly ?string $coverHtml = null,
+        public readonly ?string $bodyHtml = null,
         public readonly array $chrome = [],
     ) {}
 
     public function hasSeparateCover(): bool
     {
-        return is_string($this->coverHtml) && $this->coverHtml !== '';
+        return is_string($this->coverHtml) && $this->coverHtml !== ''
+            && is_string($this->bodyHtml) && $this->bodyHtml !== '';
     }
 
     public function headerText(): string
