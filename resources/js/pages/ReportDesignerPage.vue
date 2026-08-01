@@ -1324,6 +1324,13 @@ onUnmounted(() => {
                                 />
                                 <span class="text-portal-heading">Mostrar key técnica junto a la etiqueta</span>
                             </label>
+                            <p
+                                v-if="c.type === 'paragraph'"
+                                class="text-portal-muted text-xs leading-snug"
+                            >
+                                Si está activo, el PDF muestra p. ej. «Luces (luces)». Útil al diseñar/depurar; en
+                                informes finales conviene dejarlo apagado.
+                            </p>
                         </template>
                         <div v-else-if="c.type === 'divider'" class="grid gap-2 md:grid-cols-2">
                             <MaterialSelect
