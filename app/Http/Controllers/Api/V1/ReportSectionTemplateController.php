@@ -6,6 +6,7 @@ use App\Enums\MembershipRole;
 use App\Http\Controllers\Controller;
 use App\Models\ReportSectionTemplate;
 use App\Support\CurrentCompany;
+use App\Support\PlatformAdmin;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -100,6 +101,10 @@ class ReportSectionTemplateController extends Controller
 
     private function authorizeDesigner(Request $request): void
     {
+        if (PlatformAdmin::isPlatformAdmin($request->user())) {
+            return;
+        }
+
         $membership = $request->attributes->get('membership');
         $role = $membership->role;
         $roleValue = $role instanceof MembershipRole ? $role->value : (string) $role;

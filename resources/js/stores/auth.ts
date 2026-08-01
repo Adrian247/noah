@@ -20,6 +20,7 @@ export type CompanyOption = {
     company_is_active?: boolean;
     /** Usuario de facturación activo en esta empresa (para mensajes de solo lectura). */
     billing_contact_email?: string | null;
+    ai_enabled?: boolean;
     permissions?: string[];
     modules?: Record<string, ModuleAccessState>;
 };

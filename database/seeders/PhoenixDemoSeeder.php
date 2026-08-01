@@ -72,6 +72,26 @@ class PhoenixDemoSeeder extends Seeder
             ]
         );
 
+        PromptTemplate::query()->updateOrCreate(
+            ['company_id' => null, 'slug' => 'insights_assistant_v1', 'version' => 1],
+            [
+                'provider' => 'openai',
+                'system_prompt' => 'Eres un asistente operativo de Phoenix. Responde en español, breve y factual. Usa SOLO datos de herramientas. No inventes rutinas, activos, montos ni IDs. Si faltan datos, dilo. Cita IDs presentes en resultados de tools.',
+                'user_template' => '{{question}}',
+                'is_active' => true,
+            ]
+        );
+
+        PromptTemplate::query()->updateOrCreate(
+            ['company_id' => null, 'slug' => 'vision_ocr_v1', 'version' => 1],
+            [
+                'provider' => 'openai',
+                'system_prompt' => 'Extrae texto visible de placa o etiqueta. Solo el texto, sin explicación.',
+                'user_template' => '{{image}}',
+                'is_active' => true,
+            ]
+        );
+
         app(CompanyAuthorizationService::class)->bootstrapAllCompanies();
 
         DemoClientLogoGenerator::writeAssetFile();

@@ -7,7 +7,7 @@
 | Identity, companies, memberships, Sanctum | Implementado |
 | Catálogo, insumos, activos, **proveedores**, **sitios CRUD** | Implementado |
 | Forms / report versions + API diseño | Implementado MVP |
-| AI Gateway + PromptTemplate + AiInvocation | Implementado (local + OpenAI opcional) |
+| AI Gateway v2 + laravel/ai + tools read-only + PromptTemplate + AiInvocation | Implementado (local grounding + Google/OpenAI vía Laravel AI SDK) |
 | Workflow runtime v1 + diseño visual (layout, **alta/duplicar**, validador v1) | Implementado MVP |
 | **Workflow v2** (facturación en grafo, `PendingBilling`, `correlation_id`) | Implementado |
 | **Workflow v3** (plantillas, configuración, borrador/publicado, transiciones editables) | Implementado |
@@ -48,7 +48,7 @@
 | **Portal cliente** (facturas, rutinas, detalle) | Implementado |
 | Detalle rutina: **timeline auditoría** + **evidencias fotográficas** | Implementado |
 | **Integraciones** (webhooks + automatización) | Implementado — `/app/integrations` |
-| **Insights IA** (asistente, OCR, narrativa, costos) | Implementado — `/app/insights` |
+| **Insights IA** (asistente FAB, OCR/narrativa en rutina y activos) | Implementado — sin ruta `/app/insights` dedicada |
 | Dashboard: **widgets configurables** por usuario | Implementado |
 | **Tour de inicio** (spotlight + voz MP3 precargada) | Implementado — ver [ONBOARDING_TOUR.md](ONBOARDING_TOUR.md) |
 

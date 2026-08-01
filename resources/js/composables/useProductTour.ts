@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue';
 import { buildProductTourSteps, PRODUCT_TOUR_STORAGE_KEY } from '@/lib/onboarding/tourSteps';
+import { useAiCapabilities } from '@/composables/useAiCapabilities';
 import { useAuthStore } from '@/stores/auth';
 import { useCompanyStore } from '@/stores/company';
 
@@ -10,12 +11,17 @@ const muted = ref(false);
 export function useProductTour() {
     const company = useCompanyStore();
     const auth = useAuthStore();
+    const { canUseAi } = useAiCapabilities();
 
     const steps = computed(() => {
         const modules = company.current?.modules ?? {};
         const isVisible = (moduleId: string) => modules[moduleId]?.visible ?? false;
 
-        return buildProductTourSteps(isVisible, auth.user?.is_platform_admin ?? false);
+        return buildProductTourSteps(
+            isVisible,
+            auth.user?.is_platform_admin ?? false,
+            canUseAi.value,
+        );
     });
 
     const currentStep = computed(() => steps.value[stepIndex.value] ?? null);

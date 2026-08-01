@@ -51,5 +51,30 @@ class ReportPresetApplierTest extends TestCase
         $this->assertTrue(
             collect($components)->contains(fn (array $c) => $c['type'] === 'image' && ($c['field'] ?? '') === 'foto_lateral'),
         );
+        $this->assertTrue(
+            collect($components)->contains(
+                fn (array $c) => $c['type'] === 'paragraph'
+                    && ($c['field'] ?? '') === 'placa'
+                    && ($c['show_field_key'] ?? null) === false,
+            ),
+        );
+    }
+
+    public function test_theme_only_build_does_not_require_form(): void
+    {
+        $applier = new ReportPresetApplier;
+        $built = $applier->build('phoenix_industrial', 1, null, 'theme_only');
+
+        $this->assertSame([], $built['components']);
+        $this->assertSame('phoenix_industrial', $built['page_settings']['theme']['preset_id'] ?? null);
+        $this->assertStringNotContainsString('{{page}}', (string) ($built['page_settings']['footer']['text'] ?? ''));
+    }
+
+    public function test_catalog_footer_never_contains_page_placeholder(): void
+    {
+        foreach (ReportDesignPresetCatalog::all() as $preset) {
+            $footer = (string) ($preset['page_settings']['footer']['text'] ?? '');
+            $this->assertStringNotContainsString('{{page}}', $footer, $preset['id']);
+        }
     }
 }

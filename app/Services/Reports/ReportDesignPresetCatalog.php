@@ -116,7 +116,7 @@ final class ReportDesignPresetCatalog
                     ],
                 ],
                 'header' => ['enabled' => true, 'text' => '{{company}} | Informe técnico #{{routine_id}}'],
-                'footer' => ['enabled' => true, 'text' => '{{company}} · Página {{page}}'],
+                'footer' => ['enabled' => true, 'text' => '{{company}} · Informe técnico'],
                 'page_number' => ['enabled' => true, 'start_at' => 2],
                 'cover_page' => [
                     'enabled' => true,

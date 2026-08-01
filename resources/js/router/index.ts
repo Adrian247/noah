@@ -235,9 +235,7 @@ const router = createRouter({
                 },
                 {
                     path: 'insights',
-                    name: 'insights',
-                    component: () => import('@/pages/InsightsPage.vue'),
-                    meta: { title: 'Insights IA', moduleId: 'insights' },
+                    redirect: { name: 'dashboard' },
                 },
                 {
                     path: 'admin/users',
@@ -256,6 +254,10 @@ const router = createRouter({
                     name: 'platform-role-permissions',
                     component: () => import('@/pages/PlatformRolePermissionsPage.vue'),
                     meta: { title: 'Roles de plataforma', requiresPlatformAdmin: true },
+                },
+                {
+                    path: 'platform/ai-settings',
+                    redirect: { name: 'settings', hash: '#ia' },
                 },
                 {
                     path: 'admin/portal',

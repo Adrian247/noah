@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue';
 import { RouterLink, RouterView, useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useCompanyStore } from '@/stores/company';
 import { useSidebarCollapsed } from '@/composables/useSidebarCollapsed';
-import { usePermissions } from '@/composables/usePermissions';
 import { useModuleAccess } from '@/composables/useModuleAccess';
 import UserAvatar from '@/components/ui/UserAvatar.vue';
 import NavIcon, { type NavIconName } from '@/components/ui/NavIcon.vue';
@@ -12,6 +11,8 @@ import PhoenixBrand from '@/components/ui/PhoenixBrand.vue';
 import AppAtmosphere from '@/components/AppAtmosphere.vue';
 import PortalLightFrost from '@/components/PortalLightFrost.vue';
 import ProductTour from '@/components/onboarding/ProductTour.vue';
+import PhoenixAssistantPanel from '@/components/assistant/PhoenixAssistantPanel.vue';
+import { useAiCapabilities } from '@/composables/useAiCapabilities';
 import { useTheme } from '@/composables/useTheme';
 import SidebarNavTooltip from '@/components/layout/SidebarNavTooltip.vue';
 import { placeFloatingPanel } from '@/lib/floatingUi';
@@ -27,7 +28,6 @@ type NavItem = {
     tourAnchor?: string;
 };
 
-const { can } = usePermissions();
 const { isVisible, canWriteModule } = useModuleAccess();
 const auth = useAuthStore();
 const company = useCompanyStore();
@@ -49,6 +49,13 @@ const sessionMenuStyle = ref<{ top: string; left: string }>({
 
 const { isDark } = useTheme();
 const companyName = computed(() => company.current?.name ?? 'Empresa');
+const assistantOpen = ref(false);
+const { canUseAi } = useAiCapabilities();
+const showAssistant = canUseAi;
+
+provide('openPhoenixAssistant', () => {
+    assistantOpen.value = true;
+});
 
 function filterNavItems(items: NavItem[]): NavItem[] {
     return items.filter((item) => {
@@ -107,23 +114,18 @@ const navGroups = computed(() => {
             label: 'Plataforma avanzada',
             items: filterNavItems([
                 {
-                    to: '/app/insights',
-                    label: 'Insights IA',
-                    icon: 'chart-bar',
-                    moduleId: 'insights',
-                },
-                {
                     to: '/app/integrations',
                     label: 'Integraciones',
                     icon: 'workflow',
                     moduleId: 'integrations',
+                    tourAnchor: 'nav-integrations',
                 },
             ]),
         },
         {
             label: 'Administración',
             items: filterNavItems([
-                { to: '/app/settings', label: 'Configuración', icon: 'cog' },
+                { to: '/app/settings', label: 'Configuración', icon: 'cog', tourAnchor: 'nav-settings' },
                 { to: '/app/audit', label: 'Auditoría', icon: 'shield', moduleId: 'audit', tourAnchor: 'nav-audit' },
                 {
                     to: '/app/admin/users',
@@ -497,5 +499,18 @@ async function onAvatarSelected(event: Event) {
                 </RouterView>
             </main>
         </div>
+        <PhoenixAssistantPanel v-if="showAssistant" :open="assistantOpen" @close="assistantOpen = false" />
+        <button
+            v-if="showAssistant"
+            type="button"
+            class="phoenix-assistant-fab"
+            data-tour="assistant-fab"
+            aria-label="Abrir asistente Phoenix"
+            :aria-expanded="assistantOpen"
+            @click="assistantOpen = !assistantOpen"
+        >
+            <span class="phoenix-assistant-fab__icon" aria-hidden="true">✦</span>
+            <span class="phoenix-assistant-fab__label">Asistente</span>
+        </button>
     </div>
 </template>

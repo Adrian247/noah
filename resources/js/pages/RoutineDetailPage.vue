@@ -11,6 +11,8 @@ import { usePermissions } from '@/composables/usePermissions';
 import AppButton from '@/components/ui/AppButton.vue';
 import IconActionButton from '@/components/ui/IconActionButton.vue';
 import { auditActionLabel } from '@/lib/auditLabels';
+import RoutineAiAssistCard from '@/components/insights/RoutineAiAssistCard.vue';
+import { useAiCapabilities } from '@/composables/useAiCapabilities';
 
 type FormVersion = {
     id: number;
@@ -65,7 +67,8 @@ type WorkflowAction = {
 type Routine = {
     id: number;
     status: string;
-    asset?: { tag: string };
+    asset_id?: number;
+    asset?: { id?: number; tag: string };
     routine_type?: { name: string; form_version?: FormVersion | null };
     latest_execution?: Execution;
     generated_reports?: { id: number; status: string; error_message?: string | null }[];
@@ -97,6 +100,7 @@ const toast = useToast();
 const confirm = useConfirm();
 const companyStore = useCompanyStore();
 const { can } = usePermissions();
+const { canUseAi } = useAiCapabilities();
 const routine = ref<Routine | null>(null);
 const auditEntries = ref<AuditEntry[]>([]);
 const auditLoading = ref(false);
@@ -537,6 +541,8 @@ async function deleteRoutine() {
                 @click="deleteRoutine"
             />
         </div>
+
+        <RoutineAiAssistCard v-if="canUseAi" :routine-id="routine.id" />
 
         <ul
             v-if="routine.workflow_instance?.transitions?.length"

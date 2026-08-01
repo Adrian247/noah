@@ -1,25 +1,31 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { RouterLink } from 'vue-router';
+import { computed, nextTick, onMounted, watch } from 'vue';
+import { RouterLink, useRoute } from 'vue-router';
 import { useTheme, type AppTheme } from '@/composables/useTheme';
 import { usePermissions } from '@/composables/usePermissions';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { useAuthStore } from '@/stores/auth';
 import { useCompanyStore } from '@/stores/company';
 import GlassCard from '@/components/ui/GlassCard.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import BillingSettingsForm from '@/components/settings/BillingSettingsForm.vue';
 import MobileSecuritySettingsForm from '@/components/settings/MobileSecuritySettingsForm.vue';
+import CompanyAiSettingsForm from '@/components/settings/CompanyAiSettingsForm.vue';
+import PlatformAiSettingsForm from '@/components/settings/PlatformAiSettingsForm.vue';
 import NotificationSettingsForm from '@/components/settings/NotificationSettingsForm.vue';
 
+const route = useRoute();
 const { theme, setTheme } = useTheme();
 const { can } = usePermissions();
 const { canWriteModule } = useModuleAccess();
+const auth = useAuthStore();
 const company = useCompanyStore();
 
 const canBillingSettings = computed(
     () => canWriteModule('billing') || can('billing.settings'),
 );
 const isAdmin = computed(() => company.current?.role === 'administrator');
+const isPlatformAdmin = computed(() => Boolean(auth.user?.is_platform_admin));
 
 const themeOptions: { id: AppTheme; title: string; description: string }[] = [
     {
@@ -37,13 +43,30 @@ const themeOptions: { id: AppTheme; title: string; description: string }[] = [
 function selectTheme(next: AppTheme) {
     setTheme(next);
 }
+
+function scrollToHash(hash?: string | null) {
+    const id = (hash ?? route.hash).replace(/^#/, '');
+    if (!id) {
+        return;
+    }
+    nextTick(() => {
+        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+}
+
+onMounted(() => scrollToHash());
+
+watch(
+    () => [route.hash, canBillingSettings.value, isPlatformAdmin.value, isAdmin.value] as const,
+    () => scrollToHash(),
+);
 </script>
 
 <template>
     <div class="max-w-2xl space-y-8">
         <PageHeader
             title="Configuración"
-            subtitle="Tema, notificaciones, facturación, app móvil y contenido del portal de acceso."
+            subtitle="Tema, notificaciones, facturación, asistente IA, app móvil y portal de acceso."
         />
 
         <section id="apariencia">
@@ -89,6 +112,27 @@ function selectTheme(next: AppTheme) {
                     Parámetros de borradores (mano de obra, IVA) y timbrado fiscal PAC al emitir.
                 </p>
                 <BillingSettingsForm />
+            </GlassCard>
+        </section>
+
+        <section v-if="isPlatformAdmin || isAdmin" id="ia">
+            <GlassCard padding="lg" class="space-y-6">
+                <div>
+                    <h2 class="text-portal-heading text-base font-semibold">Asistente IA</h2>
+                    <p class="text-portal-muted mt-1 text-sm">
+                        Proveedor y modelos a nivel plataforma, y habilitación por empresa.
+                    </p>
+                </div>
+
+                <div v-if="isPlatformAdmin" class="space-y-3 border-b border-[var(--portal-edge-label-border)] pb-6">
+                    <h3 class="text-portal-heading text-sm font-semibold">Proveedor y modelos</h3>
+                    <PlatformAiSettingsForm />
+                </div>
+
+                <div v-if="isAdmin" class="space-y-3">
+                    <h3 class="text-portal-heading text-sm font-semibold">Política de la empresa</h3>
+                    <CompanyAiSettingsForm />
+                </div>
             </GlassCard>
         </section>
 

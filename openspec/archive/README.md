@@ -47,3 +47,6 @@ Propuestas cerradas (histórico). El flujo activo está en [../changes/README.md
 | [040-phase-4-platform](040-phase-4-platform/) | Plataforma | Webhooks, automatización, insights IA, dashboard prefs |
 | [041-integrations-insights-polish](041-integrations-insights-polish/) | Plataforma / UX | Webhook JSON único, perf UI login/claro |
 | [042-roadmap-pending-completion](042-roadmap-pending-completion/) | Roadmap | PAC fiscal, RAG insights, rule engine visual, probar webhook |
+| [043-ai-gateway-tool-registry](043-ai-gateway-tool-registry/) | IA | Gateway v2: adapters, tool registry read-only, grounding Insights |
+| [044-laravel-ai-sdk-gateway](044-laravel-ai-sdk-gateway/) | IA | `laravel/ai` como motor bajo Gateway + tools Phoenix RBAC |
+| [045-assistant-v3-history-kpis](045-assistant-v3-history-kpis/) | IA | Historial chat, tools módulos, dashboard KPIs, UI tema claro |

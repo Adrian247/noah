@@ -17,6 +17,7 @@ type TourStepDef = {
     id: string;
     moduleId?: string;
     requiresPlatformAdmin?: boolean;
+    requiresAi?: boolean;
     route?: string;
     target?: string;
     padding?: number;
@@ -38,8 +39,8 @@ function materialize(def: TourStepDef): TourStep {
         route: def.route,
         target: def.target,
         padding: def.padding ?? 8,
-        audioUrl: `/audio/onboarding/${def.id}.mp3`,
-        audioUrlAlt: `/audio/onboarding/${def.id}.m4a`,
+        audioUrl: `/audio/onboarding/${def.id}.m4a`,
+        audioUrlAlt: `/audio/onboarding/${def.id}.mp3`,
         spotlight: def.spotlight,
     };
 }
@@ -154,6 +155,29 @@ export const TOUR_STEP_DEFS: TourStepDef[] = [
         spotlight: 'nav',
     },
     {
+        id: '32-integrations',
+        moduleId: 'integrations',
+        route: '/app/dashboard',
+        target: '[data-tour="nav-integrations"]',
+        padding: 6,
+        spotlight: 'nav',
+    },
+    {
+        id: '33-settings',
+        route: '/app/dashboard',
+        target: '[data-tour="nav-settings"]',
+        padding: 6,
+        spotlight: 'nav',
+    },
+    {
+        id: '34-assistant',
+        requiresAi: true,
+        route: '/app/dashboard',
+        target: '[data-tour="assistant-fab"]',
+        padding: 10,
+        spotlight: 'panel',
+    },
+    {
         id: '40-audit',
         moduleId: 'audit',
         route: '/app/dashboard',
@@ -191,9 +215,13 @@ export const TOUR_STEP_DEFS: TourStepDef[] = [
 export function buildProductTourSteps(
     isModuleVisible: (moduleId: string) => boolean,
     isPlatformAdmin: boolean,
+    canUseAi = false,
 ): TourStep[] {
     return TOUR_STEP_DEFS.filter((def) => {
         if (def.requiresPlatformAdmin && !isPlatformAdmin) {
+            return false;
+        }
+        if (def.requiresAi && !canUseAi) {
             return false;
         }
         if (def.moduleId && !isModuleVisible(def.moduleId)) {
@@ -204,6 +232,6 @@ export function buildProductTourSteps(
 }
 
 /** @deprecated usar buildProductTourSteps; se mantiene para tests estáticos. */
-export const productTourSteps = buildProductTourSteps(() => true, true);
+export const productTourSteps = buildProductTourSteps(() => true, true, true);
 
-export const PRODUCT_TOUR_STORAGE_KEY = 'phoenix_product_tour_v3_completed';
+export const PRODUCT_TOUR_STORAGE_KEY = 'phoenix_product_tour_v5_completed';

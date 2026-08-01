@@ -12,8 +12,10 @@ use App\Models\RoutineType;
 use App\Services\Audit\AuditLogger;
 use App\Services\Forms\FormFieldCatalog;
 use App\Services\Reports\FormReportFieldAlignment;
+use App\Services\Reports\ReportComponentValidator;
 use App\Services\Reports\ReportDesignPresetCatalog;
 use App\Services\Reports\ReportHtmlBuilder;
+use App\Services\Reports\ReportPageSettingsNormalizer;
 use App\Services\Reports\ReportPresetApplier;
 use App\Services\Reports\ReportTemplateGuard;
 use App\Enums\FormUsage;
@@ -195,7 +197,7 @@ class ReportTemplateController extends Controller
 
         return response($pdf->output(), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Content-Disposition' => 'inline; filename="'.$filename.'"',
         ]);
     }
 
@@ -261,6 +263,7 @@ class ReportTemplateController extends Controller
         $data = $request->validate([
             'preset_id' => ['required', 'string', 'max:64'],
             'form_slug' => ['nullable', 'string', 'max:128'],
+            'mode' => ['sometimes', 'string', 'in:full,theme_only'],
         ]);
 
         $draft = $applier->applyToDraft(
@@ -268,11 +271,13 @@ class ReportTemplateController extends Controller
             $data['preset_id'],
             (int) $request->user()->id,
             $data['form_slug'] ?? null,
+            $data['mode'] ?? 'full',
         );
 
         $audit->fromRequest($request, 'report.preset_applied', ReportTemplate::class, $reportTemplate->id, [
             'preset_id' => $data['preset_id'],
             'form_slug' => $data['form_slug'] ?? null,
+            'mode' => $data['mode'] ?? 'full',
         ]);
 
         return response()->json(['data' => $draft]);
@@ -296,14 +301,24 @@ class ReportTemplateController extends Controller
             ->all();
     }
 
-    public function updateComponents(Request $request, ReportTemplate $reportTemplate, AuditLogger $audit): JsonResponse
-    {
+    public function updateComponents(
+        Request $request,
+        ReportTemplate $reportTemplate,
+        AuditLogger $audit,
+        ReportComponentValidator $validator,
+        ReportPageSettingsNormalizer $pageSettingsNormalizer,
+    ): JsonResponse {
         $this->authorizeDesigner($request);
 
         $data = $request->validate([
             'components' => ['required', 'array'],
             'page_settings' => ['nullable', 'array'],
         ]);
+
+        $components = $validator->validate($data['components']);
+        $pageSettings = array_key_exists('page_settings', $data)
+            ? $pageSettingsNormalizer->normalize($data['page_settings'] ?? [])
+            : null;
 
         $draft = $reportTemplate->versions()->where('status', 'draft')->orderByDesc('version')->first();
 
@@ -313,14 +328,16 @@ class ReportTemplateController extends Controller
                 'report_template_id' => $reportTemplate->id,
                 'version' => $next,
                 'status' => 'draft',
-                'components' => $data['components'],
-                'page_settings' => $data['page_settings'] ?? ['size' => 'A4'],
+                'components' => $components,
+                'page_settings' => $pageSettings ?? $pageSettingsNormalizer->normalize(['size' => 'A4']),
                 'created_by' => $request->user()->id,
             ]);
         } else {
             $draft->update([
-                'components' => $data['components'],
-                'page_settings' => $data['page_settings'] ?? $draft->page_settings,
+                'components' => $components,
+                'page_settings' => $pageSettings ?? $pageSettingsNormalizer->normalize(
+                    is_array($draft->page_settings) ? $draft->page_settings : ['size' => 'A4'],
+                ),
             ]);
         }
 
@@ -329,7 +346,7 @@ class ReportTemplateController extends Controller
         return response()->json(['data' => $draft->fresh()]);
     }
 
-    public function uploadCoverImage(Request $request, ReportTemplate $reportTemplate, AuditLogger $audit): JsonResponse
+    public function uploadCoverImage(Request $request, ReportTemplate $reportTemplate, AuditLogger $audit, ReportPageSettingsNormalizer $pageSettingsNormalizer): JsonResponse
     {
         $this->authorizeDesigner($request);
 
@@ -339,7 +356,7 @@ class ReportTemplateController extends Controller
 
         $draft = $this->ensureDraft($reportTemplate, $request);
 
-        $pageSettings = $draft->page_settings ?? [];
+        $pageSettings = is_array($draft->page_settings) ? $draft->page_settings : [];
         $cover = is_array($pageSettings['cover_page'] ?? null) ? $pageSettings['cover_page'] : [];
         $oldPath = (string) ($cover['image_path'] ?? '');
         if ($oldPath !== '' && Storage::disk('public')->exists($oldPath)) {
@@ -350,8 +367,10 @@ class ReportTemplateController extends Controller
         $cover['image_path'] = $path;
         $cover['logo_source'] = 'custom';
         $cover['use_client_logo'] = false;
+        $cover['enabled'] = $cover['enabled'] ?? true;
         unset($cover['client_id']);
         $pageSettings['cover_page'] = $cover;
+        $pageSettings = $pageSettingsNormalizer->normalize($pageSettings);
         $draft->update(['page_settings' => $pageSettings]);
 
         $audit->fromRequest($request, 'report.cover_image_updated', ReportTemplate::class, $reportTemplate->id);
@@ -431,7 +450,24 @@ class ReportTemplateController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
-        return response()->json(['data' => $draft->fresh()]);
+        $versionIds = $reportTemplate->versions()->pluck('id');
+        $staleTypes = RoutineType::query()
+            ->where('company_id', $reportTemplate->company_id)
+            ->whereIn('report_template_version_id', $versionIds)
+            ->where('report_template_version_id', '!=', $draft->id)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return response()->json([
+            'data' => $draft->fresh(),
+            'meta' => [
+                'published_version' => $draft->version,
+                'routine_types_pending_relink' => $staleTypes->map(fn (RoutineType $t) => [
+                    'id' => $t->id,
+                    'name' => $t->name,
+                ])->values()->all(),
+            ],
+        ]);
     }
 
     private function authorizeDesigner(Request $request): void

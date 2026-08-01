@@ -76,6 +76,12 @@
 }
 
 @layer components {
+    .phoenix-checkbox {
+        border: 1px solid var(--portal-edge-label-border);
+        background-color: var(--portal-edge-label-bg);
+        accent-color: #f59e0b;
+    }
+
     .app-portal-shell {
         @apply relative h-dvh max-h-dvh overflow-hidden text-slate-100;
         --app-sidebar-width: 16rem;
@@ -5014,4 +5020,350 @@
 .client-portal-timeline__body {
     @apply min-w-0 flex-1;
 }
+
+/* Asistente Phoenix (panel global) — tokens --portal-* (oscuro y claro) */
+.phoenix-assistant-fab {
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    z-index: 60;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    padding: 0.65rem 1rem;
+    border: 1px solid rgb(245 158 11 / 0.55);
+    background: linear-gradient(135deg, rgb(245 158 11 / 0.95), rgb(217 119 6 / 0.95));
+    color: #1c1917;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    box-shadow: 0 10px 28px rgb(15 23 42 / 0.22);
+}
+
+.phoenix-assistant-fab:hover {
+    filter: brightness(1.05);
+}
+
+.phoenix-assistant-fab__icon {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.phoenix-assistant-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    background: rgb(15 23 42 / 0.4);
+}
+
+[data-theme='light'] .phoenix-assistant-backdrop {
+    background: rgb(15 23 42 / 0.28);
+}
+
+.phoenix-assistant-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 80;
+    display: flex;
+    flex-direction: column;
+    width: min(26rem, 100vw);
+    height: 100dvh;
+    border-left: 1px solid var(--portal-edge-label-border);
+    background: var(--portal-edge-label-bg);
+    color: var(--portal-heading);
+    box-shadow: -12px 0 40px rgb(15 23 42 / 0.18);
+}
+
+[data-theme='light'] .phoenix-assistant-panel {
+    background: #ffffff;
+    box-shadow: -12px 0 36px rgb(15 23 42 / 0.12);
+}
+
+.phoenix-assistant-panel__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 1rem 1rem 0.5rem;
+    border-bottom: 1px solid var(--portal-edge-label-border);
+}
+
+.phoenix-assistant-panel__title {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 650;
+    color: var(--portal-heading);
+}
+
+.phoenix-assistant-panel__subtitle {
+    margin: 0.15rem 0 0;
+    font-size: 0.6875rem;
+    color: var(--portal-muted);
+}
+
+.phoenix-assistant-panel__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.phoenix-assistant-panel__ghost {
+    border-radius: 0.5rem;
+    padding: 0.35rem 0.55rem;
+    font-size: 0.6875rem;
+    color: var(--portal-muted);
+    border: 1px solid var(--portal-edge-label-border);
+}
+
+.phoenix-assistant-panel__ghost:hover {
+    color: var(--portal-heading);
+    border-color: rgb(245 158 11 / 0.45);
+}
+
+.phoenix-assistant-panel__close {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.5rem;
+    color: var(--portal-muted);
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.phoenix-assistant-panel__close:hover {
+    background: var(--portal-canvas-bg);
+    color: var(--portal-heading);
+}
+
+.phoenix-assistant-panel__context {
+    margin: 0;
+    padding: 0.55rem 1rem;
+    font-size: 0.6875rem;
+    color: var(--portal-muted);
+    background: var(--portal-canvas-bg);
+    border-bottom: 1px solid var(--portal-edge-label-border);
+}
+
+.phoenix-assistant-panel__messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    background: var(--portal-canvas-bg);
+}
+
+.phoenix-assistant-msg {
+    border-radius: 0.85rem;
+    padding: 0.7rem 0.8rem;
+    color: var(--portal-heading);
+}
+
+.phoenix-assistant-msg__text {
+    margin: 0;
+    white-space: pre-wrap;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: var(--portal-heading);
+}
+
+.phoenix-assistant-msg__meta,
+.phoenix-assistant-panel__loading {
+    margin: 0.4rem 0 0;
+    font-size: 0.625rem;
+    color: var(--portal-muted);
+}
+
+.phoenix-assistant-msg__sources {
+    margin: 0.35rem 0 0;
+    padding-left: 1rem;
+    font-size: 0.625rem;
+    color: var(--portal-muted);
+    list-style: disc;
+}
+
+.phoenix-assistant-msg--user {
+    align-self: flex-end;
+    max-width: 92%;
+    background: rgb(245 158 11 / 0.18);
+    border: 1px solid rgb(245 158 11 / 0.35);
+}
+
+[data-theme='light'] .phoenix-assistant-msg--user {
+    background: rgb(245 158 11 / 0.14);
+    border-color: rgb(180 83 9 / 0.28);
+}
+
+.phoenix-assistant-msg--assistant {
+    align-self: flex-start;
+    max-width: 100%;
+    background: var(--portal-edge-label-bg);
+    border: 1px solid var(--portal-edge-label-border);
+}
+
+[data-theme='light'] .phoenix-assistant-msg--assistant {
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+}
+
+.phoenix-assistant-dashboard {
+    margin-top: 0.65rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--portal-edge-label-border);
+    background: var(--portal-canvas-bg);
+    padding: 0.65rem;
+}
+
+.phoenix-assistant-dashboard__title {
+    margin: 0 0 0.55rem;
+    font-size: 0.75rem;
+    font-weight: 650;
+    color: var(--portal-heading);
+}
+
+.phoenix-assistant-dashboard__grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 0.45rem;
+}
+
+.phoenix-assistant-kpi {
+    grid-column: span 4;
+    border-radius: 0.65rem;
+    border: 1px solid var(--portal-edge-label-border);
+    background: var(--portal-edge-label-bg);
+    padding: 0.55rem 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+[data-theme='light'] .phoenix-assistant-kpi {
+    background: #ffffff;
+}
+
+.phoenix-assistant-kpi--hero {
+    border-color: rgb(245 158 11 / 0.45);
+    background: rgb(245 158 11 / 0.1);
+}
+
+.phoenix-assistant-kpi--compact {
+    grid-column: auto;
+    min-width: 0;
+}
+
+.phoenix-assistant-kpi__label {
+    font-size: 0.625rem;
+    color: var(--portal-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.phoenix-assistant-kpi__value {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--portal-heading);
+    line-height: 1.2;
+}
+
+.phoenix-assistant-kpi-grid {
+    grid-column: span 12;
+}
+
+.phoenix-assistant-kpi-grid__title {
+    margin: 0 0 0.4rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--portal-muted);
+}
+
+.phoenix-assistant-kpi-grid__items {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+}
+
+.phoenix-assistant-table-wrap {
+    grid-column: span 12;
+    overflow-x: auto;
+}
+
+.phoenix-assistant-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.6875rem;
+}
+
+.phoenix-assistant-table th,
+.phoenix-assistant-table td {
+    border: 1px solid var(--portal-edge-label-border);
+    padding: 0.35rem 0.45rem;
+    text-align: left;
+    color: var(--portal-heading);
+}
+
+.phoenix-assistant-table th {
+    background: var(--portal-canvas-bg);
+    color: var(--portal-muted);
+    font-weight: 600;
+}
+
+.phoenix-assistant-panel__suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    padding: 0.35rem 1rem 0.65rem;
+    background: var(--portal-canvas-bg);
+}
+
+.phoenix-assistant-suggestion {
+    border-radius: 9999px;
+    border: 1px solid var(--portal-edge-label-border);
+    background: var(--portal-edge-label-bg);
+    padding: 0.3rem 0.7rem;
+    font-size: 0.6875rem;
+    color: var(--portal-heading);
+}
+
+[data-theme='light'] .phoenix-assistant-suggestion {
+    background: #ffffff;
+}
+
+.phoenix-assistant-suggestion:hover {
+    border-color: rgb(245 158 11 / 0.5);
+    color: var(--portal-link);
+}
+
+.phoenix-assistant-panel__footer {
+    padding: 0.75rem 1rem 1rem;
+    border-top: 1px solid var(--portal-edge-label-border);
+    background: var(--portal-edge-label-bg);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+[data-theme='light'] .phoenix-assistant-panel__footer {
+    background: #ffffff;
+}
+
+.phoenix-assistant-backdrop-enter-active,
+.phoenix-assistant-backdrop-leave-active,
+.phoenix-assistant-panel-enter-active,
+.phoenix-assistant-panel-leave-active {
+    transition: opacity 0.2s ease, transform 0.22s ease;
+}
+
+.phoenix-assistant-backdrop-enter-from,
+.phoenix-assistant-backdrop-leave-to {
+    opacity: 0;
+}
+
+.phoenix-assistant-panel-enter-from,
+.phoenix-assistant-panel-leave-to {
+    opacity: 0;
+    transform: translateX(1rem);
+}
+
 

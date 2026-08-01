@@ -30,6 +30,40 @@ class ReportHtmlBuilderProductionTest extends TestCase
         return $routine;
     }
 
+    public function test_cover_contract_forces_omit_header_footer_in_production_html(): void
+    {
+        $this->seed();
+
+        $routine = $this->routineWithExecution();
+        $execution = $routine->latestExecution;
+
+        $html = app(ReportHtmlBuilder::class)->build(
+            $routine,
+            $execution,
+            [['type' => 'title', 'text' => 'Cuerpo']],
+            [
+                'cover_page' => [
+                    'enabled' => true,
+                    'title' => 'Portada contract',
+                    'omit_header_footer' => false,
+                ],
+                'header' => ['enabled' => true, 'text' => 'HDR_CONTRACT'],
+                'footer' => ['enabled' => true, 'text' => 'FTR_CONTRACT'],
+            ],
+        );
+
+        $coverPos = strpos($html, 'report-cover');
+        $mainPos = strpos($html, 'class="report-pdf-main');
+        $this->assertNotFalse($coverPos);
+        $this->assertNotFalse($mainPos);
+        $coverSection = substr($html, $coverPos, $mainPos - $coverPos);
+        $this->assertStringNotContainsString('HDR_CONTRACT', $coverSection);
+        $this->assertTrue(
+            str_contains($html, 'skipFirstPage') || str_contains($html, 'report-pdf--cover-omit-hf'),
+            'Portada debe activar omit de chrome en hoja 1.',
+        );
+    }
+
     public function test_production_html_puts_cover_before_main_and_omits_header_on_cover(): void
     {
         $this->seed();
@@ -120,8 +154,67 @@ class ReportHtmlBuilderProductionTest extends TestCase
         );
 
         $this->assertStringContainsString('<table', $html);
-        $this->assertStringContainsString('luces', $html);
+        $this->assertStringNotContainsString('(luces)', $html);
         $this->assertStringContainsString('Operativo', $html);
+    }
+
+    public function test_paragraph_can_show_field_key_when_requested(): void
+    {
+        $this->seed();
+
+        $routine = $this->routineWithExecution();
+        $execution = $routine->latestExecution;
+        $execution->update(['responses' => ['luces' => 'operativo']]);
+        $execution->refresh();
+
+        $html = app(ReportHtmlBuilder::class)->build(
+            $routine,
+            $execution,
+            [['type' => 'paragraph', 'field' => 'luces', 'show_field_key' => true]],
+            [],
+        );
+
+        $this->assertStringContainsString('(luces)', $html);
+        $this->assertStringContainsString('Operativo', $html);
+    }
+
+    public function test_placeholder_strips_literal_page_token(): void
+    {
+        $this->seed();
+
+        $routine = $this->routineWithExecution();
+        $execution = $routine->latestExecution;
+
+        $html = app(ReportHtmlBuilder::class)->build(
+            $routine,
+            $execution,
+            [['type' => 'title', 'text' => 'Cuerpo']],
+            [
+                'footer' => ['enabled' => true, 'text' => 'Pie {{page}} confidencial'],
+            ],
+        );
+
+        $this->assertStringContainsString('Pie  confidencial', $html);
+        $this->assertStringNotContainsString('{{page}}', $html);
+    }
+
+    public function test_section_style_card_adds_table_class(): void
+    {
+        $this->seed();
+
+        $routine = $this->routineWithExecution();
+        $execution = $routine->latestExecution;
+        $execution->update(['responses' => ['luces' => 'operativo']]);
+        $execution->refresh();
+
+        $html = app(ReportHtmlBuilder::class)->build(
+            $routine,
+            $execution,
+            [['type' => 'paragraph', 'field' => 'luces']],
+            ['theme' => ['section_style' => 'card']],
+        );
+
+        $this->assertStringContainsString('report-field-table--card', $html);
     }
 
     public function test_cover_pdf_does_not_start_with_blank_page(): void

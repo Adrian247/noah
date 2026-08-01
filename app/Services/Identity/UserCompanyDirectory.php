@@ -65,6 +65,7 @@ class UserCompanyDirectory
             'company_is_active' => $company->is_active,
             'billing_contact_email' => $this->billingContactEmailForCompany($company->id),
             'mobile_policy' => $this->mobilePolicyForCompany($company),
+            'ai_enabled' => (bool) $company->ai_enabled,
             'permissions' => $this->authorization->permissionsForUser($user, $company->id),
             'modules' => $this->authorization->modulesForMembership($membership),
         ];
@@ -86,6 +87,7 @@ class UserCompanyDirectory
             'company_is_active' => $company->is_active,
             'billing_contact_email' => $this->billingContactEmailForCompany($company->id),
             'mobile_policy' => $this->mobilePolicyForCompany($company),
+            'ai_enabled' => (bool) $company->ai_enabled,
             'permissions' => $this->authorization->permissionsForPlatformAssumption(),
             'modules' => $this->authorization->modulesForPlatformAssumption($user),
         ];

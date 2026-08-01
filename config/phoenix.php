@@ -19,9 +19,15 @@ return [
 
     'ai' => [
         'default_provider' => env('PHOENIX_AI_PROVIDER', 'local'),
+        'max_tool_rounds' => (int) env('PHOENIX_AI_MAX_TOOL_ROUNDS', 4),
+        'google' => [
+            'api_key' => env('GOOGLE_API_KEY', env('GEMINI_API_KEY')),
+            'model' => env('GOOGLE_MODEL', env('GEMINI_MODEL', 'gemini-2.0-flash')),
+        ],
         'openai' => [
             'api_key' => env('OPENAI_API_KEY'),
             'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
+            'vision_model' => env('OPENAI_VISION_MODEL', 'gpt-4o-mini'),
             'base_url' => env('OPENAI_BASE_URL', 'https://api.openai.com/v1'),
         ],
     ],

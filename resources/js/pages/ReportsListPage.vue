@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { api, getToken, getCompanyId } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
@@ -32,14 +32,49 @@ const showCreate = ref(false);
 const previewUrls = ref<Record<number, string>>({});
 const deletingId = ref<number | null>(null);
 
+const THUMB_CONCURRENCY = 4;
+let thumbRunId = 0;
+let thumbActive = 0;
+let thumbQueue: number[] = [];
+
+function revokePreviewUrls() {
+    for (const url of Object.values(previewUrls.value)) {
+        URL.revokeObjectURL(url);
+    }
+    previewUrls.value = {};
+}
+
+function enqueuePreviewThumbs(ids: number[], runId: number) {
+    thumbQueue = [...ids];
+    drainThumbQueue(runId);
+}
+
+function drainThumbQueue(runId: number) {
+    while (thumbActive < THUMB_CONCURRENCY && thumbQueue.length > 0) {
+        if (runId !== thumbRunId) {
+            return;
+        }
+        const id = thumbQueue.shift()!;
+        thumbActive++;
+        void loadPreviewThumb(id, runId).finally(() => {
+            thumbActive--;
+            drainThumbQueue(runId);
+        });
+    }
+}
+
 async function load() {
+    const runId = ++thumbRunId;
+    thumbQueue = [];
     loading.value = true;
     try {
         const res = await api<{ data: ReportRow[] }>('/design/reports');
+        revokePreviewUrls();
         reports.value = res.data;
-        for (const r of res.data) {
-            void loadPreviewThumb(r.id);
-        }
+        enqueuePreviewThumbs(
+            res.data.map((r) => r.id),
+            runId,
+        );
     } catch (e) {
         toast.error((e as Error).message);
     } finally {
@@ -47,7 +82,7 @@ async function load() {
     }
 }
 
-async function loadPreviewThumb(id: number) {
+async function loadPreviewThumb(id: number, runId: number) {
     const token = getToken();
     const companyId = getCompanyId();
     const headers: Record<string, string> = {};
@@ -59,7 +94,17 @@ async function loadPreviewThumb(id: number) {
     }
     try {
         const res = await fetch(`/api/v1/design/reports/${id}/preview?thumbnail=1`, { headers });
+        if (runId !== thumbRunId) {
+            return;
+        }
         const html = await res.text();
+        if (runId !== thumbRunId) {
+            return;
+        }
+        const previous = previewUrls.value[id];
+        if (previous) {
+            URL.revokeObjectURL(previous);
+        }
         previewUrls.value[id] = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
     } catch {
         /* ignore thumb errors */
@@ -115,6 +160,12 @@ async function removeReport(row: ReportRow) {
 }
 
 onMounted(load);
+
+onUnmounted(() => {
+    thumbRunId++;
+    thumbQueue = [];
+    revokePreviewUrls();
+});
 </script>
 
 <template>

@@ -1,32 +1,39 @@
 # Dominio — AI (Phoenix)
 
-Capa de dominio delimitada para casos de uso IA. Implementación: [ai-gateway.md](../architecture/ai-gateway.md).
+Capa de dominio delimitada. Implementación: [ai-gateway.md](../architecture/ai-gateway.md).
 
 ## Agregados (Gateway)
 
 ### PromptTemplate
 
-- Nombre, versión, system prompt, user template, variables, modelo sugerido, temperatura.
+- Nombre, versión, system prompt, user template, modelo, temperatura.
 
 ### AIInvocation
 
-- `company_id`, tipo de caso (`grammar_correction`, …), entrada hash, salida, proveedor, tokens, costo estimado, `invoked_by` (usuario o workflow).
+- `company_id`, `use_case`, proveedor, tokens, excerpts, `status`, `tool_calls` (JSON).
 
-## Casos de uso v1
+### AiTool (catálogo interno)
+
+- Contrato de herramienta read-only; ejecución scoped por empresa.
+
+## Casos de uso
 
 | Caso | Entrada | Salida |
 |------|---------|--------|
-| Grammar correction | Texto técnico crudo | Texto corregido sin hechos nuevos |
+| Grammar correction | Texto técnico | Texto corregido |
+| Insights assistant | Pregunta (+ conversation_id / history) | Respuesta + sources + tool_calls + conversation_id + presentation? |
+| Vision OCR | Imagen | Texto de placa/etiqueta |
+| Report narrative | Rutina | Borrador factual desde campos |
 
 ## Políticas
 
-- Validador post-respuesta: longitud, prohibición de frases que impliquen datos no presentes (heurística + revisión humana en validación).
-- Retención de prompts y logs según política de empresa.
+1. Toda IA pasa por AI Gateway.
+2. Tools de escritura: **prohibidas** en v2.
+3. Respuestas operativas deben citar datos de tools o declarar insuficiencia.
+4. Revisión humana en entregables al cliente.
 
-## Eventos
+## Fuera de alcance v2
 
-- `GrammarCorrectionRequested`, `GrammarCorrectionCompleted`, `AIInvocationFailed`
-
-## Fuera de alcance v1
-
-- Visión por imagen, OCR, chat sobre historial (roadmap fase 4).
+- MCP HTTP/stdio externo
+- Detección de fugas/corrosión (fase 4b)
+- Caché semántica

@@ -265,6 +265,53 @@ class ReportDesignerApiTest extends TestCase
         $this->assertStringContainsString('#1e3a5f', $preview->getContent());
     }
 
+    public function test_apply_preset_theme_only_preserves_components(): void
+    {
+        $this->seed();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
+        $company = Company::query()->first();
+        $token = $admin->createToken('test')->plainTextToken;
+        $template = ReportTemplate::query()->where('company_id', $company->id)->first();
+        $draft = $template->versions()->where('status', 'draft')->orderByDesc('version')->first();
+        $this->assertNotNull($draft);
+
+        $marker = [['type' => 'title', 'text' => 'Bloque conservado XYZ', 'align' => 'left']];
+        $draft->update(['components' => $marker]);
+
+        $response = $this->withToken($token)
+            ->withHeader('X-Company-Id', (string) $company->id)
+            ->postJson("/api/v1/design/reports/{$template->id}/apply-preset", [
+                'preset_id' => 'corporate_navy',
+                'mode' => 'theme_only',
+            ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('data.page_settings.theme.preset_id', 'corporate_navy');
+
+        $draft->refresh();
+        $this->assertSame('Bloque conservado XYZ', $draft->components[0]['text'] ?? null);
+        $this->assertSame('corporate_navy', $draft->page_settings['theme']['preset_id'] ?? null);
+    }
+
+    public function test_publish_returns_pending_relink_meta(): void
+    {
+        $this->seed();
+        $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
+        $company = Company::query()->first();
+        $token = $admin->createToken('test')->plainTextToken;
+        $template = ReportTemplate::query()->where('company_id', $company->id)->first();
+
+        $response = $this->withToken($token)
+            ->withHeader('X-Company-Id', (string) $company->id)
+            ->postJson("/api/v1/design/reports/{$template->id}/publish");
+
+        $response->assertOk();
+        $response->assertJsonStructure([
+            'data' => ['version', 'status'],
+            'meta' => ['published_version', 'routine_types_pending_relink'],
+        ]);
+    }
+
     public function test_tenant_admin_can_delete_unlinked_report_template(): void
     {
         $this->seed();

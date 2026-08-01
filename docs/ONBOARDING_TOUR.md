@@ -40,10 +40,9 @@ Variables opcionales:
 
 - Primera visita al **Inicio**: invitación a iniciar el tour.
 - Botón **Ver tour guiado** en el dashboard.
-El tour filtra pasos según `company.modules` y si eres administrador de plataforma (workflows, tenants, selector de empresa). Clave `localStorage`: `phoenix_product_tour_v3_completed`.
-
-- Sin `ELEVENLABS_API_KEY` en macOS, el script usa `say` y escribe `.m4a` (o `.mp3` si tienes `ffmpeg`). Incluye narración para todos los pasos del guion v3, p. ej. `04-workspace` y `43-platform-tenants`.
-- El reproductor intenta `.mp3` y luego `.m4a`; si faltan ambos, usa **síntesis de voz del navegador** (mismo texto del guion).
+- El tour filtra pasos según `company.modules`, si eres administrador de plataforma (workflows, tenants, selector de empresa) y si tienes capacidad de IA (`canUseAi`: FAB del asistente). Clave `localStorage`: `phoenix_product_tour_v5_completed`.
+- Incluye pasos de Integraciones, Configuración y, cuando aplica, el FAB del asistente (chat IA unificado; OCR/narrativa viven en rutina y activos).
+- Sin `ELEVENLABS_API_KEY` válida en macOS, el script usa `say` y escribe `.m4a` (o `.mp3` si tienes `ffmpeg`). El reproductor intenta `.mp3` y luego `.m4a`; si faltan ambos, usa síntesis de voz del navegador.
 
 ## Seguridad
 

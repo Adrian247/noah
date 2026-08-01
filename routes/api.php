@@ -73,6 +73,10 @@ Route::prefix('v1')->group(function (): void {
         Route::middleware('platform.admin')->prefix('platform')->group(function (): void {
             Route::get('/role-permissions', [\App\Http\Controllers\Api\V1\PlatformRolePermissionController::class, 'show']);
             Route::put('/role-permissions', [\App\Http\Controllers\Api\V1\PlatformRolePermissionController::class, 'update']);
+            Route::get('/ai/settings', [\App\Http\Controllers\Api\V1\PlatformAiSettingsController::class, 'show']);
+            Route::put('/ai/settings', [\App\Http\Controllers\Api\V1\PlatformAiSettingsController::class, 'update']);
+            Route::get('/ai/models', [\App\Http\Controllers\Api\V1\PlatformAiSettingsController::class, 'models']);
+            Route::post('/ai/validate', [\App\Http\Controllers\Api\V1\PlatformAiSettingsController::class, 'validateProvider']);
             Route::get('/tenants', [\App\Http\Controllers\Api\V1\PlatformTenantController::class, 'index']);
             Route::post('/tenants', [\App\Http\Controllers\Api\V1\PlatformTenantController::class, 'store']);
             Route::patch('/tenants/{company}', [\App\Http\Controllers\Api\V1\PlatformTenantController::class, 'update']);
@@ -159,6 +163,8 @@ Route::prefix('v1')->group(function (): void {
                 Route::put('/portal/settings', [PortalController::class, 'update']);
                 Route::get('/mobile/settings', [MobileSecuritySettingsController::class, 'show']);
                 Route::put('/mobile/settings', [MobileSecuritySettingsController::class, 'update']);
+                Route::get('/ai/settings', [\App\Http\Controllers\Api\V1\CompanyAiSettingsController::class, 'show']);
+                Route::put('/ai/settings', [\App\Http\Controllers\Api\V1\CompanyAiSettingsController::class, 'update']);
             });
 
             Route::post('/sync', [SyncController::class, 'sync']);

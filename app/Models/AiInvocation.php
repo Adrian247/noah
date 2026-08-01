@@ -18,7 +18,15 @@ class AiInvocation extends Model
         'input_excerpt',
         'output_excerpt',
         'status',
+        'tool_calls',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'tool_calls' => 'array',
+        ];
+    }
 
     public function company(): BelongsTo
     {

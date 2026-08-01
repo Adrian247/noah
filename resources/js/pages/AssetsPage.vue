@@ -12,6 +12,9 @@ import AppButton from '@/components/ui/AppButton.vue';
 import IconActionButton from '@/components/ui/IconActionButton.vue';
 import ConfigurableDataTable from '@/components/ui/ConfigurableDataTable.vue';
 import { tableActionsColumn, type TableColumnDef } from '@/lib/tableColumns';
+import AssetAiAssistCard from '@/components/insights/AssetAiAssistCard.vue';
+import PlateOcrControl from '@/components/insights/PlateOcrControl.vue';
+import { useAiCapabilities } from '@/composables/useAiCapabilities';
 
 type Site = { id: number; name: string };
 type CatalogItem = { id: number; code: string; name: string };
@@ -26,6 +29,7 @@ type Asset = {
 
 const { canWriteModule } = useModuleAccess();
 const toast = useToast();
+const { canUseAi } = useAiCapabilities();
 const canWrite = computed(() => canWriteModule('assets'));
 
 const assetTableColumns = computed((): TableColumnDef[] => {
@@ -261,7 +265,7 @@ onMounted(load);
         <AppModal
             :open="showForm && canWrite"
             :title="editingId ? 'Editar activo' : 'Nuevo activo'"
-            size="sm"
+            size="md"
             @close="showForm = false"
         >
             <form id="asset-form" class="space-y-4" @submit.prevent="save">
@@ -280,6 +284,17 @@ onMounted(load);
                 </p>
                 <MaterialField v-model="form.tag" label="Etiqueta (tag)" required />
                 <MaterialField v-model="form.location_label" label="Ubicación" />
+                <PlateOcrControl
+                    v-if="canUseAi && !editingId"
+                    apply-label="No. serie"
+                    @apply="form.serial_number = $event"
+                />
+                <AssetAiAssistCard
+                    v-if="canUseAi && editingId"
+                    :asset-id="editingId"
+                    show-ocr
+                    @apply-ocr="(text) => { form.tag = text || form.tag }"
+                />
             </form>
             <template #footer>
                 <button

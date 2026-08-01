@@ -23,6 +23,7 @@ class Company extends Model
         'mobile_allow_biometric_unlock',
         'ai_monthly_token_quota',
         'ai_monthly_vision_quota',
+        'ai_enabled',
         'fiscal_enabled',
         'fiscal_provider',
         'fiscal_settings',
@@ -39,6 +40,7 @@ class Company extends Model
             'form_allowed_image_mimes' => 'array',
             'ai_monthly_token_quota' => 'integer',
             'ai_monthly_vision_quota' => 'integer',
+            'ai_enabled' => 'boolean',
             'fiscal_enabled' => 'boolean',
             'fiscal_settings' => 'array',
         ];

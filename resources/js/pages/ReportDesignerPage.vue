@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
 import { api, getToken, getCompanyId } from '@/api/client';
 import { useToast } from '@/composables/useToast';
+import { useConfirm } from '@/composables/useConfirm';
 import { useModuleAccess } from '@/composables/useModuleAccess';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
@@ -11,6 +12,8 @@ import MaterialSelect from '@/components/ui/MaterialSelect.vue';
 import RichTextEditor from '@/components/ui/RichTextEditor.vue';
 import AppButton from '@/components/ui/AppButton.vue';
 import IconActionButton from '@/components/ui/IconActionButton.vue';
+import ReadOnlyNotice from '@/components/ui/ReadOnlyNotice.vue';
+import ReportDesignNav from '@/components/reports/ReportDesignNav.vue';
 
 type FormFieldOption = { key: string; label: string; form_name: string; field_type?: string };
 
@@ -18,10 +21,14 @@ type Component = {
     type: string;
     text?: string;
     field?: string;
+    label?: string;
+    show_field_key?: boolean;
     section_template_id?: number | null;
     align?: string;
     color?: string;
     size_pt?: number;
+    style?: string;
+    margin_pt?: number;
 };
 
 type SectionTemplateRow = { id: number; name: string; slug: string };
@@ -103,11 +110,16 @@ const routineForms = ref<RoutineFormSource[]>([]);
 const selectedPresetId = ref('phoenix_industrial');
 const selectedFormSlug = ref('');
 const applyingPreset = ref(false);
+const presetMode = ref<'full' | 'theme_only'>('theme_only');
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
+const confirm = useConfirm();
 const { canWriteModule } = useModuleAccess();
-const canDeleteTemplate = computed(() => canWriteModule('design_reports'));
+const canWrite = computed(() => canWriteModule('design_reports'));
+const canDeleteTemplate = canWrite;
+const dirty = ref(false);
+const suppressDirty = ref(false);
 const deletingTemplate = ref(false);
 const tpl = ref<ReportTpl | null>(null);
 const templateName = ref('');
@@ -150,6 +162,8 @@ const misalignedRoutineTypes = computed(() =>
 );
 const loading = ref(true);
 const previewUrl = ref<string | null>(null);
+/** Blob URL sin fragmento (para revoke). */
+const previewObjectUrl = ref<string | null>(null);
 const coverImageInput = ref<HTMLInputElement | null>(null);
 const coverImageUploading = ref(false);
 const coverImagePreview = ref<string | null>(null);
@@ -326,6 +340,7 @@ function defaultPhotoField(): string {
 
 async function load() {
     loading.value = true;
+    suppressDirty.value = true;
     try {
         const res = await api<{
             data: ReportTpl;
@@ -378,6 +393,12 @@ async function load() {
         if (merged.cover_page.date_fixed === undefined || merged.cover_page.date_fixed === null) {
             merged.cover_page.date_fixed = '';
         }
+        if (!merged.theme) {
+            merged.theme = {};
+        }
+        if (!merged.theme.section_style) {
+            merged.theme.section_style = 'card';
+        }
         pageSettings.value = merged;
         const presetsRes = await api<{ data: DesignPreset[] }>('/design/reports/presets');
         designPresets.value = presetsRes.data ?? [];
@@ -386,16 +407,33 @@ async function load() {
         }
         await loadClientsWithLogo();
         await refreshPreview();
+        dirty.value = false;
     } catch (e) {
         toast.error((e as Error).message);
     } finally {
         loading.value = false;
+        suppressDirty.value = false;
     }
 }
 
 async function applyDesignPreset() {
-    if (!routineForms.value.length) {
-        toast.error('Publica al menos un formulario con uso Rutina para aplicar una plantilla.');
+    if (!canWrite.value) {
+        return;
+    }
+    if (presetMode.value === 'full' && !routineForms.value.length) {
+        toast.error('Publica al menos un formulario con uso Rutina para aplicar una plantilla completa.');
+        return;
+    }
+    const message =
+        presetMode.value === 'theme_only'
+            ? 'Se actualizarán colores, tipografía y encabezado/pie. Los bloques del informe se conservan. ¿Continuar?'
+            : 'Se reemplazarán los bloques del borrador y la configuración de página con la plantilla. ¿Continuar?';
+    const ok = await confirm(message, {
+        title: 'Aplicar plantilla de diseño',
+        confirmLabel: 'Aplicar',
+        danger: presetMode.value === 'full',
+    });
+    if (!ok) {
         return;
     }
     applyingPreset.value = true;
@@ -405,9 +443,13 @@ async function applyDesignPreset() {
             body: JSON.stringify({
                 preset_id: selectedPresetId.value,
                 form_slug: selectedFormSlug.value || null,
+                mode: presetMode.value,
             }),
         });
-        components.value = structuredClone(res.data.components ?? []);
+        suppressDirty.value = true;
+        if (presetMode.value === 'full') {
+            components.value = structuredClone(res.data.components ?? []);
+        }
         const merged = { ...pageSettings.value, ...(res.data.page_settings ?? {}) };
         merged.cover_page = { ...pageSettings.value.cover_page, ...(res.data.page_settings?.cover_page ?? {}) };
         merged.typography = { ...pageSettings.value.typography, ...(res.data.page_settings?.typography ?? {}) };
@@ -425,11 +467,17 @@ async function applyDesignPreset() {
             selectedPresetId.value = merged.theme.preset_id;
         }
         await refreshPreview();
-        toast.success('Plantilla de diseño aplicada al borrador.');
+        dirty.value = false;
+        toast.success(
+            presetMode.value === 'theme_only'
+                ? 'Tema aplicado (bloques conservados).'
+                : 'Plantilla de diseño aplicada al borrador.',
+        );
     } catch (e) {
         toast.error((e as Error).message);
     } finally {
         applyingPreset.value = false;
+        suppressDirty.value = false;
     }
 }
 
@@ -440,6 +488,18 @@ function selectDesignPreset(id: string) {
 const routineFormOptions = computed(() =>
     routineForms.value.map((f) => ({ value: f.slug, label: f.name })),
 );
+
+const sectionStyleOptions = [
+    { value: 'card', label: 'Tarjeta (borde y fondo suave)' },
+    { value: 'line', label: 'Línea (separadores)' },
+    { value: 'minimal', label: 'Minimal' },
+];
+
+const dividerStyleOptions = [
+    { value: 'solid', label: 'Continua' },
+    { value: 'dashed', label: 'Discontinua' },
+    { value: 'dotted', label: 'Punteada' },
+];
 
 async function downloadPreviewPdf() {
     downloadingPreview.value = true;
@@ -486,9 +546,10 @@ async function downloadPreviewPdf() {
 async function refreshPreview() {
     const token = getToken();
     const companyId = getCompanyId();
+    const usePdfPreview = Boolean(pageSettings.value.cover_page?.enabled);
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-        Accept: 'text/html',
+        Accept: usePdfPreview ? 'application/pdf' : 'text/html',
     };
     if (token) {
         headers.Authorization = `Bearer ${token}`;
@@ -496,7 +557,10 @@ async function refreshPreview() {
     if (companyId) {
         headers['X-Company-Id'] = companyId;
     }
-    const res = await fetch(`/api/v1/design/reports/${route.params.id}/preview`, {
+    const endpoint = usePdfPreview
+        ? `/api/v1/design/reports/${route.params.id}/preview-pdf`
+        : `/api/v1/design/reports/${route.params.id}/preview`;
+    const res = await fetch(endpoint, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -514,21 +578,23 @@ async function refreshPreview() {
         }
         return;
     }
-    const html = await res.text();
-    const blob = new Blob([html], { type: 'text/html' });
-    if (previewUrl.value) {
-        URL.revokeObjectURL(previewUrl.value);
+    const blob = await res.blob();
+    if (previewObjectUrl.value) {
+        URL.revokeObjectURL(previewObjectUrl.value);
     }
-    previewUrl.value = URL.createObjectURL(blob);
+    const objectUrl = URL.createObjectURL(blob);
+    previewObjectUrl.value = objectUrl;
+    previewUrl.value = usePdfPreview ? `${objectUrl}#toolbar=0&navpanes=0` : objectUrl;
 }
 
 function schedulePreview() {
     if (previewTimer) {
         clearTimeout(previewTimer);
     }
+    const delay = pageSettings.value.cover_page?.enabled ? 750 : 500;
     previewTimer = setTimeout(() => {
         void refreshPreview();
-    }, 500);
+    }, delay);
 }
 
 function addComponent(type: string) {
@@ -540,7 +606,13 @@ function addComponent(type: string) {
         components.value.push({ type: 'text', text: 'Texto con **negritas**.', align: 'left' });
     } else if (type === 'paragraph') {
         const first = formFields.value.find((f) => f.field_type !== 'photo') ?? formFields.value[0];
-        components.value.push({ type: 'paragraph', field: first?.key ?? 'technician_comments', align: 'left' });
+        components.value.push({
+            type: 'paragraph',
+            field: first?.key ?? 'technician_comments',
+            label: first?.label,
+            show_field_key: false,
+            align: 'left',
+        });
     } else if (type === 'image') {
         components.value.push({ type: 'image', field: defaultPhotoField(), align: 'left' });
     } else if (type === 'divider') {
@@ -595,19 +667,38 @@ async function saveMeta() {
 }
 
 async function save() {
+    if (!canWrite.value) {
+        return;
+    }
     await saveMeta();
     await api(`/design/reports/${route.params.id}/components`, {
         method: 'PUT',
         body: JSON.stringify({ components: components.value, page_settings: pageSettings.value }),
     });
+    dirty.value = false;
     toast.success('Borrador guardado.');
     await refreshPreview();
 }
 
 async function publish() {
+    if (!canWrite.value) {
+        return;
+    }
     await save();
-    await api(`/design/reports/${route.params.id}/publish`, { method: 'POST' });
-    toast.success('Publicado.');
+    const res = await api<{
+        data: ReportVersion;
+        meta?: { routine_types_pending_relink?: { id: number; name: string }[] };
+    }>(`/design/reports/${route.params.id}/publish`, { method: 'POST' });
+    const pending = res.meta?.routine_types_pending_relink ?? [];
+    if (pending.length > 0) {
+        toast.warning(
+            `Publicado v${res.data.version}. Tipos de rutina aún en versión anterior: ${pending
+                .map((t) => t.name)
+                .join(', ')}. Re-enlázalos en Tipos de rutina.`,
+        );
+    } else {
+        toast.success(`Publicado v${res.data.version}.`);
+    }
     await load();
 }
 
@@ -715,6 +806,7 @@ async function onCoverImagePicked(ev: Event) {
             URL.revokeObjectURL(coverImagePreview.value);
         }
         coverImagePreview.value = null;
+        toast.info('Imagen de portada guardada en el borrador (no requiere Guardar).');
         schedulePreview();
     } catch (e) {
         toast.error((e as Error).message);
@@ -749,23 +841,52 @@ async function removeCoverImage() {
 }
 
 watch(
+    () => pageSettings.value.cover_page?.enabled,
+    (enabled) => {
+        if (enabled && pageSettings.value.cover_page) {
+            pageSettings.value.cover_page.omit_header_footer = true;
+            if (!pageSettings.value.page_number) {
+                pageSettings.value.page_number = { enabled: false, start_at: 2 };
+            } else if (!pageSettings.value.page_number.start_at || Number(pageSettings.value.page_number.start_at) < 2) {
+                pageSettings.value.page_number.start_at = 2;
+            }
+        }
+    },
+);
+
+watch(
     () => [components.value, pageSettings.value],
     () => {
         if (loading.value) {
             return;
+        }
+        if (!suppressDirty.value) {
+            dirty.value = true;
         }
         schedulePreview();
     },
     { deep: true },
 );
 
-onMounted(load);
+function onBeforeUnload(event: BeforeUnloadEvent) {
+    if (!dirty.value || !canWrite.value) {
+        return;
+    }
+    event.preventDefault();
+    event.returnValue = '';
+}
+
+onMounted(() => {
+    window.addEventListener('beforeunload', onBeforeUnload);
+    void load();
+});
 onUnmounted(() => {
+    window.removeEventListener('beforeunload', onBeforeUnload);
     if (previewTimer) {
         clearTimeout(previewTimer);
     }
-    if (previewUrl.value) {
-        URL.revokeObjectURL(previewUrl.value);
+    if (previewObjectUrl.value) {
+        URL.revokeObjectURL(previewObjectUrl.value);
     }
 });
 </script>
@@ -774,11 +895,17 @@ onUnmounted(() => {
     <div v-if="loading" class="text-portal-muted">Cargando…</div>
     <div v-else-if="tpl" class="portal-page report-enter-stagger w-full max-w-none space-y-4">
         <div class="report-module-chrome space-y-3">
+            <ReportDesignNav />
+            <ReadOnlyNotice v-if="!canWrite" module-label="Reportes" />
+            <p v-if="dirty && canWrite" class="text-amber-600 text-xs">
+                Hay cambios sin guardar en el borrador.
+            </p>
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <PageHeader class="flex-1" title="Diseñador de reporte" :subtitle="`Plantilla: ${tpl.name}`" />
-                <div v-if="canDeleteTemplate" class="flex shrink-0 items-center gap-2 pt-1">
+                <div class="flex shrink-0 items-center gap-2 pt-1">
                     <RouterLink to="/app/design/reports" class="text-portal-muted text-sm underline">Volver al listado</RouterLink>
                     <AppButton
+                        v-if="canDeleteTemplate"
                         type="button"
                         variant="danger"
                         :disabled="deletingTemplate"
@@ -831,30 +958,51 @@ onUnmounted(() => {
                         Plantillas de diseño profesional
                     </h2>
                     <p class="text-portal-muted mt-1 max-w-2xl text-xs leading-relaxed">
-                        Elige un estilo visual predefinido y un formulario de rutina publicado. Al aplicar, el borrador
-                        recibe colores, portada, encabezados y bloques alineados a las secciones del formulario.
+                        Por defecto se aplica solo el tema (colores, tipografía, encabezado/pie) y se conservan tus
+                        bloques y textos de portada. Usa «Completa» solo si quieres regenerar el árbol de bloques desde
+                        un formulario.
                     </p>
                 </div>
                 <AppButton
                     variant="primary"
-                    :disabled="applyingPreset || !routineForms.length"
+                    :disabled="!canWrite || applyingPreset || (presetMode === 'full' && !routineForms.length)"
                     @click="applyDesignPreset"
                 >
-                    {{ applyingPreset ? 'Aplicando…' : 'Aplicar plantilla al borrador' }}
+                    {{ applyingPreset ? 'Aplicando…' : 'Aplicar al borrador' }}
                 </AppButton>
             </div>
 
-            <div v-if="!routineForms.length" class="portal-callout portal-callout--info text-sm" role="status">
+            <div class="flex flex-wrap gap-4">
+                <label class="text-portal-muted flex cursor-pointer items-center gap-2 text-sm">
+                    <input v-model="presetMode" type="radio" value="full" class="size-4" :disabled="!canWrite" />
+                    <span class="text-portal-heading">Completa (reemplaza bloques)</span>
+                </label>
+                <label class="text-portal-muted flex cursor-pointer items-center gap-2 text-sm">
+                    <input v-model="presetMode" type="radio" value="theme_only" class="size-4" :disabled="!canWrite" />
+                    <span class="text-portal-heading">Solo tema (conserva bloques)</span>
+                </label>
+            </div>
+
+            <div v-if="!routineForms.length && presetMode === 'full'" class="portal-callout portal-callout--info text-sm" role="status">
                 No hay formularios de rutina publicados. Crea y publica un formulario en Diseño → Formularios antes de
-                usar las plantillas.
+                usar las plantillas completas, o elige «Solo tema».
             </div>
 
             <MaterialSelect
-                v-if="routineForms.length"
+                v-if="routineForms.length && presetMode === 'full'"
                 v-model="selectedFormSlug"
                 class="max-w-md"
                 label="Formulario de rutina (mapeo de campos)"
                 :options="routineFormOptions"
+                :disabled="!canWrite"
+            />
+
+            <MaterialSelect
+                v-model="pageSettings.theme!.section_style"
+                class="max-w-md"
+                label="Estilo de tablas de campos"
+                :options="sectionStyleOptions"
+                :disabled="!canWrite"
             />
 
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -864,6 +1012,7 @@ onUnmounted(() => {
                     type="button"
                     class="report-preset-card text-left transition"
                     :class="{ 'report-preset-card--active': selectedPresetId === preset.id }"
+                    :disabled="!canWrite"
                     @click="selectDesignPreset(preset.id)"
                 >
                     <div class="report-preset-card__swatch" aria-hidden="true">
@@ -915,7 +1064,7 @@ onUnmounted(() => {
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <h3 class="text-portal-heading text-sm font-medium">Página de presentación (portada)</h3>
                         <label class="text-portal-muted flex cursor-pointer items-center gap-2 text-sm">
-                            <input v-model="pageSettings.cover_page!.enabled" type="checkbox" class="size-4 rounded" />
+                            <input v-model="pageSettings.cover_page!.enabled" type="checkbox" class="size-4 rounded" :disabled="!canWrite" />
                             <span class="text-portal-heading font-medium">Incluir portada</span>
                         </label>
                     </div>
@@ -924,6 +1073,13 @@ onUnmounted(() => {
                         imagen, título y texto de la primera página del PDF.
                     </p>
                     <template v-if="pageSettings.cover_page?.enabled">
+                        <div class="portal-callout portal-callout--info text-xs leading-relaxed" role="note">
+                            <p class="text-portal-heading font-medium">Contrato estable de portada</p>
+                            <p class="text-portal-muted mt-1">
+                                La portada es siempre la hoja 1, sin encabezado ni pie. El cuerpo empieza en la hoja 2.
+                                Con portada activa, la vista previa usa el mismo PDF que producción (más fiable).
+                            </p>
+                        </div>
                         <MaterialSelect
                             v-model="coverLogoSource"
                             class="max-w-md"
@@ -1054,17 +1210,21 @@ onUnmounted(() => {
                                 rutina en informes reales; hoy en vista previa).
                             </p>
                         </template>
-                        <label class="text-portal-muted flex items-center gap-2 text-sm">
-                            <input v-model="pageSettings.cover_page!.omit_header_footer" type="checkbox" />
-                            Omitir cabecera y pie en la portada
-                        </label>
+                        <p class="text-portal-muted text-xs leading-snug">
+                            Encabezado y pie se omiten automáticamente en la portada (contrato del motor). Configúralos
+                            para el cuerpo en la sección siguiente.
+                        </p>
                     </template>
                 </div>
 
                 <div class="portal-form-panel space-y-3">
                     <h3 class="text-portal-heading text-sm font-medium">Encabezado y pie</h3>
+                    <p class="text-portal-muted text-xs leading-snug">
+                        Encabezado, pie y numeración aplican al cuerpo del informe. Con portada, la numeración suele
+                        empezar en 2.
+                    </p>
                     <label class="text-portal-muted flex items-center gap-2 text-sm">
-                        <input v-model="pageSettings.header!.enabled" type="checkbox" />
+                        <input v-model="pageSettings.header!.enabled" type="checkbox" :disabled="!canWrite" />
                         Mostrar encabezado
                     </label>
                     <MaterialField
@@ -1105,19 +1265,20 @@ onUnmounted(() => {
                                 <IconActionButton
                                     icon="chevron-up"
                                     label="Subir componente"
-                                    :disabled="i === 0"
+                                    :disabled="!canWrite || i === 0"
                                     @click="moveUp(i)"
                                 />
                                 <IconActionButton
                                     icon="chevron-down"
                                     label="Bajar componente"
-                                    :disabled="i === components.length - 1"
+                                    :disabled="!canWrite || i === components.length - 1"
                                     @click="moveDown(i)"
                                 />
                                 <IconActionButton
                                     icon="trash"
                                     label="Eliminar componente"
                                     variant="danger"
+                                    :disabled="!canWrite"
                                     @click="removeComponent(i)"
                                 />
                             </div>
@@ -1138,18 +1299,46 @@ onUnmounted(() => {
                             :label="c.type === 'title' ? 'Título' : 'Subtítulo'"
                         />
                         <RichTextEditor v-else-if="c.type === 'text'" v-model="c.text" label="Texto enriquecido" />
-                        <MaterialSelect
-                            v-else-if="c.type === 'paragraph' || c.type === 'image'"
-                            v-model="c.field"
-                            :label="c.type === 'image' ? 'Campo foto del formulario' : 'Campo del formulario'"
-                            :options="fieldOptionsForComponent(c.type)"
-                        />
-                        <p
-                            v-if="(c.type === 'paragraph' || c.type === 'image') && c.field && liveOrphanFields.includes(c.field)"
-                            class="portal-msg-warning text-xs"
-                        >
-                            Esta key no existe (o no es foto) en un formulario de rutina publicado.
-                        </p>
+                        <template v-else-if="c.type === 'paragraph' || c.type === 'image'">
+                            <MaterialSelect
+                                v-model="c.field"
+                                :label="c.type === 'image' ? 'Campo foto del formulario' : 'Campo del formulario'"
+                                :options="fieldOptionsForComponent(c.type)"
+                                :disabled="!canWrite"
+                            />
+                            <MaterialField
+                                v-if="c.type === 'paragraph'"
+                                v-model="c.label"
+                                label="Etiqueta en el PDF (opcional)"
+                                :readonly="!canWrite"
+                            />
+                            <label
+                                v-if="c.type === 'paragraph'"
+                                class="text-portal-muted flex cursor-pointer items-center gap-2 text-sm"
+                            >
+                                <input
+                                    v-model="c.show_field_key"
+                                    type="checkbox"
+                                    class="size-4 rounded"
+                                    :disabled="!canWrite"
+                                />
+                                <span class="text-portal-heading">Mostrar key técnica junto a la etiqueta</span>
+                            </label>
+                        </template>
+                        <div v-else-if="c.type === 'divider'" class="grid gap-2 md:grid-cols-2">
+                            <MaterialSelect
+                                v-model="c.style"
+                                label="Estilo de línea"
+                                :options="dividerStyleOptions"
+                                :disabled="!canWrite"
+                            />
+                            <MaterialField
+                                v-model="c.margin_pt"
+                                label="Margen vertical (pt)"
+                                type="number"
+                                :readonly="!canWrite"
+                            />
+                        </div>
                         <MaterialSelect
                             v-else-if="c.type === 'section_template'"
                             :model-value="c.section_template_id ? String(c.section_template_id) : ''"
@@ -1158,8 +1347,15 @@ onUnmounted(() => {
                                 { value: '', label: sectionTemplates.length ? '— Seleccionar —' : 'Sin secciones' },
                                 ...sectionTemplateOptions,
                             ]"
+                            :disabled="!canWrite"
                             @update:model-value="(v) => (c.section_template_id = v ? Number(v) : null)"
                         />
+                        <p
+                            v-if="(c.type === 'paragraph' || c.type === 'image') && c.field && liveOrphanFields.includes(c.field)"
+                            class="portal-msg-warning text-xs"
+                        >
+                            Esta key no existe (o no es foto) en un formulario de rutina publicado.
+                        </p>
                         <RouterLink
                             v-if="c.type === 'section_template'"
                             to="/app/design/reports/settings"
@@ -1176,6 +1372,7 @@ onUnmounted(() => {
                         :key="t.value"
                         type="button"
                         variant="secondary"
+                        :disabled="!canWrite"
                         @click="addComponent(t.value)"
                     >
                         + {{ t.label }}
@@ -1183,8 +1380,10 @@ onUnmounted(() => {
                 </div>
 
                 <div class="flex gap-2">
-                    <AppButton type="button" variant="secondary" @click="save">Guardar</AppButton>
-                    <AppButton type="button" @click="publish">Publicar</AppButton>
+                    <AppButton type="button" variant="secondary" :disabled="!canWrite" @click="save">
+                        Guardar
+                    </AppButton>
+                    <AppButton type="button" :disabled="!canWrite" @click="publish">Publicar</AppButton>
                 </div>
             </div>
 
@@ -1192,14 +1391,23 @@ onUnmounted(() => {
                 class="portal-form-panel flex max-h-[min(80vh,720px)] flex-col overflow-hidden xl:sticky xl:top-24 xl:z-0 xl:self-start"
             >
                 <div class="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2">
-                    <p class="text-portal-heading text-sm font-medium">Vista previa en vivo</p>
+                    <div>
+                        <p class="text-portal-heading text-sm font-medium">Vista previa en vivo</p>
+                        <p class="text-portal-muted text-xs">
+                            {{
+                                pageSettings.cover_page?.enabled
+                                    ? 'PDF real (mismo motor que producción)'
+                                    : 'HTML rápido · descarga PDF para validar tipografía exacta'
+                            }}
+                        </p>
+                    </div>
                     <AppButton
                         type="button"
                         variant="secondary"
                         :disabled="!previewUrl || downloadingPreview"
                         @click="downloadPreviewPdf"
                     >
-                        {{ downloadingPreview ? 'Generando…' : 'Descargar PDF (vista previa)' }}
+                        {{ downloadingPreview ? 'Generando…' : 'Descargar PDF' }}
                     </AppButton>
                 </div>
                 <div class="report-designer-preview min-h-0 flex-1 overflow-x-hidden overflow-y-auto rounded-lg border border-white/10 bg-slate-200">

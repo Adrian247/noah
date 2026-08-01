@@ -106,7 +106,46 @@ class Phase4PlatformCapabilitiesTest extends TestCase
                 'question' => '¿Qué rutinas hay?',
             ])
             ->assertOk()
-            ->assertJsonStructure(['data' => ['answer', 'sources']]);
+            ->assertJsonStructure([
+                'data' => [
+                    'answer',
+                    'sources',
+                    'provider',
+                    'tool_calls',
+                ],
+            ])
+            ->assertJsonPath('data.provider', 'local');
+    }
+
+    public function test_company_ai_settings_roundtrip(): void
+    {
+        $company = $this->meinCompany();
+        $admin = $this->meinUser('emilio.sanchez@mein-company.com');
+        Sanctum::actingAs($admin);
+
+        $this->withHeader('X-Company-Id', (string) $company->id)
+            ->getJson('/api/v1/ai/settings')
+            ->assertOk()
+            ->assertJsonStructure(['data' => ['ai_enabled']]);
+
+        $this->withHeader('X-Company-Id', (string) $company->id)
+            ->putJson('/api/v1/ai/settings', ['ai_enabled' => false])
+            ->assertOk()
+            ->assertJsonPath('data.ai_enabled', false);
+
+        $this->assertFalse((bool) $company->fresh()->ai_enabled);
+
+        $this->withHeader('X-Company-Id', (string) $company->id)
+            ->postJson('/api/v1/insights/assistant', [
+                'question' => 'hola',
+            ])
+            ->assertForbidden();
+
+        $this->withHeader('X-Company-Id', (string) $company->id)
+            ->post('/api/v1/insights/ocr', [
+                'file' => UploadedFile::fake()->image('placa.jpg'),
+            ])
+            ->assertForbidden();
     }
 
     public function test_routine_validated_dispatches_webhook_job(): void
