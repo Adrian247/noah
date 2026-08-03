@@ -12,6 +12,7 @@ use App\Services\Platform\TenantUserProvisioner;
 use App\Support\CurrentCompany;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -50,6 +51,7 @@ class CompanyUserController extends Controller
             'email' => ['required', 'email', 'max:255'],
             'name' => ['nullable', 'string', 'max:255'],
             'role' => ['required', Rule::enum(MembershipRole::class)],
+            'password' => ['nullable', 'string', 'min:8', 'max:128', 'confirmed'],
             'extra_permissions' => ['sometimes', 'array'],
             'extra_permissions.*' => ['string', 'max:64'],
             'modules' => ['prohibited'],
@@ -58,13 +60,16 @@ class CompanyUserController extends Controller
 
         $email = strtolower($validated['email']);
         $company = \App\Models\Company::query()->findOrFail($companyId);
+        $passwordProvided = isset($validated['password']) && $validated['password'] !== '';
+        $sendInvitation = (bool) ($validated['send_invitation'] ?? ! $passwordProvided);
 
         $provisioned = $this->provisioner->provision(
             $company,
             $email,
             $validated['name'] ?? Str::before($email, '@'),
             MembershipRole::from($validated['role']),
-            (bool) ($validated['send_invitation'] ?? true),
+            $sendInvitation,
+            $validated['password'] ?? null,
         );
         $user = $provisioned['user'];
 
@@ -108,9 +113,14 @@ class CompanyUserController extends Controller
 
         $labels = $this->authorization->roleLabels();
 
-        return response()->json([
+        $payload = [
             'data' => $this->formatMembership($membership->fresh('user'), $labels, $companyId),
-        ], 201);
+        ];
+        if ($provisioned['plain_password'] !== null) {
+            $payload['generated_password'] = $provisioned['plain_password'];
+        }
+
+        return response()->json($payload, 201);
     }
 
     public function update(Request $request, User $user): JsonResponse
@@ -130,6 +140,7 @@ class CompanyUserController extends Controller
         $validated = $request->validate([
             'role' => ['sometimes', Rule::enum(MembershipRole::class)],
             'is_active' => ['sometimes', 'boolean'],
+            'password' => ['sometimes', 'nullable', 'string', 'min:8', 'max:128', 'confirmed'],
             'extra_permissions' => ['sometimes', 'array'],
             'extra_permissions.*' => ['string', 'max:64'],
             'modules' => ['prohibited'],
@@ -155,6 +166,22 @@ class CompanyUserController extends Controller
 
         $membership = $this->authorization->assignMembershipRole($membership, $newRole, $isActive);
         $this->authorization->clearLegacyModuleAccess($membership);
+
+        if (array_key_exists('password', $validated) && $validated['password'] !== null && $validated['password'] !== '') {
+            if ($actor !== null && $actor->id === $user->id) {
+                throw ValidationException::withMessages([
+                    'password' => ['Para cambiar tu propia contraseña usa Configuración → Cuenta.'],
+                ]);
+            }
+            $user->update(['password' => $validated['password']]);
+            $this->audit->fromRequest(
+                $request,
+                'user.password_reset',
+                User::class,
+                $user->id,
+                ['membership_id' => $membership->id, 'reset_by_admin' => true],
+            );
+        }
 
         if (array_key_exists('extra_permissions', $validated)) {
             $this->authorization->syncDirectPermissions($membership, $validated['extra_permissions']);

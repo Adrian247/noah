@@ -2,7 +2,7 @@
 
 return [
     /** Contraseña de cuentas demo de tenant (seeder, ensure-demo). */
-    'demo_password' => env('PHOENIX_DEMO_PASSWORD', 'phoenix.2026$'),
+    'demo_password' => env('PHOENIX_DEMO_PASSWORD', 'pyro.2026$'),
 
     /** Contraseña del administrador de plataforma (root). */
     'demo_root_password' => env('PHOENIX_DEMO_ROOT_PASSWORD', 'pyro.2026$'),
@@ -29,6 +29,17 @@ return [
             'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
             'vision_model' => env('OPENAI_VISION_MODEL', 'gpt-4o-mini'),
             'base_url' => env('OPENAI_BASE_URL', 'https://api.openai.com/v1'),
+        ],
+    ],
+    'predictive' => [
+        /** Ventanas de predicción permitidas, en días. */
+        'horizons' => [7, 14, 30],
+        'default_horizon_days' => (int) env('PHOENIX_PREDICTIVE_HORIZON_DAYS', 14),
+        /** Subproyecto ML (ml/phoenix-predict); si está apagado se usa el motor determinístico. */
+        'ml' => [
+            'enabled' => filter_var(env('PHOENIX_PREDICTIVE_ML_ENABLED', false), FILTER_VALIDATE_BOOL),
+            'url' => env('PHOENIX_PREDICTIVE_ML_URL', 'http://ml:8000'),
+            'timeout' => (int) env('PHOENIX_PREDICTIVE_ML_TIMEOUT', 8),
         ],
     ],
     'reports' => [
@@ -59,6 +70,16 @@ return [
                 'base_url' => env('PHOENIX_PAC_BASE_URL'),
                 'api_key' => env('PHOENIX_PAC_API_KEY'),
             ],
+        ],
+    ],
+    'push' => [
+        'enabled' => filter_var(env('PHOENIX_PUSH_ENABLED', true), FILTER_VALIDATE_BOOL),
+        /** log | fcm */
+        'driver' => env('PHOENIX_PUSH_DRIVER', 'log'),
+        'fcm' => [
+            'project_id' => env('FCM_PROJECT_ID'),
+            /** Ruta absoluta al JSON de service account con rol Firebase Cloud Messaging Admin. */
+            'credentials' => env('FCM_CREDENTIALS'),
         ],
     ],
 ];

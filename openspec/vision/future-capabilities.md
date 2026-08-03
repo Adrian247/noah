@@ -12,7 +12,7 @@ Funcionalidades **no comprometidas** en fases 1–3. Se habilitan cuando el núc
 | **OCR de placas** | Leer serie/modelo desde placa o etiqueta | Captura más rápida |
 | **Generación automática del reporte** | Borrador narrativo desde campos + evidencias (con revisión humana) | Menos tiempo de redacción |
 | **Chatbot sobre historiales** | Consulta en lenguaje natural sobre rutinas y activos (RAG) | Soporte y supervisión |
-| **Predicción de mantenimientos** | Modelos sobre historial, horómetros, fallas | Planificación preventiva |
+| ~~**Predicción de mantenimientos**~~ | Implementado en el cambio 046 — ver [domain/predictive.md](../domain/predictive.md) y [ADR-013](../decisions/ADR-013-predictive-maintenance.md) | Planificación preventiva |
 | **Estimación de costos** | Proyección según tipo de rutina, insumos y tiempos históricos | Cotizaciones |
 | **Recomendaciones de refacciones** | Sugerir insumos según activo, falla o historial | Menos faltantes en campo |
 
@@ -62,7 +62,7 @@ flowchart LR
 | **Ya en roadmap cercano** | Corrección gramatical | AI Gateway, prompts, auditoría |
 | **4a** | Chatbot historiales, generación asistida de reporte | Índice de documentos/rutinas, permisos, revisión obligatoria en workflow |
 | **4b** | OCR, reconocimiento equipo, fugas/corrosión | Pipeline de imágenes, modelos o APIs de visión vía Gateway, política de privacidad |
-| **4c** | Predicción, costos, refacciones | Volumen de historial, inventory/costos fiables, gobernanza de modelos |
+| **4c** | ~~Predicción~~ (hecha), costos, refacciones | Volumen de historial, inventory/costos fiables, gobernanza de modelos |
 
 ## Principios (igual que hoy)
 

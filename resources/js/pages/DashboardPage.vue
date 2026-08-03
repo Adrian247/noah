@@ -289,7 +289,7 @@ const quickLinks = computed(() => {
             to: '/app/catalog/clients',
             label: 'Clientes',
             description: 'Cartera y portales',
-            icon: 'building',
+            icon: 'briefcase',
             moduleId: 'clients',
         },
     ];
@@ -304,9 +304,9 @@ const catalogTiles = computed(() => {
     return [
         { label: 'Activos', value: c.assets, to: '/app/assets', moduleId: 'assets', icon: 'cube' as NavIconName },
         { label: 'Sitios', value: c.sites, to: '/app/sites', moduleId: 'sites', icon: 'map-pin' as NavIconName },
-        { label: 'Clientes', value: c.clients, to: '/app/catalog/clients', moduleId: 'clients', icon: 'building' as NavIconName },
+        { label: 'Clientes', value: c.clients, to: '/app/catalog/clients', moduleId: 'clients', icon: 'briefcase' as NavIconName },
         { label: 'Insumos', value: c.supply_items, to: '/app/inventory', moduleId: 'inventory', icon: 'archive' as NavIconName },
-        { label: 'Equipos cat.', value: c.equipment_items, to: '/app/catalog/items', moduleId: 'catalog_items', icon: 'wrench' as NavIconName },
+        { label: 'Equipos cat.', value: c.equipment_items, to: '/app/catalog/items', moduleId: 'catalog_items', icon: 'factory' as NavIconName },
         { label: 'Proveedores', value: c.suppliers, to: '/app/catalog/suppliers', moduleId: 'catalog_suppliers', icon: 'truck' as NavIconName },
     ].filter((t) => isVisible(t.moduleId));
 });

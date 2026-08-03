@@ -21,6 +21,9 @@
 /public/storage
 /storage/*.key
 /storage/pail
+# FCM service account (never commit; path used by FCM_CREDENTIALS)
+/storage/app/firebase-service-account.json
+**/firebase-service-account*.json
 /vendor
 _ide_helper.php
 Homestead.json

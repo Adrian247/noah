@@ -11,6 +11,8 @@ export type NavIconName =
     | 'layers'
     | 'document'
     | 'chart-bar'
+    | 'activity'
+    | 'cpu'
     | 'workflow'
     | 'receipt'
     | 'cog'
@@ -20,6 +22,9 @@ export type NavIconName =
     | 'chevron-right'
     | 'tags'
     | 'building'
+    | 'buildings'
+    | 'briefcase'
+    | 'factory'
     | 'archive'
     | 'pencil'
     | 'trash'
@@ -97,6 +102,14 @@ const sizeClass = computed(() => (props.size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'));
         <template v-else-if="name === 'chart-bar'">
             <path d="M4 20V10M10 20V4M16 20v-8M22 20H2" />
         </template>
+        <template v-else-if="name === 'activity'">
+            <path d="M22 12h-4l-3 7L9 5l-3 7H2" />
+        </template>
+        <template v-else-if="name === 'cpu'">
+            <rect x="5" y="5" width="14" height="14" rx="2" />
+            <path d="M9 9h6v6H9z" />
+            <path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3" />
+        </template>
         <template v-else-if="name === 'workflow'">
             <circle cx="6" cy="6" r="2.5" />
             <circle cx="18" cy="6" r="2.5" />
@@ -136,6 +149,24 @@ const sizeClass = computed(() => (props.size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'));
         <template v-else-if="name === 'building'">
             <path d="M4 20V8l8-5 8 5v12H4z" />
             <path d="M9 20v-5h6v5M9 10h.01M15 10h.01" />
+        </template>
+        <template v-else-if="name === 'buildings'">
+            <path d="M3 21V10l5-3.5v14.5H3z" />
+            <path d="M16 21V6l5-3v18h-5z" />
+            <path d="M6 14h.01M6 17h.01M19 11h.01M19 14h.01" />
+        </template>
+        <template v-else-if="name === 'briefcase'">
+            <rect x="3" y="7" width="18" height="13" rx="2" />
+            <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            <path d="M3 12h18" />
+        </template>
+        <template v-else-if="name === 'factory'">
+            <path d="M2 20V11l4-2v9" />
+            <path d="M6 20V9l4-2v13" />
+            <path d="M10 20V7l4-2v15" />
+            <path d="M14 20V5l6-2.5V20" />
+            <path d="M2 20h20" />
+            <path d="M17 8v2M17 12v2" />
         </template>
         <template v-else-if="name === 'archive'">
             <path d="M4 7h16v3H4zM6 10v9h12v-9" />

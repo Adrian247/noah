@@ -23,6 +23,9 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
+        <!-- Estas variables solo aplican fuera de Docker: dentro, el contenedor las exporta al
+             proceso y `$_SERVER` gana sobre `phpunit.xml`. El aislamiento real contra la base de
+             desarrollo lo garantiza Tests\TestCase (base hermana `<nombre>_testing`). -->
         <env name="DB_CONNECTION" value="sqlite"/>
         <env name="DB_DATABASE" value=":memory:"/>
         <env name="DB_URL" value=""/>

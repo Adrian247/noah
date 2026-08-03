@@ -6,7 +6,6 @@ import 'package:phoenix_field/core/config/app_config.dart';
 import 'package:phoenix_field/core/network/api_connectivity.dart';
 import 'package:phoenix_field/core/network/dio_provider.dart';
 import 'package:phoenix_field/core/security/app_lock_provider.dart';
-import 'package:phoenix_field/core/security/mobile_policy_enforcer.dart';
 import 'package:phoenix_field/core/system_enter/system_enter_provider.dart';
 import 'package:phoenix_field/data/repositories/auth_repository.dart';
 import 'package:phoenix_field/data/repositories/sync_repository.dart';
@@ -160,11 +159,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           await ref.read(mobilePolicyEnforcerProvider).ensureRequiredPin(context);
       if (!policyOk) {
         await ref.read(authRepositoryProvider).logout();
+        unlockAppSession(ref);
         ref.read(authNavigationVersionProvider.notifier).state++;
         if (mounted) {
           setState(() => _error = 'Tu empresa exige bloqueo con PIN para usar la app.');
         }
         return;
+      }
+      // Siempre bloquear si hay PIN (incluido el recién configurado por política).
+      if (ref.read(appLockControllerProvider).enabled) {
+        lockAppSession(ref);
       }
       await systemEnter.waitForMinimumDuration();
       if (mounted) {
@@ -210,7 +214,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     Text(
                       'Rutinas offline-first para técnicos en campo',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.white70,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                           ),
                       textAlign: TextAlign.center,
                     ),

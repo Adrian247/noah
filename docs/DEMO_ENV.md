@@ -1,4 +1,18 @@
-# Demo multi-tenant (Mein Company + Dom-G)
+# Demo multi-tenant (Sandbox + Mein Company + Dom-G)
+
+## Cuenta por defecto (pruebas)
+
+| Email | Empresa | Contraseña |
+|-------|---------|------------|
+| **`admin@sandbox-demo.com`** | **Sandbox** (tenant virgen) | **`pyro.2026$`** |
+
+Sin catálogos, rutinas ni activos precargados — ideal para onboarding y pruebas desde cero.
+
+## Contraseña unificada (fase de pruebas)
+
+Todas las cuentas demo: **`pyro.2026$`**
+
+Variables: `PHOENIX_DEMO_PASSWORD`, `PHOENIX_DEMO_ROOT_PASSWORD` (ambas default `pyro.2026$`).
 
 ## Root (plataforma)
 
@@ -6,13 +20,11 @@
 |-------|------------|
 | `admin@pyro-systems.com` | `pyro.2026$` |
 
-Variables: `PHOENIX_DEMO_ROOT_PASSWORD`, `PHOENIX_PLATFORM_ADMIN_EMAILS`.
-
-## Cuentas tenant (Mein, Dom-G, etc.)
-
-Contraseña común: **`phoenix.2026$`** (o `PHOENIX_DEMO_PASSWORD`).
+Administrador de sistema: tenants, algoritmo predictivo, roles globales. Elige empresa en el selector (asunción de tenant).
 
 ## Mein Company
+
+Clientes demo: **Mina Velardeña**, **Presidencia Municipal Sombrerete**, **Interno**.
 
 | Email | Rol |
 |-------|-----|
@@ -20,8 +32,11 @@ Contraseña común: **`phoenix.2026$`** (o `PHOENIX_DEMO_PASSWORD`).
 | `misael.palos@mein-company.com` | Técnico |
 | `claudio.rodriguez@mein-company.com` | Supervisión |
 | `elena.sanchez@mein-company.com` | Facturación |
+| `cliente.portal@mein-company.com` | Portal (Mina Velardeña) |
 
 ## Dom-G
+
+Clientes demo: **Grupo México**, **Interno**.
 
 | Email | Rol |
 |-------|-----|
@@ -29,7 +44,18 @@ Contraseña común: **`phoenix.2026$`** (o `PHOENIX_DEMO_PASSWORD`).
 | `technician@dom-g.com` | Técnico |
 | `gilberto-sanchez@dom-g.com` | Supervisión |
 | `luis-olvera@dom-g.com` | Facturación |
+| `cliente.portal@dom-g.com` | Portal (Grupo México) |
 
-El root **no** tiene membresía en los tenants: elige empresa en el selector (marcada «plataforma») y cada cambio registra auditoría `platform.tenant_assumed`.
+## Sandbox (tenant virgen)
+
+Misma fila que **cuenta por defecto** arriba. Empresa demo sin datos operativos — equivalente a un alta desde **Clientes de plataforma**.
+
+| Email | Rol |
+|-------|-----|
+| `admin@sandbox-demo.com` | Administrador |
 
 Ritual: `docker compose exec app php artisan phoenix:refresh-demo`
+
+## Push móvil (opcional)
+
+Por defecto `PHOENIX_PUSH_DRIVER=log` (traza en logs del worker). Para FCM real: `fcm` + `FCM_PROJECT_ID` + `FCM_CREDENTIALS`. Setup de la app: `mobile/README.md` → Push notifications.

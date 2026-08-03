@@ -40,8 +40,9 @@ Variables opcionales:
 
 - Primera visita al **Inicio**: invitación a iniciar el tour.
 - Botón **Ver tour guiado** en el dashboard.
-- El tour filtra pasos según `company.modules`, si eres administrador de plataforma (workflows, tenants, selector de empresa) y si tienes capacidad de IA (`canUseAi`: FAB del asistente). Clave `localStorage`: `phoenix_product_tour_v5_completed`.
-- Incluye pasos de Integraciones, Configuración y, cuando aplica, el FAB del asistente (chat IA unificado; OCR/narrativa viven en rutina y activos).
+- El tour filtra pasos según `company.modules`, si eres administrador de plataforma (workflows, tenants, selector de empresa) y si tienes capacidad de IA (`canUseAi`: FAB del asistente). Clave `localStorage`: `phoenix_product_tour_v6_completed`.
+- Los pasos de módulo abren la página real y resaltan el contenido con recorte (cutout); el menú lateral se destaca en los pasos de navegación.
+- Incluye Integraciones, Configuración (tema, móvil/PIN, IA) y, cuando aplica, el FAB del asistente.
 - Sin `ELEVENLABS_API_KEY` válida en macOS, el script usa `say` y escribe `.m4a` (o `.mp3` si tienes `ffmpeg`). El reproductor intenta `.mp3` y luego `.m4a`; si faltan ambos, usa síntesis de voz del navegador.
 
 ## Seguridad

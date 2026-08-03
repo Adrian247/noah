@@ -19,7 +19,10 @@ class CatalogItemController extends Controller
     {
         return response()->json([
             'data' => CatalogItem::query()
-                ->with('equipmentType:id,code,name')
+                ->with([
+                    'equipmentType:id,code,name',
+                    'oemEquipmentModel:id,manufacturer,model,equipment_class,family',
+                ])
                 ->orderBy('code')
                 ->get(),
         ]);
@@ -32,6 +35,7 @@ class CatalogItemController extends Controller
             'code' => ['required', 'string', 'max:64'],
             'name' => ['required', 'string', 'max:255'],
             'manufacturer' => ['nullable', 'string', 'max:255'],
+            'oem_equipment_model_id' => ['nullable', 'integer', 'exists:oem_equipment_models,id'],
             'specifications' => ['nullable', 'array'],
         ]);
 
@@ -52,6 +56,7 @@ class CatalogItemController extends Controller
             'code' => ['sometimes', 'string', 'max:64'],
             'name' => ['sometimes', 'string', 'max:255'],
             'manufacturer' => ['nullable', 'string', 'max:255'],
+            'oem_equipment_model_id' => ['nullable', 'integer', 'exists:oem_equipment_models,id'],
             'specifications' => ['nullable', 'array'],
         ]);
 

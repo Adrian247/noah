@@ -46,11 +46,13 @@ class ConsumptionsPanel extends StatelessWidget {
     required this.supplies,
     required this.lines,
     required this.onChanged,
+    this.enabled = true,
   });
 
   final List<Map<String, dynamic>> supplies;
   final List<ConsumptionLine> lines;
   final void Function(List<ConsumptionLine> lines) onChanged;
+  final bool enabled;
 
   static List<ConsumptionLine> decodeList(dynamic raw) {
     if (raw is! List) {
@@ -64,7 +66,7 @@ class ConsumptionsPanel extends StatelessWidget {
   }
 
   void _addLine() {
-    if (supplies.isEmpty) {
+    if (!enabled || supplies.isEmpty) {
       return;
     }
     final first = supplies.first;
@@ -122,7 +124,7 @@ class ConsumptionsPanel extends StatelessWidget {
             const SizedBox(height: 4),
             const Text(
               'Opcional. Se registran al enviar la ejecución.',
-              style: TextStyle(fontSize: 12, color: Colors.white70),
+              style: TextStyle(fontSize: 12),
             ),
             if (supplies.isEmpty) ...[
               const SizedBox(height: 12),
@@ -137,13 +139,14 @@ class ConsumptionsPanel extends StatelessWidget {
                 supplies: supplies,
                 line: lines[i],
                 label: _supplyLabel(lines[i].supplyItemId),
+                enabled: enabled,
                 onChanged: (line) => _updateLine(i, line),
                 onRemove: () => _removeLine(i),
               ),
             ],
             const SizedBox(height: 12),
             OutlinedButton.icon(
-              onPressed: supplies.isEmpty ? null : _addLine,
+              onPressed: !enabled || supplies.isEmpty ? null : _addLine,
               icon: const Icon(Icons.add),
               label: const Text('Agregar consumo'),
             ),
@@ -159,6 +162,7 @@ class _ConsumptionRow extends StatelessWidget {
     required this.supplies,
     required this.line,
     required this.label,
+    required this.enabled,
     required this.onChanged,
     required this.onRemove,
   });
@@ -166,8 +170,13 @@ class _ConsumptionRow extends StatelessWidget {
   final List<Map<String, dynamic>> supplies;
   final ConsumptionLine line;
   final String label;
+  final bool enabled;
   final ValueChanged<ConsumptionLine> onChanged;
   final VoidCallback onRemove;
+
+  String _itemLabel(Map<String, dynamic> supply) {
+    return '${supply['sku'] ?? ''} ${supply['name'] ?? 'Insumo'}'.trim();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -176,19 +185,38 @@ class _ConsumptionRow extends StatelessWidget {
       children: [
         DropdownButtonFormField<int>(
           value: line.supplyItemId,
+          isExpanded: true,
           decoration: const InputDecoration(labelText: 'Insumo'),
+          selectedItemBuilder: (context) => [
+            for (final supply in supplies)
+              if (supply['id'] is int)
+                Text(
+                  _itemLabel(supply),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                ),
+          ],
           items: [
             for (final supply in supplies)
               if (supply['id'] is int)
                 DropdownMenuItem<int>(
                   value: supply['id'] as int,
-                  child: Text(
-                    '${supply['sku'] ?? ''} ${supply['name'] ?? 'Insumo'}'.trim(),
-                    overflow: TextOverflow.ellipsis,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.sizeOf(context).width - 72,
+                    ),
+                    child: Text(
+                      _itemLabel(supply),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
           ],
-          onChanged: (id) {
+          onChanged: !enabled
+              ? null
+              : (id) {
             if (id == null) {
               return;
             }
@@ -215,6 +243,7 @@ class _ConsumptionRow extends StatelessWidget {
             Expanded(
               child: TextFormField(
                 initialValue: line.quantity.toString(),
+                enabled: enabled,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
                   labelText: 'Cantidad',
@@ -239,7 +268,7 @@ class _ConsumptionRow extends StatelessWidget {
             ),
             IconButton(
               tooltip: 'Quitar',
-              onPressed: onRemove,
+              onPressed: enabled ? onRemove : null,
               icon: const Icon(Icons.delete_outline),
             ),
           ],

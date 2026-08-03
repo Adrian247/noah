@@ -5,6 +5,8 @@ namespace Tests\Feature\Api;
 use App\Models\Company;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\Sanctum;
 use Tests\Support\CreatesDemoRoutine;
 use Tests\TestCase;
 
@@ -50,6 +52,37 @@ class AuthApiTest extends TestCase
         ])->assertOk();
 
         $dom->assertJsonPath('companies.0.billing_contact_email', 'luis-olvera@dom-g.com');
+    }
+
+    public function test_user_can_change_own_password(): void
+    {
+        $this->seed();
+        $user = User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
+        Sanctum::actingAs($user);
+
+        $this->putJson('/api/v1/auth/password', [
+            'current_password' => config('phoenix.demo_password'),
+            'password' => 'MiNuevaClave2026',
+            'password_confirmation' => 'MiNuevaClave2026',
+        ])
+            ->assertOk();
+
+        $this->assertTrue(Hash::check('MiNuevaClave2026', $user->fresh()->password));
+    }
+
+    public function test_user_cannot_change_password_with_wrong_current_password(): void
+    {
+        $this->seed();
+        $user = User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
+        Sanctum::actingAs($user);
+
+        $this->putJson('/api/v1/auth/password', [
+            'current_password' => 'incorrecta',
+            'password' => 'MiNuevaClave2026',
+            'password_confirmation' => 'MiNuevaClave2026',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['current_password']);
     }
 
     public function test_routines_require_company_header(): void

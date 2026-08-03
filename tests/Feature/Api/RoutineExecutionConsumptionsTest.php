@@ -3,12 +3,10 @@
 namespace Tests\Feature\Api;
 
 use App\Enums\RoutineStatus;
-use App\Models\Company;
-use App\Models\Routine;
 use App\Models\SupplyItem;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\CreatesDemoRoutine;
+use Tests\Support\UsesMeinCompany;
 use Tests\Support\VehicleDemoFormResponses;
 use Tests\TestCase;
 
@@ -16,14 +14,15 @@ class RoutineExecutionConsumptionsTest extends TestCase
 {
     use CreatesDemoRoutine;
     use RefreshDatabase;
+    use UsesMeinCompany;
 
     public function test_execution_persists_consumptions(): void
     {
         $this->seed();
-        $user = User::query()->where('email', 'misael.palos@mein-company.com')->first();
-        $company = Company::query()->first();
+        $company = $this->meinCompany();
+        $user = $this->meinUser('misael.palos@mein-company.com');
         $routine = $this->demoRoutine($user);
-        $supply = SupplyItem::query()->firstOrFail();
+        $supply = SupplyItem::query()->where('company_id', $company->id)->orderBy('id')->firstOrFail();
         $supply->update(['quantity_on_hand' => 50]);
         $token = $user->createToken('test')->plainTextToken;
 

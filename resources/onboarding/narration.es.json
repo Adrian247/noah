@@ -2,42 +2,42 @@
     {
         "id": "01-welcome",
         "title": "Bienvenido a Phoenix",
-        "text": "Bienvenido a Phoenix, de Pyro Systems. Este recorrido se adapta a los módulos que tu perfil puede usar. Avanza con Siguiente, silencia la voz si lo prefieres u omite cuando quieras."
+        "text": "Bienvenido a Phoenix, de Pyro Systems. Este recorrido se adapta a tu rol y a los módulos visibles de la empresa. Usa Siguiente para avanzar, silencia la voz si lo prefieres u omite cuando quieras."
     },
     {
         "id": "02-dashboard",
         "title": "Tu inicio",
-        "text": "El inicio resume lo urgente según tu rol: rutinas, validaciones y facturación en borrador. Cada tarjeta abre el listado ya filtrado."
+        "text": "El inicio resume lo urgente: rutinas pendientes, validaciones y facturación en borrador. Cada tarjeta abre el listado ya filtrado para actuar en un clic."
     },
     {
         "id": "03-navigation",
         "title": "Menú principal",
-        "text": "El menú lateral agrupa operación, catálogos, diseño, facturación, integraciones y administración. El asistente IA vive en el botón flotante Asistente, no en un menú aparte. Solo ves los módulos autorizados para tu rol en la empresa activa."
+        "text": "El menú lateral agrupa operación, catálogos, diseño, facturación, integraciones y administración. Solo ves lo autorizado para tu rol. El asistente IA vive en el botón flotante, no en un ítem aparte."
     },
     {
         "id": "04-workspace",
         "title": "Empresa activa",
-        "text": "Cambia de tenant desde aquí. Si eres administrador de plataforma, las empresas sin membresía aparecen como «plataforma» y cada selección queda registrada en auditoría."
+        "text": "Cambia de tenant desde aquí. Si eres administrador de plataforma, las empresas sin membresía aparecen como plataforma y cada cambio queda en auditoría."
     },
     {
         "id": "10-routines",
         "title": "Rutinas",
-        "text": "Rutinas concentra el trabajo en campo: alta, asignación, ejecución con formulario, evidencias y envío a validación."
+        "text": "Aquí vive el trabajo de campo: alta, asignación, ejecución con formulario y fotos, envío a validación y rechazo con motivo. El técnico también puede trabajar offline desde la app móvil Phoenix Campo."
     },
     {
         "id": "11-assets",
         "title": "Activos",
-        "text": "Activos son las piezas de equipo en sitio: etiqueta, serie y vínculo al catálogo maestro para cada rutina."
+        "text": "Activos son los equipos en sitio: etiqueta, serie y vínculo al catálogo. Desde la ficha puedes enriquecer datos con OCR de placa cuando la IA está habilitada."
     },
     {
         "id": "12-catalog-items",
         "title": "Equipos",
-        "text": "El catálogo de equipos define modelos y tipos de equipo. Desde aquí también gestionas tipos de equipo en la pestaña del módulo."
+        "text": "El catálogo de equipos define modelos y tipos. Es la base para crear activos y asociarlos a rutinas repetibles."
     },
     {
         "id": "13-catalog-supplies",
         "title": "Inventario",
-        "text": "Inventario concentra insumos y tipos de insumo para consumos en rutinas: SKU, costo estándar y referencias de refacción."
+        "text": "Inventario concentra insumos y tipos de insumo para consumos en rutinas: SKU, costo estándar y stock."
     },
     {
         "id": "14-catalog-suppliers",
@@ -47,12 +47,12 @@
     {
         "id": "15-clients",
         "title": "Clientes",
-        "text": "Clientes centraliza datos de facturación y portal. Los activos pueden asignarse a un cliente para prefactura y portal."
+        "text": "Clientes centraliza datos de facturación y portal. Puedes asignar activos a un cliente para prefactura y entrega."
     },
     {
         "id": "16-sites",
         "title": "Sitios",
-        "text": "Sitios ubican geográficamente plantas o talleres donde viven los activos y se planifican rutinas."
+        "text": "Sitios ubican plantas o talleres donde viven los activos y se planifican las rutinas."
     },
     {
         "id": "20-routine-types",
@@ -62,37 +62,37 @@
     {
         "id": "21-design-forms",
         "title": "Formularios",
-        "text": "Aquí diseñas y publicas versiones de formularios de campo: secciones, validaciones, fotos y catálogos de opciones."
+        "text": "Diseña y publica versiones de formularios de campo: secciones, validaciones, galerías de fotos y catálogos de opciones."
     },
     {
         "id": "22-design-reports",
         "title": "Reportes",
-        "text": "Las plantillas de reporte definen el PDF entregable: componentes, secciones reutilizables y datos del formulario ejecutado."
+        "text": "Las plantillas definen el PDF entregable: portada, campos del formulario y fotos con layout landscape o portrait. Puedes previsualizar y publicar versiones."
     },
     {
         "id": "23-design-workflows",
         "title": "Workflows",
-        "text": "Solo el administrador de plataforma edita workflows aquí. Modelan validación, rechazo, correos y pasos de facturación tras la ejecución en campo."
+        "text": "Solo el administrador de plataforma edita workflows. Modelan validación, rechazo, correos y pasos de facturación tras la ejecución."
     },
     {
         "id": "30-billing",
         "title": "Facturación",
-        "text": "Facturación agrupa borradores y emisión. Tras validar rutinas puedes generar prefacturas y ajustar líneas antes de emitir. Los parámetros fiscales están en Configuración."
+        "text": "Facturación agrupa borradores y emisión. Tras validar rutinas puedes generar prefacturas, adjuntar evidencias y emitir. Los parámetros fiscales están en Configuración."
     },
     {
         "id": "32-integrations",
         "title": "Integraciones",
-        "text": "Integraciones permite webhooks y reglas de automatización para notificar sistemas externos cuando cambian rutinas u otros eventos."
+        "text": "Webhooks y reglas de automatización para notificar sistemas externos cuando cambian rutinas, facturas u otros eventos."
     },
     {
         "id": "33-settings",
         "title": "Configuración",
-        "text": "En Configuración ajustas apariencia, notificaciones, facturación, app móvil y el asistente IA: proveedor, modelos y si la empresa lo habilita para sus usuarios."
+        "text": "Ajusta tema claro u oscuro, notificaciones, facturación, seguridad de la app móvil con PIN obligatorio y el asistente IA de la empresa."
     },
     {
         "id": "34-assistant",
         "title": "Asistente Phoenix",
-        "text": "El botón Asistente concentra el chat operativo con datos verificados: rutinas, clientes, facturas, sitios y KPIs. En la ficha de una rutina puedes generar narrativa y costo; en activos, OCR de placa y sugerencias de insumos."
+        "text": "El botón Asistente concentra el chat operativo con datos verificados: rutinas por línea de servicio (mantenimiento, manufactura, suministro), clientes, facturas, KPIs y predicción (riesgo en equipos o demanda a clientes)."
     },
     {
         "id": "40-audit",
@@ -102,7 +102,7 @@
     {
         "id": "41-company-users",
         "title": "Usuarios",
-        "text": "Invita personas a la empresa, asigna rol y permisos extra. Los nuevos usuarios pueden recibir correo de invitación con acceso inicial."
+        "text": "Invita personas a la empresa, asigna rol y permisos. Los nuevos usuarios pueden recibir correo de invitación con acceso inicial."
     },
     {
         "id": "42-platform-roles",
@@ -112,11 +112,11 @@
     {
         "id": "43-platform-tenants",
         "title": "Clientes de plataforma",
-        "text": "Alta y administración de empresas tenant: activar o desactivar clientes, usuarios iniciales y aislamiento de datos entre organizaciones."
+        "text": "Alta y administración de empresas tenant: activar o desactivar clientes, usuarios iniciales y aislamiento de datos."
     },
     {
         "id": "99-finish",
         "title": "Listo",
-        "text": "Recorrido completado para tu perfil en Phoenix. Repite el tour desde el inicio cuando quieras; verás solo los módulos y pasos de plataforma que te correspondan."
+        "text": "Recorrido completado. Puedes repetir el tour desde Inicio cuando quieras; verás solo los módulos y pasos que te correspondan."
     }
 ]

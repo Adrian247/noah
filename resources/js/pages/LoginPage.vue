@@ -45,7 +45,7 @@ const capabilities = [
     },
 ];
 
-const email = ref('admin@pyro-systems.com');
+const email = ref('admin@sandbox-demo.com');
 const password = ref('pyro.2026$');
 const passwordReadonly = ref(true);
 const loading = ref(false);
@@ -106,11 +106,16 @@ async function submit() {
     }
 }
 
-const DEMO_EMAIL = 'admin@pyro-systems.com';
+const DEMO_EMAIL = 'admin@sandbox-demo.com';
+const LEGACY_DEMO_EMAIL = 'admin@pyro-systems.com';
 const DEMO_PASSWORD = 'pyro.2026$';
 
 function applyDemoCredentials() {
-    if (email.value === '' || email.value === 'admin@pyro-systems.com') {
+    if (
+        email.value === ''
+        || email.value === LEGACY_DEMO_EMAIL
+        || email.value === DEMO_EMAIL
+    ) {
         email.value = DEMO_EMAIL;
     }
     if (password.value === '' || password.value === 'password') {
@@ -182,7 +187,7 @@ onMounted(() => {
                                     {{ auth.error }}
                                     <span class="mt-1 block text-xs text-slate-500">
                                         Demo local:
-                                        <span class="font-mono">admin@pyro-systems.com</span>
+                                        <span class="font-mono">admin@sandbox-demo.com</span>
                                         /
                                         <span class="font-mono">pyro.2026$</span>
                                         — si falla:
@@ -200,8 +205,8 @@ onMounted(() => {
                             {{ loading ? 'Entrando…' : 'Iniciar sesión' }}
                         </AppButton>
                         <p class="text-center text-xs text-slate-500">
-                            Demo local:
-                            <span class="font-mono text-slate-400">admin@pyro-systems.com</span>
+                            Demo local (Sandbox):
+                            <span class="font-mono text-slate-400">admin@sandbox-demo.com</span>
                             /
                             <span class="font-mono text-slate-400">pyro.2026$</span>
                         </p>

@@ -39,10 +39,14 @@ class AiToolRegistryTest extends TestCase
             'list_invoices',
             'list_sites',
             'get_operational_kpis',
+            'predict_equipment_failures',
+            'predict_client_demand',
+            'get_equipment_health',
+            'list_failure_modes',
         ], $registry->names());
 
         $schemas = $registry->openAiToolSchemas();
-        $this->assertCount(9, $schemas);
+        $this->assertCount(13, $schemas);
         $this->assertSame('function', $schemas[0]['type']);
 
         $company = $this->meinCompany();

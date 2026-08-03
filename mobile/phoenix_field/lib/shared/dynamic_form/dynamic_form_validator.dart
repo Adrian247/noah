@@ -130,6 +130,54 @@ class DynamicFormValidator {
     return errors;
   }
 
+  /// Cuenta campos obligatorios (excluye signature) y cuántos ya están llenos.
+  static ({int total, int filled}) requiredProgress(
+    Map<String, dynamic> schema,
+    Map<String, dynamic> values, {
+    List<Map<String, dynamic>> catalogs = const [],
+  }) {
+    var total = 0;
+    var filled = 0;
+    final sections = schema['sections'] as List<dynamic>? ?? [];
+
+    for (final section in sections) {
+      if (section is! Map) {
+        continue;
+      }
+      final fields = section['fields'] as List<dynamic>? ?? [];
+      for (final field in fields) {
+        if (field is! Map) {
+          continue;
+        }
+        final map = Map<String, dynamic>.from(field);
+        final key = map['key']?.toString();
+        if (key == null) {
+          continue;
+        }
+        final type = map['type']?.toString() ?? 'text';
+        if (type == 'signature' || map['required'] != true) {
+          continue;
+        }
+
+        total++;
+        final probe = <String, dynamic>{key: values[key]};
+        final miniSchema = {
+          'sections': [
+            {
+              'fields': [map],
+            }
+          ],
+        };
+        final errors = validate(miniSchema, probe, catalogs: catalogs);
+        if (errors.isEmpty) {
+          filled++;
+        }
+      }
+    }
+
+    return (total: total, filled: filled);
+  }
+
   static void _validatePhoto(
     Map<String, dynamic> field,
     dynamic value,

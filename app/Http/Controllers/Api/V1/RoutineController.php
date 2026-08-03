@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Enums\InvoiceStatus;
 use App\Enums\MembershipRole;
 use App\Enums\RoutineStatus;
 use App\Http\Controllers\Controller;
 use App\Models\CompanyMembership;
 use App\Models\Routine;
+use App\Models\RoutineType;
 use App\Services\Audit\AuditLogger;
 use App\Services\Forms\FormDesignSettings;
 use App\Services\Routines\DemoRoutineFactory;
+use App\Services\Routines\RoutineSubjectRules;
 use App\Services\Workflow\WorkflowRuntime;
 use App\Support\AuditCorrelation;
 use Illuminate\Http\JsonResponse;
@@ -21,7 +22,7 @@ class RoutineController extends Controller
     public function index(Request $request): JsonResponse
     {
         $routines = Routine::query()
-            ->with(['asset', 'site', 'routineType', 'assignee', 'latestExecution'])
+            ->with(['asset', 'client', 'site', 'routineType', 'assignee', 'latestExecution'])
             ->when(
                 $request->query('status'),
                 fn ($q, $status) => $q->where('status', $status)
@@ -32,24 +33,33 @@ class RoutineController extends Controller
         return response()->json($routines);
     }
 
-    public function store(Request $request, WorkflowRuntime $workflow, AuditLogger $audit): JsonResponse
+    public function store(Request $request, WorkflowRuntime $workflow, AuditLogger $audit, RoutineSubjectRules $subjects): JsonResponse
     {
         $data = $request->validate([
             'site_id' => ['required', 'exists:sites,id'],
-            'asset_id' => ['required', 'exists:assets,id'],
+            'asset_id' => ['nullable', 'exists:assets,id'],
+            'client_id' => ['nullable', 'exists:clients,id'],
             'routine_type_id' => ['required', 'exists:routine_types,id'],
             'assigned_to' => ['nullable', 'exists:users,id'],
             'scheduled_at' => ['nullable', 'date'],
         ]);
 
+        $type = RoutineType::query()->findOrFail((int) $data['routine_type_id']);
+        $subject = $subjects->normalizeForType($type, $data);
+
         $routine = Routine::query()->create([
-            ...$data,
+            'site_id' => $data['site_id'],
+            'asset_id' => $subject['asset_id'],
+            'client_id' => $subject['client_id'],
+            'routine_type_id' => $type->id,
+            'assigned_to' => $data['assigned_to'] ?? null,
+            'scheduled_at' => $data['scheduled_at'] ?? null,
             'created_by' => $request->user()->id,
-            'status' => \App\Enums\RoutineStatus::Assigned,
+            'status' => RoutineStatus::Assigned,
         ]);
 
         $workflow->ensureInstance($routine->load('routineType.workflowDefinition'));
-        $routine->load(['asset', 'site', 'routineType', 'assignee', 'workflowInstance']);
+        $routine->load(['asset', 'client', 'site', 'routineType', 'assignee', 'workflowInstance']);
         $this->auditRoutineCreated($request, $audit, $routine);
 
         return response()->json(['data' => $routine], 201);
@@ -76,7 +86,7 @@ class RoutineController extends Controller
             ?? $request->user();
 
         $routine = $factory->createForCompany($companyId, $technician);
-        $routine->loadMissing(['asset', 'site', 'routineType', 'assignee', 'workflowInstance']);
+        $routine->loadMissing(['asset', 'client', 'site', 'routineType', 'assignee', 'workflowInstance']);
         $this->auditRoutineCreated($request, $audit, $routine);
 
         return response()->json(['data' => $routine], 201);
@@ -86,6 +96,7 @@ class RoutineController extends Controller
     {
         $routine->load([
             'asset',
+            'client',
             'site',
             'routineType.formVersion',
             'assignee',

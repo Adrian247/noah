@@ -28,9 +28,13 @@ class RefreshDemoCommand extends Command
         $this->call('phoenix:ensure-demo', ['--reset-credentials' => true]);
 
         $this->newLine();
-        $this->info('Demo listo. Root: '.DemoAccounts::ROOT_EMAIL.' / '.config('phoenix.demo_root_password'));
-        $this->info('Tenants: contraseña '.config('phoenix.demo_password'));
+        $this->info('Demo listo. Cuenta por defecto: '.DemoAccounts::DEFAULT_LOGIN_EMAIL.' / '.config('phoenix.demo_password'));
+        $this->info('Root plataforma: '.DemoAccounts::ROOT_EMAIL.' / '.config('phoenix.demo_root_password'));
+        $this->line('Otras cuentas (misma contraseña tenant):');
         foreach (EnsureDemoDataCommand::demoAccountEmails() as $email) {
+            if ($email === DemoAccounts::DEFAULT_LOGIN_EMAIL) {
+                continue;
+            }
             $this->line('  · '.$email);
         }
 

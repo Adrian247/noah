@@ -76,8 +76,13 @@ class ClientPortalController extends Controller
             ->pluck('asset_id');
 
         $routines = Routine::query()
-            ->whereIn('asset_id', $assetIds)
-            ->with(['asset', 'routineType', 'latestExecution', 'invoice'])
+            ->where(function ($q) use ($clientId, $assetIds) {
+                $q->where('client_id', $clientId);
+                if ($assetIds->isNotEmpty()) {
+                    $q->orWhereIn('asset_id', $assetIds);
+                }
+            })
+            ->with(['asset', 'client', 'routineType', 'latestExecution', 'invoice'])
             ->orderByDesc('id')
             ->paginate(15);
 
@@ -91,6 +96,7 @@ class ClientPortalController extends Controller
         return response()->json([
             'data' => $routine->load([
                 'asset.catalogItem',
+                'client',
                 'routineType',
                 'executions',
                 'latestExecution',
@@ -152,6 +158,15 @@ class ClientPortalController extends Controller
     private function authorizeRoutine(Request $request, Routine $routine): void
     {
         $clientId = $this->clientId($request);
+
+        if ((int) $routine->client_id === $clientId) {
+            return;
+        }
+
+        if ($routine->asset_id === null) {
+            abort(404);
+        }
+
         $allowed = \App\Models\AssetClientAssignment::query()
             ->active()
             ->where('client_id', $clientId)

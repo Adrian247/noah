@@ -11,7 +11,7 @@ flowchart LR
   Q --> N[NotificationService]
   N --> C{Channel}
   C --> Email[Email]
-  C --> Push[Push - futuro]
+  C --> Push[Push FCM]
 ```
 
 ## Canales
@@ -19,9 +19,15 @@ flowchart LR
 | Canal | Fase |
 |-------|------|
 | Email | v1 |
-| Push móvil | v2 |
+| Push móvil (FCM) | v2 — ver [ADR-014](../decisions/ADR-014-mobile-push-fcm.md) y cambio 047 |
 | WhatsApp / SMS | futuro |
 | Slack / Teams | integraciones |
+
+## Push (v2)
+
+- Registro: `POST /api/v1/mobile/device-tokens`
+- Envío: `App\Services\Notifications\PushNotifier` (cola Redis)
+- Drivers: `log` (local/tests) | `fcm` (HTTP v1)
 
 ## Interfaz
 

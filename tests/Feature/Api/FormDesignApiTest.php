@@ -2,16 +2,15 @@
 
 namespace Tests\Feature\Api;
 
-use App\Models\Company;
 use App\Models\FormDefinition;
 use App\Models\FormOptionCatalog;
 use App\Models\FormVersion;
-use App\Models\Routine;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\Support\CreatesDemoRoutine;
+use Tests\Support\UsesMeinCompany;
 use Tests\Support\VehicleDemoFormResponses;
 use Tests\TestCase;
 
@@ -19,12 +18,13 @@ class FormDesignApiTest extends TestCase
 {
     use CreatesDemoRoutine;
     use RefreshDatabase;
+    use UsesMeinCompany;
 
     private function adminHeaders(): array
     {
         $this->seed();
         $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
-        $company = Company::query()->first();
+        $company = $this->meinCompany();
 
         return [
             'token' => $admin->createToken('test')->plainTextToken,
@@ -60,8 +60,14 @@ class FormDesignApiTest extends TestCase
             ->withHeader('X-Company-Id', $h['company_id'])
             ->putJson("/api/v1/design/forms/option-catalogs/{$id}", [
                 'name' => 'Prioridades actualizadas',
+                'options' => [
+                    ['value' => 'baja', 'label' => 'Baja'],
+                    ['value' => 'alta', 'label' => 'Alta'],
+                ],
             ])
-            ->assertOk();
+            ->assertOk()
+            ->assertJsonPath('data.options.0.value', 'baja')
+            ->assertJsonPath('data.options.1.value', 'alta');
     }
 
     public function test_admin_can_update_form_image_settings(): void
@@ -105,7 +111,7 @@ class FormDesignApiTest extends TestCase
     {
         $this->seed();
         $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
-        $company = Company::query()->first();
+        $company = $this->meinCompany();
         $routine = $this->demoRoutine();
         $token = $technician->createToken('test')->plainTextToken;
 
@@ -143,7 +149,7 @@ class FormDesignApiTest extends TestCase
 
         $this->seed();
         $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
-        $company = Company::query()->first();
+        $company = $this->meinCompany();
         $company->update(['form_max_image_size_kb' => 1]);
         $routine = $this->demoRoutine();
         $token = $technician->createToken('test')->plainTextToken;
@@ -163,7 +169,7 @@ class FormDesignApiTest extends TestCase
     {
         $this->seed();
         $admin = User::query()->where('email', 'admin@pyro-systems.com')->firstOrFail();
-        $company = Company::query()->firstOrFail();
+        $company = $this->meinCompany();
         $routine = $this->demoRoutine();
         $token = $admin->createToken('test')->plainTextToken;
 

@@ -196,7 +196,10 @@ async function testWebhook(row: Webhook) {
         if (res.data.success) {
             toast.success(`Prueba enviada (${res.data.status}).`);
         } else {
-            toast.error(`Prueba fallida: ${res.data.status}`);
+            const detail = res.data.http_status
+                ? `${res.data.status} (HTTP ${res.data.http_status})`
+                : res.data.status;
+            toast.error(`Prueba fallida: ${detail}`);
         }
         await load();
     } catch (e) {
@@ -305,7 +308,7 @@ onMounted(load);
 </script>
 
 <template>
-    <div class="portal-page">
+    <div class="portal-page" data-tour="page-integrations">
         <PageHeader
             title="Integraciones"
             subtitle="Webhooks salientes y reglas de automatización operativa."
@@ -328,7 +331,7 @@ onMounted(load);
             </AppButton>
         </div>
 
-        <p v-if="loading" class="text-portal-muted">Cargando…</p>
+        <p v-if="loading" class="text-portal-muted">Cargandoâ€¦</p>
 
         <template v-else-if="tab === 'webhooks'">
             <div class="mb-3 flex justify-end">
@@ -410,6 +413,10 @@ onMounted(load);
             <form id="webhook-form" class="grid gap-4" @submit.prevent="saveWebhook">
                 <MaterialField v-model="webhookForm.name" label="Nombre" required />
                 <MaterialField v-model="webhookForm.url" label="URL destino" type="url" required />
+                <p class="text-portal-muted text-xs">
+                    Slack Incoming Webhook (<code class="font-mono">hooks.slack.com</code>) se formatea
+                    automáticamente. Otros destinos reciben el JSON estándar de Phoenix.
+                </p>
                 <fieldset class="space-y-2">
                     <legend class="text-portal-heading text-sm font-medium">Eventos</legend>
                     <label

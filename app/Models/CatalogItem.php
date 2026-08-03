@@ -11,7 +11,15 @@ class CatalogItem extends Model
 {
     use BelongsToCompany;
 
-    protected $fillable = ['company_id', 'equipment_type_id', 'code', 'name', 'manufacturer', 'specifications'];
+    protected $fillable = [
+        'company_id',
+        'equipment_type_id',
+        'code',
+        'name',
+        'manufacturer',
+        'oem_equipment_model_id',
+        'specifications',
+    ];
 
     protected function casts(): array
     {
@@ -23,6 +31,11 @@ class CatalogItem extends Model
     public function equipmentType(): BelongsTo
     {
         return $this->belongsTo(EquipmentType::class);
+    }
+
+    public function oemEquipmentModel(): BelongsTo
+    {
+        return $this->belongsTo(OemEquipmentModel::class, 'oem_equipment_model_id');
     }
 
     public function assets(): HasMany

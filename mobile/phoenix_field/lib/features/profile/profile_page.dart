@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phoenix_field/core/network/dio_provider.dart';
 import 'package:phoenix_field/core/security/app_lock_provider.dart';
-import 'package:phoenix_field/core/security/mobile_policy_enforcer.dart';
 import 'package:phoenix_field/core/sync/background_sync_service.dart';
+import 'package:phoenix_field/core/theme/theme_mode_provider.dart';
 import 'package:phoenix_field/data/repositories/auth_repository.dart';
 import 'package:phoenix_field/data/repositories/media_repository.dart';
 import 'package:phoenix_field/data/repositories/sync_repository.dart';
@@ -53,6 +53,28 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       await ref.read(syncRepositoryProvider).syncNow();
       await ref.read(mobilePolicyEnforcerProvider).applyLocalRules();
       await BackgroundSyncService.requestImmediate();
+
+      final policy = ref.read(mobilePolicyEnforcerProvider).policy;
+      if (policy.requireAppLock && !ref.read(appLockControllerProvider).enabled) {
+        if (!mounted) {
+          return;
+        }
+        final ok =
+            await ref.read(mobilePolicyEnforcerProvider).ensureRequiredPin(context);
+        if (!ok) {
+          await ref.read(authRepositoryProvider).logout();
+          unlockAppSession(ref);
+          ref.read(authNavigationVersionProvider.notifier).state++;
+          if (mounted) {
+            context.go('/login');
+          }
+          return;
+        }
+      }
+      if (ref.read(appLockControllerProvider).enabled) {
+        lockAppSession(ref);
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Sincronización completada')),
@@ -245,6 +267,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final auth = ref.watch(authRepositoryProvider);
     final lock = ref.watch(appLockControllerProvider);
     final policy = ref.watch(mobilePolicyEnforcerProvider).policy;
+    final themeMode = ref.watch(themeModeControllerProvider);
+    final themeController = ref.read(themeModeControllerProvider.notifier);
     final userName = session.user?['name']?.toString() ?? 'Técnico';
     final email = session.user?['email']?.toString() ?? '';
     final avatarUrl = auth.userAvatarUrl;
@@ -311,6 +335,32 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   ? 'Activo cada ~15 min con red (Android/iOS)'
                   : 'En desktop: sync al volver a la app',
             ),
+          ),
+          const Divider(),
+          Text('Apariencia', style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 8),
+          SegmentedButton<ThemeMode>(
+            segments: const [
+              ButtonSegment(
+                value: ThemeMode.light,
+                label: Text('Claro'),
+                icon: Icon(Icons.light_mode_outlined, size: 16),
+              ),
+              ButtonSegment(
+                value: ThemeMode.dark,
+                label: Text('Oscuro'),
+                icon: Icon(Icons.dark_mode_outlined, size: 16),
+              ),
+              ButtonSegment(
+                value: ThemeMode.system,
+                label: Text('Auto'),
+                icon: Icon(Icons.brightness_auto_outlined, size: 16),
+              ),
+            ],
+            selected: {themeMode},
+            onSelectionChanged: (selection) {
+              themeController.setMode(selection.first);
+            },
           ),
           const Divider(),
           Text('Seguridad', style: Theme.of(context).textTheme.titleSmall),

@@ -4,38 +4,52 @@ use App\Http\Controllers\Api\V1\AssetClientAssignmentController;
 use App\Http\Controllers\Api\V1\AssetController;
 use App\Http\Controllers\Api\V1\AuditController;
 use App\Http\Controllers\Api\V1\AuthController;
-use App\Http\Controllers\Api\V1\PortalController;
-use App\Http\Controllers\Api\V1\ProfileController;
+use App\Http\Controllers\Api\V1\AutomationRuleController;
 use App\Http\Controllers\Api\V1\BillingSettingsController;
+use App\Http\Controllers\Api\V1\CatalogItemController;
 use App\Http\Controllers\Api\V1\ClientController;
 use App\Http\Controllers\Api\V1\ClientPortalController;
+use App\Http\Controllers\Api\V1\CompanyAiSettingsController;
+use App\Http\Controllers\Api\V1\CompanyPredictiveSettingsController;
 use App\Http\Controllers\Api\V1\CompanyRoleController;
 use App\Http\Controllers\Api\V1\CompanyUserController;
 use App\Http\Controllers\Api\V1\DashboardController;
-use App\Http\Controllers\Api\V1\ExecutionEvidenceController;
-use App\Http\Controllers\Api\V1\CatalogItemController;
+use App\Http\Controllers\Api\V1\DashboardPreferenceController;
+use App\Http\Controllers\Api\V1\DevicePushTokenController;
 use App\Http\Controllers\Api\V1\EquipmentTypeController;
+use App\Http\Controllers\Api\V1\ExecutionEvidenceController;
 use App\Http\Controllers\Api\V1\FormDefinitionController;
 use App\Http\Controllers\Api\V1\FormDesignSettingsController;
 use App\Http\Controllers\Api\V1\FormOptionCatalogController;
 use App\Http\Controllers\Api\V1\GeneratedReportController;
+use App\Http\Controllers\Api\V1\InsightsController;
 use App\Http\Controllers\Api\V1\InventoryMetaController;
 use App\Http\Controllers\Api\V1\InventoryMovementController;
-use App\Http\Controllers\Api\V1\MobileSecuritySettingsController;
 use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\InvoiceEvidenceController;
+use App\Http\Controllers\Api\V1\MobileSecuritySettingsController;
+use App\Http\Controllers\Api\V1\PlatformAiSettingsController;
+use App\Http\Controllers\Api\V1\PlatformPredictiveAlgorithmController;
+use App\Http\Controllers\Api\V1\PlatformRolePermissionController;
+use App\Http\Controllers\Api\V1\PlatformTenantController;
+use App\Http\Controllers\Api\V1\PortalController;
+use App\Http\Controllers\Api\V1\PredictiveMaintenanceController;
+use App\Http\Controllers\Api\V1\ProfileController;
+use App\Http\Controllers\Api\V1\ReportSectionTemplateController;
+use App\Http\Controllers\Api\V1\ReportTemplateController;
 use App\Http\Controllers\Api\V1\RoutineController;
 use App\Http\Controllers\Api\V1\RoutineExecutionController;
 use App\Http\Controllers\Api\V1\RoutineFormFieldUploadController;
 use App\Http\Controllers\Api\V1\RoutineTypeController;
-use App\Http\Controllers\Api\V1\ReportSectionTemplateController;
-use App\Http\Controllers\Api\V1\ReportTemplateController;
 use App\Http\Controllers\Api\V1\SiteController;
 use App\Http\Controllers\Api\V1\SupplierController;
-use App\Http\Controllers\Api\V1\SyncController;
 use App\Http\Controllers\Api\V1\SupplyItemController;
 use App\Http\Controllers\Api\V1\SupplyTypeController;
+use App\Http\Controllers\Api\V1\SyncController;
+use App\Http\Controllers\Api\V1\WebhookSubscriptionController;
 use App\Http\Controllers\Api\V1\WorkflowDefinitionController;
+use App\Models\User;
+use App\Support\DemoAccounts;
 use App\Support\DemoEnvironmentBootstrap;
 use Illuminate\Support\Facades\Route;
 
@@ -51,10 +65,11 @@ Route::prefix('v1')->group(function (): void {
 
         if (app()->environment('local')) {
             $payload['demo'] = [
-                'accounts_ready' => \App\Models\User::query()->where('email', \App\Support\DemoAccounts::ROOT_EMAIL)->exists(),
-                'root_email' => \App\Support\DemoAccounts::ROOT_EMAIL,
-                'password' => config('phoenix.demo_root_password'),
-                'tenant_password' => config('phoenix.demo_password'),
+                'accounts_ready' => User::query()->where('email', DemoAccounts::DEFAULT_LOGIN_EMAIL)->exists(),
+                'default_login_email' => DemoAccounts::DEFAULT_LOGIN_EMAIL,
+                'root_email' => DemoAccounts::ROOT_EMAIL,
+                'password' => config('phoenix.demo_password'),
+                'root_password' => config('phoenix.demo_root_password'),
             ];
         }
 
@@ -68,58 +83,63 @@ Route::prefix('v1')->group(function (): void {
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);
+        Route::put('/auth/password', [ProfileController::class, 'updatePassword']);
         Route::post('/auth/avatar', [ProfileController::class, 'updateAvatar']);
 
         Route::middleware('platform.admin')->prefix('platform')->group(function (): void {
-            Route::get('/role-permissions', [\App\Http\Controllers\Api\V1\PlatformRolePermissionController::class, 'show']);
-            Route::put('/role-permissions', [\App\Http\Controllers\Api\V1\PlatformRolePermissionController::class, 'update']);
-            Route::get('/ai/settings', [\App\Http\Controllers\Api\V1\PlatformAiSettingsController::class, 'show']);
-            Route::put('/ai/settings', [\App\Http\Controllers\Api\V1\PlatformAiSettingsController::class, 'update']);
-            Route::get('/ai/models', [\App\Http\Controllers\Api\V1\PlatformAiSettingsController::class, 'models']);
-            Route::post('/ai/validate', [\App\Http\Controllers\Api\V1\PlatformAiSettingsController::class, 'validateProvider']);
-            Route::get('/tenants', [\App\Http\Controllers\Api\V1\PlatformTenantController::class, 'index']);
-            Route::post('/tenants', [\App\Http\Controllers\Api\V1\PlatformTenantController::class, 'store']);
-            Route::patch('/tenants/{company}', [\App\Http\Controllers\Api\V1\PlatformTenantController::class, 'update']);
-            Route::post('/tenants/{company}/logo', [\App\Http\Controllers\Api\V1\PlatformTenantController::class, 'updateLogo']);
-            Route::post('/tenants/{company}/memberships', [\App\Http\Controllers\Api\V1\PlatformTenantController::class, 'storeMembership']);
-            Route::post('/users/{user}/avatar', [\App\Http\Controllers\Api\V1\PlatformTenantController::class, 'updateUserAvatar']);
-            Route::post('/tenants/{company}/assume', [\App\Http\Controllers\Api\V1\PlatformTenantController::class, 'assume']);
+            Route::get('/role-permissions', [PlatformRolePermissionController::class, 'show']);
+            Route::put('/role-permissions', [PlatformRolePermissionController::class, 'update']);
+            Route::get('/ai/settings', [PlatformAiSettingsController::class, 'show']);
+            Route::put('/ai/settings', [PlatformAiSettingsController::class, 'update']);
+            Route::get('/ai/models', [PlatformAiSettingsController::class, 'models']);
+            Route::post('/ai/validate', [PlatformAiSettingsController::class, 'validateProvider']);
+            Route::get('/predictive/algorithms', [PlatformPredictiveAlgorithmController::class, 'index']);
+            Route::post('/predictive/algorithms/train', [PlatformPredictiveAlgorithmController::class, 'train']);
+            Route::post('/predictive/algorithms/{version}/publish', [PlatformPredictiveAlgorithmController::class, 'publish']);
+            Route::post('/predictive/algorithms/{version}/archive', [PlatformPredictiveAlgorithmController::class, 'archive']);
+            Route::get('/tenants', [PlatformTenantController::class, 'index']);
+            Route::post('/tenants', [PlatformTenantController::class, 'store']);
+            Route::patch('/tenants/{company}', [PlatformTenantController::class, 'update']);
+            Route::post('/tenants/{company}/logo', [PlatformTenantController::class, 'updateLogo']);
+            Route::post('/tenants/{company}/memberships', [PlatformTenantController::class, 'storeMembership']);
+            Route::post('/users/{user}/avatar', [PlatformTenantController::class, 'updateUserAvatar']);
+            Route::post('/tenants/{company}/assume', [PlatformTenantController::class, 'assume']);
         });
 
         Route::middleware('company')->group(function (): void {
             Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
-            Route::get('/dashboard/preferences', [\App\Http\Controllers\Api\V1\DashboardPreferenceController::class, 'show']);
-            Route::put('/dashboard/preferences', [\App\Http\Controllers\Api\V1\DashboardPreferenceController::class, 'update']);
+            Route::get('/dashboard/preferences', [DashboardPreferenceController::class, 'show']);
+            Route::put('/dashboard/preferences', [DashboardPreferenceController::class, 'update']);
 
-            Route::get('/integrations/webhooks', [\App\Http\Controllers\Api\V1\WebhookSubscriptionController::class, 'index'])
+            Route::get('/integrations/webhooks', [WebhookSubscriptionController::class, 'index'])
                 ->middleware('company.module:integrations,read');
-            Route::post('/integrations/webhooks', [\App\Http\Controllers\Api\V1\WebhookSubscriptionController::class, 'store'])
+            Route::post('/integrations/webhooks', [WebhookSubscriptionController::class, 'store'])
                 ->middleware('company.module:integrations,write');
-            Route::put('/integrations/webhooks/{webhookSubscription}', [\App\Http\Controllers\Api\V1\WebhookSubscriptionController::class, 'update'])
+            Route::put('/integrations/webhooks/{webhookSubscription}', [WebhookSubscriptionController::class, 'update'])
                 ->middleware('company.module:integrations,write');
-            Route::delete('/integrations/webhooks/{webhookSubscription}', [\App\Http\Controllers\Api\V1\WebhookSubscriptionController::class, 'destroy'])
+            Route::delete('/integrations/webhooks/{webhookSubscription}', [WebhookSubscriptionController::class, 'destroy'])
                 ->middleware('company.module:integrations,write');
-            Route::post('/integrations/webhooks/{webhookSubscription}/test', [\App\Http\Controllers\Api\V1\WebhookSubscriptionController::class, 'test'])
+            Route::post('/integrations/webhooks/{webhookSubscription}/test', [WebhookSubscriptionController::class, 'test'])
                 ->middleware('company.module:integrations,write');
 
-            Route::get('/automation/rules', [\App\Http\Controllers\Api\V1\AutomationRuleController::class, 'index'])
+            Route::get('/automation/rules', [AutomationRuleController::class, 'index'])
                 ->middleware('company.module:integrations,read');
-            Route::post('/automation/rules', [\App\Http\Controllers\Api\V1\AutomationRuleController::class, 'store'])
+            Route::post('/automation/rules', [AutomationRuleController::class, 'store'])
                 ->middleware('company.module:integrations,write');
-            Route::put('/automation/rules/{automationRule}', [\App\Http\Controllers\Api\V1\AutomationRuleController::class, 'update'])
+            Route::put('/automation/rules/{automationRule}', [AutomationRuleController::class, 'update'])
                 ->middleware('company.module:integrations,write');
-            Route::delete('/automation/rules/{automationRule}', [\App\Http\Controllers\Api\V1\AutomationRuleController::class, 'destroy'])
+            Route::delete('/automation/rules/{automationRule}', [AutomationRuleController::class, 'destroy'])
                 ->middleware('company.module:integrations,write');
 
-            Route::post('/insights/assistant', [\App\Http\Controllers\Api\V1\InsightsController::class, 'assistant'])
+            Route::post('/insights/assistant', [InsightsController::class, 'assistant'])
                 ->middleware('company.permission:insights.use');
-            Route::post('/insights/ocr', [\App\Http\Controllers\Api\V1\InsightsController::class, 'ocr'])
+            Route::post('/insights/ocr', [InsightsController::class, 'ocr'])
                 ->middleware('company.permission:insights.use');
-            Route::get('/insights/routines/{routine}/narrative', [\App\Http\Controllers\Api\V1\InsightsController::class, 'routineNarrative'])
+            Route::get('/insights/routines/{routine}/narrative', [InsightsController::class, 'routineNarrative'])
                 ->middleware('company.permission:insights.use');
-            Route::get('/insights/routines/{routine}/cost-estimate', [\App\Http\Controllers\Api\V1\InsightsController::class, 'routineCostEstimate'])
+            Route::get('/insights/routines/{routine}/cost-estimate', [InsightsController::class, 'routineCostEstimate'])
                 ->middleware('company.permission:insights.use');
-            Route::get('/insights/assets/{asset}/supply-suggestions', [\App\Http\Controllers\Api\V1\InsightsController::class, 'assetSupplySuggestions'])
+            Route::get('/insights/assets/{asset}/supply-suggestions', [InsightsController::class, 'assetSupplySuggestions'])
                 ->middleware('company.permission:insights.use');
 
             Route::get('/sites', [SiteController::class, 'index'])
@@ -163,11 +183,15 @@ Route::prefix('v1')->group(function (): void {
                 Route::put('/portal/settings', [PortalController::class, 'update']);
                 Route::get('/mobile/settings', [MobileSecuritySettingsController::class, 'show']);
                 Route::put('/mobile/settings', [MobileSecuritySettingsController::class, 'update']);
-                Route::get('/ai/settings', [\App\Http\Controllers\Api\V1\CompanyAiSettingsController::class, 'show']);
-                Route::put('/ai/settings', [\App\Http\Controllers\Api\V1\CompanyAiSettingsController::class, 'update']);
+                Route::get('/ai/settings', [CompanyAiSettingsController::class, 'show']);
+                Route::put('/ai/settings', [CompanyAiSettingsController::class, 'update']);
+                Route::get('/predictive/settings', [CompanyPredictiveSettingsController::class, 'show']);
+                Route::put('/predictive/settings', [CompanyPredictiveSettingsController::class, 'update']);
             });
 
             Route::post('/sync', [SyncController::class, 'sync']);
+            Route::post('/mobile/device-tokens', [DevicePushTokenController::class, 'store']);
+            Route::delete('/mobile/device-tokens', [DevicePushTokenController::class, 'destroy']);
 
             Route::get('/catalog/equipment-types/form-options', [EquipmentTypeController::class, 'formOptions'])
                 ->middleware('company.module:catalog_items,read');
@@ -238,6 +262,18 @@ Route::prefix('v1')->group(function (): void {
                 ->middleware('company.module:assets,read');
             Route::post('/assets/{asset}/client-assignments', [AssetClientAssignmentController::class, 'store'])
                 ->middleware('company.module:assets,write');
+
+            Route::prefix('predictive')->middleware('company.module:assets,read')->group(function (): void {
+                Route::get('/predictions', [PredictiveMaintenanceController::class, 'predictions']);
+                Route::get('/client-demand', [PredictiveMaintenanceController::class, 'clientDemand']);
+                Route::get('/assets/{asset}/health', [PredictiveMaintenanceController::class, 'health']);
+                Route::get('/failure-modes', [PredictiveMaintenanceController::class, 'failureModes']);
+                Route::get('/oem-models', [PredictiveMaintenanceController::class, 'oemModels']);
+                Route::get('/oem-plans', [PredictiveMaintenanceController::class, 'oemPlans']);
+                Route::get('/accuracy', [PredictiveMaintenanceController::class, 'accuracy']);
+                Route::post('/evaluate', [PredictiveMaintenanceController::class, 'evaluate'])
+                    ->middleware('company.module:assets,write');
+            });
 
             Route::middleware('company.client_portal')->prefix('portal')->group(function (): void {
                 Route::get('/invoices', [ClientPortalController::class, 'invoices']);

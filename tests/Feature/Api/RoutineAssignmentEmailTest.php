@@ -3,16 +3,20 @@
 namespace Tests\Feature\Api;
 
 use App\Mail\WorkflowStepMail;
-use App\Models\Company;
+use App\Models\Asset;
+use App\Models\RoutineType;
+use App\Models\Site;
 use App\Models\User;
 use App\Services\Routines\DemoRoutineFactory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Tests\Support\UsesMeinCompany;
 use Tests\TestCase;
 
 class RoutineAssignmentEmailTest extends TestCase
 {
     use RefreshDatabase;
+    use UsesMeinCompany;
 
     public function test_creating_assigned_routine_queues_assignment_email(): void
     {
@@ -21,12 +25,15 @@ class RoutineAssignmentEmailTest extends TestCase
 
         $admin = User::query()->where('email', 'admin@pyro-systems.com')->firstOrFail();
         $technician = User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
-        $company = Company::query()->firstOrFail();
+        $company = $this->meinCompany();
 
         $token = $admin->createToken('test')->plainTextToken;
-        $siteId = \App\Models\Site::query()->where('company_id', $company->id)->value('id');
-        $assetId = \App\Models\Asset::query()->where('company_id', $company->id)->value('id');
-        $typeId = \App\Models\RoutineType::query()->where('company_id', $company->id)->value('id');
+        $siteId = Site::query()->where('company_id', $company->id)->value('id');
+        $assetId = Asset::query()->where('company_id', $company->id)->value('id');
+        $typeId = RoutineType::query()
+            ->where('company_id', $company->id)
+            ->where('slug', 'revision-mayor-vehiculo-premium')
+            ->value('id');
 
         $this->withToken($token)
             ->withHeader('X-Company-Id', (string) $company->id)
@@ -52,7 +59,7 @@ class RoutineAssignmentEmailTest extends TestCase
         Mail::fake();
 
         $technician = User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
-        $company = Company::query()->firstOrFail();
+        $company = $this->meinCompany();
 
         app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
 

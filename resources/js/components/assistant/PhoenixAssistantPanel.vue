@@ -72,8 +72,8 @@ const routeContext = computed(() => {
 const suggestions = [
     'Muéstrame el dashboard de KPIs',
     '¿Qué rutinas hay recientes?',
-    'Lista clientes',
-    'Facturas recientes',
+    'Demanda de manufactura a clientes',
+    'Riesgo de falla en toda la flota',
 ];
 
 function onDocumentKeydown(event: KeyboardEvent) {
@@ -91,7 +91,7 @@ watch(
             if (messages.value.length === 0) {
                 messages.value.push({
                     role: 'assistant',
-                    text: 'Soy el asistente de Phoenix. Consulto datos reales (rutinas, clientes, facturas, sitios, KPIs). En la ficha de una rutina puedes generar narrativa y costo; en activos, OCR y sugerencias de insumos.',
+                    text: 'Soy el asistente de Phoenix. Consulto datos reales: rutinas (mantenimiento, manufactura o suministro), clientes, facturas, sitios y KPIs. Puedo estimar riesgo en equipos o demanda de servicios a clientes. En la ficha de una rutina puedes generar narrativa y costo; en activos, OCR y sugerencias de insumos.',
                 });
             }
             void nextTick(() => closeButtonRef.value?.focus());

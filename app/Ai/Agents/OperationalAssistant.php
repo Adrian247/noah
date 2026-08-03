@@ -7,6 +7,7 @@ use App\Ai\Tools\PhoenixDomainTool;
 use App\Models\User;
 use App\Services\AI\AiToolAuthorizer;
 use App\Services\AI\Contracts\AiTool;
+use App\Support\Ai\OperationalAssistantPrompt;
 use Laravel\Ai\Attributes\MaxSteps;
 use Laravel\Ai\Attributes\Temperature;
 use Laravel\Ai\Attributes\Timeout;
@@ -14,6 +15,7 @@ use Laravel\Ai\Concerns\RemembersConversations;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasTools;
 use Laravel\Ai\Contracts\RemembersConversations as RemembersConversationsContract;
+use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Promptable;
 use Stringable;
 
@@ -41,16 +43,11 @@ class OperationalAssistant implements Agent, HasTools, RemembersConversationsCon
     {
         return $this->systemInstructions !== ''
             ? $this->systemInstructions
-            : <<<'PROMPT'
-Eres un asistente operativo de Phoenix. Responde en español, breve y factual.
-Usa SOLO datos obtenidos de las herramientas. No inventes rutinas, activos, montos ni IDs.
-Si el usuario pide KPIs, dashboard o indicadores, llama get_operational_kpis.
-Si faltan datos, dilo. Cita IDs presentes en los resultados de herramientas.
-PROMPT;
+            : OperationalAssistantPrompt::default();
     }
 
     /**
-     * @return list<\Laravel\Ai\Contracts\Tool>
+     * @return list<Tool>
      */
     public function tools(): iterable
     {

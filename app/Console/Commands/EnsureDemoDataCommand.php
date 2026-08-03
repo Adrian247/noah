@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Support\DemoAccounts;
 use App\Support\PlatformAdmin;
 use Database\Seeders\PhoenixDemoSeeder;
+use App\Services\Workflow\WorkflowRuntime;
 use Illuminate\Console\Command;
 
 class EnsureDemoDataCommand extends Command
@@ -16,7 +17,11 @@ class EnsureDemoDataCommand extends Command
 
     protected $description = 'Seed demo data when missing; optional reset of demo login passwords';
 
-    private const DEMO_COMPANY_NAME = 'Mein Company';
+    private const DEMO_COMPANY_NAMES = [
+        'Mein Company',
+        'Dom-G',
+        'Sandbox',
+    ];
 
     /**
      * @return list<string>
@@ -52,10 +57,18 @@ class EnsureDemoDataCommand extends Command
 
         $this->call('phoenix:bootstrap-permissions');
 
-        $company = Company::query()->where('name', self::DEMO_COMPANY_NAME)->first();
-        if ($company !== null) {
-            app(\App\Services\Workflow\WorkflowRuntime::class)->seedDefinitionForCompany($company->id);
-            $this->info('Workflow demo «routine-validation-v1» sincronizado con el diseño estándar.');
+        $workflowRuntime = app(WorkflowRuntime::class);
+        $synced = 0;
+        foreach (self::DEMO_COMPANY_NAMES as $companyName) {
+            $company = Company::query()->where('name', $companyName)->first();
+            if ($company === null) {
+                continue;
+            }
+            $workflowRuntime->syncStandardWorkflowForCompany($company->id);
+            $synced++;
+        }
+        if ($synced > 0) {
+            $this->info("Workflow estándar «routine-validation-v1» sincronizado en {$synced} empresa(s) demo.");
         }
 
         return self::SUCCESS;
@@ -67,7 +80,7 @@ class EnsureDemoDataCommand extends Command
             return true;
         }
 
-        return ! Company::query()->where('name', self::DEMO_COMPANY_NAME)->exists();
+        return ! Company::query()->where('name', self::DEMO_COMPANY_NAMES[0])->exists();
     }
 
     private function resetDemoCredentials(): void

@@ -9,6 +9,10 @@ class RoutineInvoiceClientResolver
 {
     public function resolveForRoutine(Routine $routine): ?int
     {
+        if ($routine->client_id !== null) {
+            return (int) $routine->client_id;
+        }
+
         $routine->loadMissing('asset');
         $assetId = $routine->asset_id;
         if ($assetId === null) {

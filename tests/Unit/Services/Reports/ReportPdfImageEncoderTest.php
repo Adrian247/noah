@@ -18,4 +18,34 @@ class ReportPdfImageEncoderTest extends TestCase
         $this->assertNotNull($uri);
         $this->assertStringStartsWith('data:image/jpeg;base64,', $uri);
     }
+
+    public function test_orientation_classifies_landscape_portrait_and_square(): void
+    {
+        $this->assertSame('landscape', ReportPdfImageEncoder::orientation($this->png(200, 100)));
+        $this->assertSame('portrait', ReportPdfImageEncoder::orientation($this->png(100, 200)));
+        $this->assertSame('square', ReportPdfImageEncoder::orientation($this->png(120, 120)));
+    }
+
+    public function test_dimensions_reads_png_size(): void
+    {
+        $dims = ReportPdfImageEncoder::dimensions($this->png(160, 90));
+        $this->assertNotNull($dims);
+        $this->assertSame(160, $dims['width']);
+        $this->assertSame(90, $dims['height']);
+    }
+
+    private function png(int $width, int $height): string
+    {
+        $image = imagecreatetruecolor($width, $height);
+        $this->assertNotFalse($image);
+        $bg = imagecolorallocate($image, 200, 200, 200);
+        imagefilledrectangle($image, 0, 0, $width, $height, $bg);
+        ob_start();
+        imagepng($image);
+        $binary = ob_get_clean();
+        imagedestroy($image);
+        $this->assertNotFalse($binary);
+
+        return $binary;
+    }
 }

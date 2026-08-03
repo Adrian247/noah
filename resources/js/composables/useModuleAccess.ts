@@ -23,6 +23,7 @@ const ROUTE_MODULE_PAIRS: [string, string][] = [
     ['/app/design/reports', 'design_reports'],
     ['/app/design/forms', 'design_forms'],
     ['/app/routines', 'routines'],
+    ['/app/predictive', 'assets'],
     ['/app/assets', 'assets'],
     ['/app/sites', 'sites'],
     ['/app/billing', 'billing'],

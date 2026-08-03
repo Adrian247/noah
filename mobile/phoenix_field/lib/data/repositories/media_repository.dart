@@ -13,6 +13,27 @@ import 'package:uuid/uuid.dart';
 
 const localMediaPrefix = 'local:';
 
+/// Detecta rutas de evidencia remota (no valores de catálogo como "tres_cuartos").
+bool isLikelyRemoteMediaPath(String path) {
+  final trimmed = path.trim();
+  if (trimmed.isEmpty || trimmed.startsWith(localMediaPrefix)) {
+    return false;
+  }
+  if (trimmed.startsWith('file://')) {
+    return false;
+  }
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return true;
+  }
+  final looksLikeEvidence = trimmed.contains('executions/') ||
+      trimmed.contains('/fields/') ||
+      trimmed.contains('/demo/') ||
+      trimmed.contains('/storage/');
+  final hasImageExt =
+      RegExp(r'\.(jpe?g|png|gif|webp|heic)$', caseSensitive: false).hasMatch(trimmed);
+  return trimmed.contains('/') && (looksLikeEvidence || hasImageExt);
+}
+
 class MediaRepository {
   MediaRepository({
     required AppDatabase db,
@@ -226,6 +247,171 @@ class MediaRepository {
             fieldKey: 'technician_signature',
             localPath: file.path,
             status: 'pending',
+            createdAt: DateTime.now(),
+          ),
+        );
+
+    return '$localMediaPrefix$id';
+  }
+
+  bool isRemoteMediaPath(String path) {
+    if ((path.startsWith('/') || RegExp(r'^[a-zA-Z]:[\\/]').hasMatch(path)) &&
+        File(path).existsSync()) {
+      return false;
+    }
+    return isLikelyRemoteMediaPath(path);
+  }
+
+  /// Descarga fotos remotas de una ejecución y las deja como `local:*` para la UI offline.
+  Future<Map<String, dynamic>> materializeRemotePhotosInResponses({
+    required int routineId,
+    required Map<String, dynamic> responses,
+  }) async {
+    final out = <String, dynamic>{};
+
+    for (final entry in responses.entries) {
+      final key = entry.key;
+      final value = entry.value;
+
+      if (key == 'technician_signature') {
+        // La firma se vuelve a capturar al reenviar.
+        continue;
+      }
+
+      try {
+        if (value is String && isRemoteMediaPath(value)) {
+          out[key] = await _materializeRemotePath(
+            routineId: routineId,
+            fieldKey: key,
+            serverPath: value,
+          );
+          continue;
+        }
+
+        if (value is Map) {
+          final map = Map<String, dynamic>.from(value);
+          final path = map['path']?.toString();
+          if (path != null && isRemoteMediaPath(path)) {
+            final localRef = await _materializeRemotePath(
+              routineId: routineId,
+              fieldKey: key,
+              serverPath: path,
+              caption: map['caption']?.toString(),
+            );
+            out[key] = {
+              ...map,
+              'path': localRef,
+            };
+            continue;
+          }
+          out[key] = map;
+          continue;
+        }
+
+        if (value is List) {
+          out[key] = await _materializeRemoteList(
+            routineId: routineId,
+            fieldKey: key,
+            items: value,
+          );
+          continue;
+        }
+
+        out[key] = value;
+      } catch (_) {
+        // No tumbar sync/UI si una foto no se puede descargar; conservar valor original.
+        out[key] = value;
+      }
+    }
+
+    return out;
+  }
+
+  Future<List<dynamic>> _materializeRemoteList({
+    required int routineId,
+    required String fieldKey,
+    required List<dynamic> items,
+  }) async {
+    final out = <dynamic>[];
+    for (final item in items) {
+      try {
+        if (item is String && isRemoteMediaPath(item)) {
+          out.add(
+            await _materializeRemotePath(
+              routineId: routineId,
+              fieldKey: fieldKey,
+              serverPath: item,
+            ),
+          );
+        } else if (item is Map) {
+          final map = Map<String, dynamic>.from(item);
+          final path = map['path']?.toString();
+          if (path != null && isRemoteMediaPath(path)) {
+            final localRef = await _materializeRemotePath(
+              routineId: routineId,
+              fieldKey: fieldKey,
+              serverPath: path,
+              caption: map['caption']?.toString(),
+            );
+            out.add({...map, 'path': localRef});
+          } else {
+            out.add(map);
+          }
+        } else {
+          out.add(item);
+        }
+      } catch (_) {
+        out.add(item);
+      }
+    }
+    return out;
+  }
+
+  Future<String> _materializeRemotePath({
+    required int routineId,
+    required String fieldKey,
+    required String serverPath,
+    String? caption,
+  }) async {
+    // Reusar si ya materializamos esta ruta del servidor.
+    final existing = await (_db.select(_db.pendingMedia)
+          ..where(
+            (t) =>
+                t.routineId.equals(routineId) &
+                t.serverPath.equals(serverPath) &
+                t.fieldKey.equals(fieldKey),
+          ))
+        .get();
+    for (final row in existing) {
+      if (File(row.localPath).existsSync()) {
+        return '$localMediaPrefix${row.id}';
+      }
+    }
+
+    final bytes = await _mediaApi.fetchFormFieldMedia(
+      routineId: routineId,
+      path: serverPath,
+    );
+
+    final id = _uuid.v4();
+    final ext = p.extension(serverPath).isEmpty ? '.jpg' : p.extension(serverPath);
+    final docs = await getApplicationDocumentsDirectory();
+    final dir = Directory(p.join(docs.path, 'media', routineId.toString()));
+    if (!dir.existsSync()) {
+      dir.createSync(recursive: true);
+    }
+    final file = File(p.join(dir.path, 'remote-$id$ext'));
+    await file.writeAsBytes(bytes);
+
+    await _db.into(_db.pendingMedia).insert(
+          PendingMediaCompanion.insert(
+            id: id,
+            routineId: routineId,
+            fieldKey: fieldKey,
+            localPath: file.path,
+            caption: Value(caption),
+            status: 'uploaded',
+            serverPath: Value(serverPath),
             createdAt: DateTime.now(),
           ),
         );

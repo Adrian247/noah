@@ -6,6 +6,7 @@ use App\Enums\RoutineStatus;
 use App\Events\ExecutionSubmitted;
 use App\Events\RoutineValidated;
 use App\Models\Routine;
+use App\Models\RoutineType;
 use App\Models\User;
 use App\Models\WorkflowDefinition;
 use App\Models\WorkflowInstance;
@@ -406,5 +407,22 @@ class WorkflowRuntime
                 'definition' => $definition,
             ]
         );
+    }
+
+    public function assignStandardWorkflowToRoutineTypes(int $companyId, ?int $workflowDefinitionId = null): void
+    {
+        $workflowId = $workflowDefinitionId ?? $this->seedDefinitionForCompany($companyId)->id;
+
+        RoutineType::query()
+            ->where('company_id', $companyId)
+            ->update(['workflow_definition_id' => $workflowId]);
+    }
+
+    public function syncStandardWorkflowForCompany(int $companyId): WorkflowDefinition
+    {
+        $workflow = $this->seedDefinitionForCompany($companyId);
+        $this->assignStandardWorkflowToRoutineTypes($companyId, $workflow->id);
+
+        return $workflow;
     }
 }

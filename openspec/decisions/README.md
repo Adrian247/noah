@@ -12,5 +12,10 @@
 | [ADR-008](ADR-008-storage.md) | Object storage para binarios | Aceptada |
 | [ADR-009](ADR-009-multitenancy.md) | Multitenancy por empresa | Aceptada |
 | [ADR-010](ADR-010-flutter.md) | Flutter para móvil fase 2 | Aceptada |
+| [ADR-011](ADR-011-rbac-spatie-teams.md) | RBAC con Spatie teams | Aceptada |
+| [ADR-012](ADR-012-client-portal-identity.md) | Identidad del portal de cliente | Aceptada |
+| [ADR-012](ADR-012-rbac-global-template-user-grants.md) | Plantillas globales de rol y grants por usuario | Aceptada |
+| [ADR-013](ADR-013-predictive-maintenance.md) | Motor de mantenimiento predictivo híbrido | Aceptada |
+| [ADR-014](ADR-014-mobile-push-fcm.md) | Push móvil vía FCM | Aceptada |
 
 Nuevas decisiones: crear `ADR-0XX-titulo.md` y actualizar esta tabla.

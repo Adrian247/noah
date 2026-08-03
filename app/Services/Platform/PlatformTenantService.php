@@ -8,6 +8,7 @@ use App\Models\Company;
 use App\Models\CompanyMembership;
 use App\Models\User;
 use App\Services\Identity\CompanyAuthorizationService;
+use App\Services\Workflow\WorkflowRuntime;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -61,6 +62,8 @@ class PlatformTenantService
             ]);
 
             $this->authorization->ensureCompanyRoles($company);
+
+            app(WorkflowRuntime::class)->seedDefinitionForCompany($company->id);
 
             $sendInvitation = $data['send_invitation'] ?? true;
             $provisioned = $this->provisioner->provision(

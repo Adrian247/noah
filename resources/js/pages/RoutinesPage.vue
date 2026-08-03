@@ -23,16 +23,24 @@ type Routine = {
     status: string;
     is_demo?: boolean;
     scheduled_at?: string | null;
-    asset?: { tag: string };
+    asset?: { tag: string } | null;
+    client?: { id: number; trade_name?: string; legal_name?: string } | null;
     site?: { name: string };
-    routine_type?: { name: string };
+    routine_type?: { name: string; service_line?: string } | null;
     assignee?: { name: string } | null;
 };
 
 type Site = { id: number; name: string };
 type Asset = { id: number; tag: string; site_id: number };
-type RoutineType = { id: number; name: string };
+type Client = { id: number; trade_name?: string; legal_name?: string; code?: string };
+type RoutineType = { id: number; name: string; service_line?: string };
 type UserRow = { id: number; name: string; email: string };
+
+const SERVICE_LINE_LABELS: Record<string, string> = {
+    maintenance: 'Mantenimiento',
+    fabrication: 'Manufactura',
+    supply: 'Suministro',
+};
 
 const route = useRoute();
 const router = useRouter();
@@ -51,11 +59,13 @@ function openRoutine(id: number) {
 const showCreate = ref(false);
 const sites = ref<Site[]>([]);
 const assets = ref<Asset[]>([]);
+const clients = ref<Client[]>([]);
 const routineTypes = ref<RoutineType[]>([]);
 const technicians = ref<UserRow[]>([]);
 const createForm = ref({
     site_id: '',
     asset_id: '',
+    client_id: '',
     routine_type_id: '',
     assigned_to: '',
     scheduled_at: '',
@@ -64,9 +74,18 @@ const createForm = ref({
 const canCreate = computed(() => canWriteModule('routines'));
 const isAdmin = computed(() => company.current?.role === 'administrator');
 
+const selectedType = computed(() =>
+    routineTypes.value.find((t) => String(t.id) === createForm.value.routine_type_id) ?? null,
+);
+const selectedServiceLine = computed(() => selectedType.value?.service_line ?? 'maintenance');
+const requiresAsset = computed(() => selectedServiceLine.value === 'maintenance');
+const requiresClient = computed(
+    () => selectedServiceLine.value === 'fabrication' || selectedServiceLine.value === 'supply',
+);
+
 const routineTableColumns = computed((): TableColumnDef[] => [
     { id: 'routine', label: 'Rutina', cellClass: 'py-3' },
-    { id: 'asset', label: 'Activo' },
+    { id: 'subject', label: 'Sujeto' },
     { id: 'site', label: 'Sitio' },
     { id: 'assignee', label: 'Asignado' },
     { id: 'status', label: 'Estado' },
@@ -85,11 +104,21 @@ const siteOptions = computed(() =>
     sites.value.map((s) => ({ value: String(s.id), label: s.name })),
 );
 const assetOptions = computed(() => [
-    { value: '', label: 'Selecciona…' },
+    { value: '', label: requiresAsset.value ? 'Selecciona…' : 'Sin activo (opcional)' },
     ...filteredAssets.value.map((a) => ({ value: String(a.id), label: a.tag })),
 ]);
+const clientOptions = computed(() => [
+    { value: '', label: requiresClient.value ? 'Selecciona…' : 'Sin cliente (opcional)' },
+    ...clients.value.map((c) => ({
+        value: String(c.id),
+        label: c.trade_name || c.legal_name || c.code || `Cliente #${c.id}`,
+    })),
+]);
 const routineTypeOptions = computed(() =>
-    routineTypes.value.map((t) => ({ value: String(t.id), label: t.name })),
+    routineTypes.value.map((t) => ({
+        value: String(t.id),
+        label: `${t.name} · ${SERVICE_LINE_LABELS[t.service_line ?? 'maintenance'] ?? 'Mantenimiento'}`,
+    })),
 );
 const technicianOptions = computed(() => [
     { value: '', label: 'Sin asignar' },
@@ -118,14 +147,16 @@ async function load() {
 }
 
 async function loadCreateData() {
-    const [s, a, t] = await Promise.all([
+    const [s, a, t, c] = await Promise.all([
         api<{ data: Site[] }>('/sites'),
         api<{ data: Asset[] }>('/assets'),
         api<{ data: RoutineType[] }>('/routine-types'),
+        api<{ data: Client[] }>('/clients'),
     ]);
     sites.value = s.data;
     assets.value = a.data;
     routineTypes.value = t.data;
+    clients.value = c.data;
     if (company.current?.role === 'administrator') {
         try {
             const u = await api<{ data: UserRow[] }>('/company/users');
@@ -146,6 +177,7 @@ function openCreate() {
     createForm.value = {
         site_id: sites.value[0] ? String(sites.value[0].id) : '',
         asset_id: '',
+        client_id: '',
         routine_type_id: routineTypes.value[0] ? String(routineTypes.value[0].id) : '',
         assigned_to: '',
         scheduled_at: '',
@@ -159,7 +191,8 @@ async function createRoutine() {
             method: 'POST',
             body: JSON.stringify({
                 site_id: Number(createForm.value.site_id),
-                asset_id: Number(createForm.value.asset_id),
+                asset_id: createForm.value.asset_id ? Number(createForm.value.asset_id) : null,
+                client_id: createForm.value.client_id ? Number(createForm.value.client_id) : null,
                 routine_type_id: Number(createForm.value.routine_type_id),
                 assigned_to: createForm.value.assigned_to
                     ? Number(createForm.value.assigned_to)
@@ -284,10 +317,30 @@ onMounted(async () => {
                         Demo
                     </span>
                 </p>
-                <p class="text-portal-muted text-xs">#{{ (row as Routine).id }}</p>
+                <p class="text-portal-muted text-xs">
+                    #{{ (row as Routine).id }}
+                    ·
+                    {{
+                        SERVICE_LINE_LABELS[(row as Routine).routine_type?.service_line ?? 'maintenance']
+                            ?? 'Mantenimiento'
+                    }}
+                </p>
             </template>
-            <template #asset="{ row }">
-                <span class="text-portal-heading">{{ (row as Routine).asset?.tag ?? '—' }}</span>
+            <template #subject="{ row }">
+                <span class="text-portal-heading">
+                    {{
+                        (row as Routine).asset?.tag
+                            ?? (row as Routine).client?.trade_name
+                            ?? (row as Routine).client?.legal_name
+                            ?? '—'
+                    }}
+                </span>
+                <p
+                    v-if="(row as Routine).asset?.tag && ((row as Routine).client?.trade_name || (row as Routine).client?.legal_name)"
+                    class="text-portal-muted text-xs"
+                >
+                    {{ (row as Routine).client?.trade_name || (row as Routine).client?.legal_name }}
+                </p>
             </template>
             <template #site="{ row }">
                 <span class="text-portal-muted">{{ (row as Routine).site?.name ?? '—' }}</span>
@@ -331,16 +384,24 @@ onMounted(async () => {
                     required
                 />
                 <MaterialSelect
-                    v-model="createForm.asset_id"
-                    label="Activo"
-                    :options="assetOptions"
-                    required
-                />
-                <MaterialSelect
                     v-model="createForm.routine_type_id"
                     label="Tipo de rutina"
                     :options="routineTypeOptions"
                     required
+                />
+                <MaterialSelect
+                    v-if="requiresAsset || !requiresClient"
+                    v-model="createForm.asset_id"
+                    :label="requiresAsset ? 'Activo *' : 'Activo (opcional)'"
+                    :options="assetOptions"
+                    :required="requiresAsset"
+                />
+                <MaterialSelect
+                    v-if="requiresClient || selectedServiceLine === 'maintenance'"
+                    v-model="createForm.client_id"
+                    :label="requiresClient ? 'Cliente *' : 'Cliente (opcional)'"
+                    :options="clientOptions"
+                    :required="requiresClient"
                 />
                 <MaterialSelect
                     v-if="technicians.length"

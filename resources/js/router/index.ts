@@ -170,6 +170,12 @@ const router = createRouter({
                     meta: { title: 'Activos', moduleId: 'assets' },
                 },
                 {
+                    path: 'predictive',
+                    name: 'predictive',
+                    component: () => import('@/pages/PredictiveMaintenancePage.vue'),
+                    meta: { title: 'Mantenimiento predictivo', moduleId: 'assets' },
+                },
+                {
                     path: 'design/routine-types',
                     redirect: { name: 'routine-types' },
                 },
@@ -248,6 +254,12 @@ const router = createRouter({
                     name: 'platform-tenants',
                     component: () => import('@/pages/PlatformTenantsPage.vue'),
                     meta: { title: 'Clientes de plataforma', requiresPlatformAdmin: true },
+                },
+                {
+                    path: 'platform/predictive',
+                    name: 'platform-predictive',
+                    component: () => import('@/pages/PlatformPredictiveAlgorithmsPage.vue'),
+                    meta: { title: 'Algoritmo predictivo', requiresPlatformAdmin: true },
                 },
                 {
                     path: 'platform/role-permissions',

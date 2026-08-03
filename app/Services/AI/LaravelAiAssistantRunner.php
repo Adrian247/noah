@@ -75,7 +75,7 @@ class LaravelAiAssistantRunner
         $template = PromptTemplate::activeFor('insights_assistant_v1', $companyId);
         $system = $systemOverride
             ?? $template?->system_prompt
-            ?? '';
+            ?? \App\Support\Ai\OperationalAssistantPrompt::default();
 
         $settings = $this->platformSettings->get();
         $model = match ($settings['provider']) {

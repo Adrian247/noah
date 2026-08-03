@@ -14,12 +14,13 @@ class AuthLoginApiTest extends TestCase
         $this->artisan('phoenix:refresh-demo', ['--skip-migrate' => true])->assertSuccessful();
 
         $this->postJson('/api/v1/auth/login', [
-            'email' => 'admin@pyro-systems.com',
+            'email' => 'admin@sandbox-demo.com',
             'password' => 'pyro.2026$',
             'device_name' => 'test',
         ])
             ->assertOk()
-            ->assertJsonStructure(['token', 'user' => ['id', 'email'], 'companies']);
+            ->assertJsonStructure(['token', 'user' => ['id', 'email'], 'companies'])
+            ->assertJsonPath('user.email', 'admin@sandbox-demo.com');
     }
 
     public function test_health_reports_demo_accounts_in_local(): void
@@ -29,6 +30,7 @@ class AuthLoginApiTest extends TestCase
         $this->getJson('/api/v1/health')
             ->assertOk()
             ->assertJsonPath('demo.accounts_ready', true)
+            ->assertJsonPath('demo.default_login_email', 'admin@sandbox-demo.com')
             ->assertJsonPath('demo.password', 'pyro.2026$');
     }
 }

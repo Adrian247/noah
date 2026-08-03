@@ -67,7 +67,7 @@ class OperationalAnalyticsService
     public function suggestSuppliesForAsset(Asset $asset, int $limit = 8): array
     {
         $consumptions = RoutineConsumption::query()
-            ->whereHas('routineExecution.routine', function ($query) use ($asset): void {
+            ->whereHas('execution.routine', function ($query) use ($asset): void {
                 $query->where('asset_id', $asset->id);
             })
             ->with('supplyItem')

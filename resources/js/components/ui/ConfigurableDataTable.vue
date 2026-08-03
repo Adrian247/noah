@@ -110,6 +110,27 @@ function onRowClick(row: unknown) {
     }
 }
 
+function isEditableTarget(target: EventTarget | null): boolean {
+    if (!(target instanceof HTMLElement)) {
+        return false;
+    }
+
+    return Boolean(
+        target.closest('input, textarea, select, button, a, [contenteditable="true"]'),
+    );
+}
+
+function onRowKeydown(event: KeyboardEvent, row: unknown) {
+    if (!props.clickable || isEditableTarget(event.target)) {
+        return;
+    }
+
+    if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        onRowClick(row);
+    }
+}
+
 function onCellClick(event: MouseEvent, columnId: string) {
     if (props.stopClickColumnIds.includes(columnId)) {
         event.stopPropagation();
@@ -220,8 +241,7 @@ const showToolbar = computed(
                     :tabindex="clickable ? 0 : undefined"
                     :role="clickable ? 'button' : undefined"
                     @click="onRowClick(row)"
-                    @keydown.enter.prevent="onRowClick(row)"
-                    @keydown.space.prevent="onRowClick(row)"
+                    @keydown="onRowKeydown($event, row)"
                 >
                     <td
                         v-for="col in visibleColumns"

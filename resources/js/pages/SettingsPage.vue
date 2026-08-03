@@ -11,8 +11,10 @@ import PageHeader from '@/components/ui/PageHeader.vue';
 import BillingSettingsForm from '@/components/settings/BillingSettingsForm.vue';
 import MobileSecuritySettingsForm from '@/components/settings/MobileSecuritySettingsForm.vue';
 import CompanyAiSettingsForm from '@/components/settings/CompanyAiSettingsForm.vue';
+import CompanyPredictiveSettingsForm from '@/components/settings/CompanyPredictiveSettingsForm.vue';
 import PlatformAiSettingsForm from '@/components/settings/PlatformAiSettingsForm.vue';
 import NotificationSettingsForm from '@/components/settings/NotificationSettingsForm.vue';
+import ProfilePasswordForm from '@/components/settings/ProfilePasswordForm.vue';
 
 const route = useRoute();
 const { theme, setTheme } = useTheme();
@@ -63,11 +65,21 @@ watch(
 </script>
 
 <template>
-    <div class="max-w-2xl space-y-8">
+    <div class="max-w-2xl space-y-8" data-tour="page-settings">
         <PageHeader
             title="Configuración"
             subtitle="Tema, notificaciones, facturación, asistente IA, app móvil y portal de acceso."
         />
+
+        <section id="cuenta">
+            <GlassCard padding="lg" class="space-y-4">
+                <h2 class="text-portal-heading text-base font-semibold">Cuenta</h2>
+                <p class="text-portal-muted text-sm">
+                    Cambia la contraseña de acceso a Phoenix para {{ auth.user?.email }}.
+                </p>
+                <ProfilePasswordForm />
+            </GlassCard>
+        </section>
 
         <section id="apariencia">
             <GlassCard padding="lg" class="space-y-4">
@@ -133,6 +145,13 @@ watch(
                     <h3 class="text-portal-heading text-sm font-semibold">Política de la empresa</h3>
                     <CompanyAiSettingsForm />
                 </div>
+            </GlassCard>
+        </section>
+
+        <section v-if="isAdmin" id="predictivo">
+            <GlassCard padding="lg" class="space-y-4">
+                <h2 class="text-portal-heading text-base font-semibold">Mantenimiento predictivo</h2>
+                <CompanyPredictiveSettingsForm />
             </GlassCard>
         </section>
 

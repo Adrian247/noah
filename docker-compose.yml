@@ -31,7 +31,7 @@ services:
       MAIL_HOST: mailpit
       MAIL_PORT: "1025"
       MAIL_MAILER: smtp
-      PHOENIX_DEMO_PASSWORD: phoenix_application
+      PHOENIX_DEMO_PASSWORD: pyro.2026$
       PHOENIX_REPORTS_PDF_DRIVER: auto
       PHOENIX_REPORTS_CHROME_PATH: /usr/bin/chromium
       PHOENIX_REPORTS_CHROME_NO_SANDBOX: "true"

@@ -53,6 +53,11 @@ const formName = ref('');
 const formRole = ref('technician');
 const formActive = ref(true);
 const formExtraPermissions = ref<string[]>([]);
+const formPassword = ref('');
+const formPasswordConfirmation = ref('');
+const formSendInvitation = ref(false);
+const formNewPassword = ref('');
+const formNewPasswordConfirmation = ref('');
 const saving = ref(false);
 const isCreate = ref(false);
 
@@ -222,6 +227,9 @@ function openCreate() {
     formRole.value = 'technician';
     formActive.value = true;
     formExtraPermissions.value = [];
+    formPassword.value = '';
+    formPasswordConfirmation.value = '';
+    formSendInvitation.value = true;
     showPanel.value = true;
 }
 
@@ -234,6 +242,8 @@ function openEdit(user: UserRow) {
     formRole.value = user.role;
     formActive.value = user.is_active;
     formExtraPermissions.value = [...user.extra_permissions];
+    formNewPassword.value = '';
+    formNewPasswordConfirmation.value = '';
     showPanel.value = true;
 }
 
@@ -251,6 +261,16 @@ function extraCount(user: UserRow) {
 }
 
 async function save() {
+    if (isCreate.value) {
+        if (formPassword.value && formPassword.value !== formPasswordConfirmation.value) {
+            toast.warning('La confirmación no coincide con la contraseña.');
+            return;
+        }
+    } else if (formNewPassword.value && formNewPassword.value !== formNewPasswordConfirmation.value) {
+        toast.warning('La confirmación no coincide con la nueva contraseña.');
+        return;
+    }
+
     saving.value = true;
     try {
         const payload = {
@@ -260,26 +280,45 @@ async function save() {
                 ? {
                       email: formEmail.value,
                       name: formName.value || undefined,
+                      ...(formPassword.value
+                          ? {
+                                password: formPassword.value,
+                                password_confirmation: formPasswordConfirmation.value,
+                            }
+                          : {}),
+                      send_invitation: formSendInvitation.value,
                   }
-                : { is_active: formActive.value }),
+                : {
+                      is_active: formActive.value,
+                      ...(formNewPassword.value
+                          ? {
+                                password: formNewPassword.value,
+                                password_confirmation: formNewPasswordConfirmation.value,
+                            }
+                          : {}),
+                  }),
         };
         if (isCreate.value) {
-            const created = await api<{ data: UserRow }>('/company/users', {
+            const created = await api<{ data: UserRow; generated_password?: string }>('/company/users', {
                 method: 'POST',
                 body: JSON.stringify(payload),
             });
             if (avatarFile.value) {
                 await uploadUserAvatar(created.data.id, avatarFile.value);
             }
+            if (created.generated_password) {
+                toast.success(`Usuario creado. Contraseña generada: ${created.generated_password}`);
+            } else {
+                toast.success('Usuario creado.');
+            }
         } else if (panelUser.value) {
             await api(`/company/users/${panelUser.value.id}`, {
                 method: 'PUT',
                 body: JSON.stringify(payload),
             });
+            toast.success(formNewPassword.value ? 'Usuario actualizado y contraseña restablecida.' : 'Usuario actualizado.');
         }
-        const wasCreate = isCreate.value;
         closePanel();
-        toast.success(wasCreate ? 'Usuario invitado.' : 'Usuario actualizado.');
         await load();
     } catch (e) {
         toast.error((e as Error).message);
@@ -396,7 +435,50 @@ onMounted(load);
                     required
                 />
                 <MaterialField v-if="isCreate" v-model="formName" label="Nombre" />
+                <template v-if="isCreate">
+                    <MaterialField
+                        v-model="formPassword"
+                        label="Contraseña"
+                        type="password"
+                        autocomplete="new-password"
+                    />
+                    <MaterialField
+                        v-model="formPasswordConfirmation"
+                        label="Confirmar contraseña"
+                        type="password"
+                        autocomplete="new-password"
+                    />
+                    <p class="text-portal-muted text-xs">
+                        Si dejas la contraseña vacía, se generará una automática y podrás enviarla por correo.
+                    </p>
+                    <label class="text-portal-muted flex items-center gap-2 text-sm">
+                        <input v-model="formSendInvitation" type="checkbox" class="rounded border-white/20" />
+                        Enviar invitación por correo con la contraseña
+                    </label>
+                </template>
                 <p v-if="!isCreate" class="text-portal-muted text-sm">{{ formEmail }}</p>
+                <template v-if="!isCreate">
+                    <div class="portal-form-panel space-y-3">
+                        <p class="text-portal-muted text-xs font-semibold uppercase tracking-wide">
+                            Restablecer contraseña
+                        </p>
+                        <MaterialField
+                            v-model="formNewPassword"
+                            label="Nueva contraseña"
+                            type="password"
+                            autocomplete="new-password"
+                        />
+                        <MaterialField
+                            v-model="formNewPasswordConfirmation"
+                            label="Confirmar nueva contraseña"
+                            type="password"
+                            autocomplete="new-password"
+                        />
+                        <p class="text-portal-muted text-xs">
+                            Opcional. El usuario puede cambiarla después en Configuración → Cuenta.
+                        </p>
+                    </div>
+                </template>
                 <MaterialSelect v-model="formRole" label="Rol" :options="roleOptions" />
                 <label v-if="!isCreate" class="text-portal-muted flex items-center gap-2 text-sm">
                     <input v-model="formActive" type="checkbox" class="rounded border-white/20" />

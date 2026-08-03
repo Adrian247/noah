@@ -7,6 +7,76 @@ namespace App\Services\Reports;
  */
 final class ReportPdfImageEncoder
 {
+    /**
+     * @return array{width: int, height: int}|null
+     */
+    public static function dimensions(string $binary): ?array
+    {
+        $info = @getimagesizefromstring($binary);
+        if ($info === false || ! isset($info[0], $info[1])) {
+            return null;
+        }
+
+        $width = (int) $info[0];
+        $height = (int) $info[1];
+        if ($width < 1 || $height < 1) {
+            return null;
+        }
+
+        [$width, $height] = self::applyExifDisplaySize($binary, $width, $height);
+
+        return ['width' => $width, 'height' => $height];
+    }
+
+    /**
+     * Clasifica orientación visual para layout de reportes.
+     *
+     * @return 'landscape'|'portrait'|'square'
+     */
+    public static function orientation(string $binary): string
+    {
+        $dims = self::dimensions($binary);
+        if ($dims === null) {
+            return 'square';
+        }
+
+        $ratio = $dims['width'] / $dims['height'];
+        if ($ratio >= 1.12) {
+            return 'landscape';
+        }
+        if ($ratio <= 0.88) {
+            return 'portrait';
+        }
+
+        return 'square';
+    }
+
+    /**
+     * @return array{0: int, 1: int}
+     */
+    private static function applyExifDisplaySize(string $binary, int $width, int $height): array
+    {
+        if (! function_exists('exif_read_data') || ! str_starts_with($binary, "\xFF\xD8\xFF")) {
+            return [$width, $height];
+        }
+
+        $temp = self::writeTemp($binary);
+        try {
+            $exif = @exif_read_data($temp);
+            $orientation = (int) ($exif['Orientation'] ?? 1);
+            // 5–8 = rotación 90°: intercambiar eje para layout.
+            if (in_array($orientation, [5, 6, 7, 8], true)) {
+                return [$height, $width];
+            }
+        } finally {
+            if (is_file($temp)) {
+                @unlink($temp);
+            }
+        }
+
+        return [$width, $height];
+    }
+
     public static function toEmbeddedSrc(string $binary, string $mime): ?string
     {
         $mime = strtolower(trim($mime));

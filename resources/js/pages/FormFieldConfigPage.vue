@@ -56,6 +56,24 @@ function emptyRow(): OptionRow {
     return { value: '', label: '', description: '' };
 }
 
+function moveRow<T>(rows: T[], index: number, delta: -1 | 1): T[] {
+    const target = index + delta;
+    if (target < 0 || target >= rows.length) {
+        return rows;
+    }
+    const copy = [...rows];
+    [copy[index], copy[target]] = [copy[target], copy[index]];
+    return copy;
+}
+
+function moveEditRow(index: number, delta: -1 | 1) {
+    editRows.value = moveRow(editRows.value, index, delta);
+}
+
+function moveNewRow(index: number, delta: -1 | 1) {
+    newCatalogRows.value = moveRow(newCatalogRows.value, index, delta);
+}
+
 function normalizeRows(rows: OptionRow[]): OptionRow[] {
     return rows
         .map((r) => ({
@@ -228,6 +246,7 @@ onMounted(load);
                         <h2 class="text-portal-heading text-lg font-semibold">Catálogo de opciones</h2>
                         <p class="text-portal-muted mt-1 max-w-3xl text-sm">
                             Cada opción tiene valor (interno), nombre (visible) y descripción (ayuda en campo).
+                            Usa las flechas para cambiar el orden de la lista.
                         </p>
                     </div>
                     <AppButton v-if="canWrite" type="button" class="shrink-0" @click="openCreate">
@@ -298,12 +317,29 @@ onMounted(load);
                                         <input v-model="(row as OptionRow).description" class="field-input w-full" />
                                     </template>
                                     <template #actions="{ index }">
-                                        <IconActionButton
-                                            icon="trash"
-                                            label="Quitar opción"
-                                            variant="danger"
-                                            @click="editRows.splice(index, 1)"
-                                        />
+                                        <div class="table-row-actions">
+                                            <IconActionButton
+                                                v-if="canWrite"
+                                                icon="chevron-up"
+                                                label="Subir opción"
+                                                :disabled="index === 0"
+                                                @click="moveEditRow(index, -1)"
+                                            />
+                                            <IconActionButton
+                                                v-if="canWrite"
+                                                icon="chevron-down"
+                                                label="Bajar opción"
+                                                :disabled="index === editRows.length - 1"
+                                                @click="moveEditRow(index, 1)"
+                                            />
+                                            <IconActionButton
+                                                icon="trash"
+                                                label="Quitar opción"
+                                                variant="danger"
+                                                :disabled="!canWrite"
+                                                @click="editRows.splice(index, 1)"
+                                            />
+                                        </div>
                                     </template>
                                 </ConfigurableDataTable>
                             </div>
@@ -358,13 +394,27 @@ onMounted(load);
                             />
                         </template>
                         <template #actions="{ index }">
-                            <IconActionButton
-                                v-if="newCatalogRows.length > 1"
-                                icon="trash"
-                                label="Quitar opción"
-                                variant="danger"
-                                @click="newCatalogRows.splice(index, 1)"
-                            />
+                            <div class="table-row-actions">
+                                <IconActionButton
+                                    icon="chevron-up"
+                                    label="Subir opción"
+                                    :disabled="index === 0"
+                                    @click="moveNewRow(index, -1)"
+                                />
+                                <IconActionButton
+                                    icon="chevron-down"
+                                    label="Bajar opción"
+                                    :disabled="index === newCatalogRows.length - 1"
+                                    @click="moveNewRow(index, 1)"
+                                />
+                                <IconActionButton
+                                    v-if="newCatalogRows.length > 1"
+                                    icon="trash"
+                                    label="Quitar opción"
+                                    variant="danger"
+                                    @click="newCatalogRows.splice(index, 1)"
+                                />
+                            </div>
                         </template>
                     </ConfigurableDataTable>
                 </div>

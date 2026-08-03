@@ -9,12 +9,17 @@ use App\Models\CompanyMembership;
 use App\Models\Routine;
 use App\Models\User;
 use App\Models\WorkflowTransition;
+use App\Services\Notifications\PushNotifier;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class WorkflowStepEmailNotifier
 {
+    public function __construct(
+        private readonly PushNotifier $push,
+    ) {}
+
     /**
      * @param  array<string, mixed>  $stepMeta
      */
@@ -101,29 +106,48 @@ class WorkflowStepEmailNotifier
                 ]);
             }
         }
+
+        $userIds = User::query()->whereIn('email', $emails->all())->pluck('id')->all();
+        $this->push->notifyUsers(
+            $userIds,
+            $subject,
+            $message,
+            [
+                'type' => 'workflow_email_step',
+                'routine_id' => (string) $routine->id,
+            ],
+        );
     }
 
     private function queueToUser(Routine $routine, array $config, User $user): void
     {
-        if ($user->email === null || $user->email === '') {
-            return;
-        }
-
         $renderer = app(WorkflowEmailBodyRenderer::class);
         $subject = $renderer->subject($routine, $config, $user);
         $message = $renderer->render($routine, $config, $user);
 
-        try {
-            Mail::to($user->email)->queue(
-                new WorkflowStepMail($routine->loadMissing(['asset', 'routineType']), $subject, $message),
-            );
-        } catch (\Throwable $e) {
-            Log::error('Workflow transition email failed', [
-                'email' => $user->email,
-                'routine_id' => $routine->id,
-                'error' => $e->getMessage(),
-            ]);
+        if ($user->email !== null && $user->email !== '') {
+            try {
+                Mail::to($user->email)->queue(
+                    new WorkflowStepMail($routine->loadMissing(['asset', 'routineType']), $subject, $message),
+                );
+            } catch (\Throwable $e) {
+                Log::error('Workflow transition email failed', [
+                    'email' => $user->email,
+                    'routine_id' => $routine->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
+
+        $this->push->notifyUsers(
+            [$user->id],
+            $subject,
+            $message,
+            [
+                'type' => 'workflow_notify',
+                'routine_id' => (string) $routine->id,
+            ],
+        );
     }
 
     /**

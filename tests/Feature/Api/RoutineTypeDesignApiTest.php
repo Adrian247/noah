@@ -167,7 +167,8 @@ class RoutineTypeDesignApiTest extends TestCase
         $create = $this->withHeader('X-Company-Id', (string) $company->id)
             ->postJson('/api/v1/routine-types', ['name' => 'Prueba CRUD'])
             ->assertCreated()
-            ->assertJsonPath('data.name', 'Prueba CRUD');
+            ->assertJsonPath('data.name', 'Prueba CRUD')
+            ->assertJsonPath('data.workflow_definition_id', fn ($id) => $id !== null);
 
         $id = $create->json('data.id');
 

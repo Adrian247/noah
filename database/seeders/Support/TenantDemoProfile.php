@@ -3,6 +3,7 @@
 namespace Database\Seeders\Support;
 
 use App\Enums\MembershipRole;
+use App\Support\DemoAccounts;
 
 /**
  * Perfil de datos demo para un tenant (empresa cliente de plataforma).
@@ -33,8 +34,8 @@ final class TenantDemoProfile
             companyLegalName: 'Mein Company S.A. de C.V.',
             siteName: 'Centro de servicio Mein',
             clientCode: 'MEIN-CLI-001',
-            clientTradeName: 'Cliente final Mein',
-            clientLegalName: 'Servicios Automotrices Mein S.A.',
+            clientTradeName: 'Mina Velardeña',
+            clientLegalName: 'Mina Velardeña S.A. de C.V.',
             catalogCode: 'MEIN-L200-2018',
             catalogName: 'Mitsubishi L200 2018 — Mein',
             assetTag: 'MEIN-L200-01',
@@ -54,6 +55,37 @@ final class TenantDemoProfile
         return $this->companyName === 'Dom-G';
     }
 
+    public function isSandbox(): bool
+    {
+        return $this->companyName === 'Sandbox';
+    }
+
+    /**
+     * Tenant virgen para pruebas de onboarding en la plataforma (sin catálogos, rutinas ni activos demo).
+     */
+    public static function sandbox(): self
+    {
+        return new self(
+            companyName: 'Sandbox',
+            companyLegalName: 'Empresa sandbox Phoenix S.A. de C.V.',
+            siteName: '',
+            clientCode: '',
+            clientTradeName: '',
+            clientLegalName: '',
+            catalogCode: '',
+            catalogName: '',
+            assetTag: '',
+            assetSerial: '',
+            staff: [
+                [
+                    'email' => DemoAccounts::DEFAULT_LOGIN_EMAIL,
+                    'name' => 'Administrador Sandbox',
+                    'role' => MembershipRole::Administrator,
+                ],
+            ],
+        );
+    }
+
     public static function domG(): self
     {
         return new self(
@@ -61,8 +93,8 @@ final class TenantDemoProfile
             companyLegalName: 'Dom-G Servicios Industriales S.A. de C.V.',
             siteName: 'Planta Dom-G',
             clientCode: 'DOMG-CLI-001',
-            clientTradeName: 'Cliente final Dom-G',
-            clientLegalName: 'Grupo Dom-G Clientes S.A.',
+            clientTradeName: 'Grupo México',
+            clientLegalName: 'Grupo México, S.A.B. de C.V.',
             catalogCode: 'DOMG-L200-2019',
             catalogName: 'Mitsubishi L200 2019 — Dom-G',
             assetTag: 'DOMG-L200-01',

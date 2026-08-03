@@ -30,12 +30,18 @@ const syncing = ref(false);
 let syncGeneration = 0;
 let pinnedNavEl: HTMLElement | null = null;
 let litSidebarEl: HTMLElement | null = null;
+let litTargetEl: HTMLElement | null = null;
+
+const SCRIM = 'rgba(15, 23, 42, 0.42)';
+const SCRIM_FULL = 'rgba(15, 23, 42, 0.48)';
 
 function clearTourDomEffects() {
     pinnedNavEl?.classList.remove('product-tour-nav-pin');
     pinnedNavEl = null;
     litSidebarEl?.classList.remove('product-tour-sidebar-lit');
     litSidebarEl = null;
+    litTargetEl?.classList.remove('product-tour-target-lit');
+    litTargetEl = null;
 }
 
 function applyTourDomEffects(step: TourStep | null, el: Element | null) {
@@ -43,6 +49,19 @@ function applyTourDomEffects(step: TourStep | null, el: Element | null) {
     if (!step || !el || !(el instanceof HTMLElement)) {
         return;
     }
+
+    const bounds = el.getBoundingClientRect();
+    const isCompactTarget =
+        step.spotlight === 'nav' ||
+        step.spotlight === 'sidebar' ||
+        bounds.height < window.innerHeight * 0.45;
+
+    // Solo elevar targets compactos. Páginas enteras se ven por el recorte del scrim.
+    if (isCompactTarget) {
+        litTargetEl = el;
+        el.classList.add('product-tour-target-lit');
+    }
+
     if (step.spotlight === 'nav') {
         pinnedNavEl = el;
         el.classList.add('product-tour-nav-pin');
@@ -54,6 +73,9 @@ function applyTourDomEffects(step: TourStep | null, el: Element | null) {
             litSidebarEl = sidebar;
             sidebar.classList.add('product-tour-sidebar-lit');
         }
+    }
+    if (step.spotlight === 'panel') {
+        el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
     }
 }
 
@@ -111,7 +133,7 @@ function measureTarget(step: TourStep | null) {
     }
 
     const pad =
-        step.spotlight === 'nav' ? (step.padding ?? 10) : step.spotlight === 'sidebar' ? (step.padding ?? 6) : (step.padding ?? 8);
+        step.spotlight === 'nav' ? (step.padding ?? 10) : step.spotlight === 'sidebar' ? (step.padding ?? 6) : (step.padding ?? 10);
     const r = el.getBoundingClientRect();
     const viewportH = window.innerHeight;
     const viewportW = window.innerWidth;
@@ -120,8 +142,8 @@ function measureTarget(step: TourStep | null) {
     targetRect.value = {
         top: Math.max(8, r.top - pad),
         left: Math.max(8, r.left - pad),
-        width: r.width + pad * 2,
-        height: r.height + pad * 2,
+        width: Math.min(viewportW - 16, r.width + pad * 2),
+        height: Math.min(viewportH - 16, r.height + pad * 2),
     };
 
     applyTourDomEffects(step, el);
@@ -248,6 +270,11 @@ async function syncStep() {
         if (generation !== syncGeneration) {
             return;
         }
+        // Segunda medición tras layout/scroll de la página destino.
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        if (generation !== syncGeneration) {
+            return;
+        }
         measureTarget(step);
         playStepAudio(step);
     } finally {
@@ -315,6 +342,24 @@ const spotlightStyle = computed(() => {
         height: `${r.height}px`,
     };
 });
+
+/** Scrim con recorte: la sección resaltada se ve nítida (sin capa oscura encima). */
+const scrimStyle = computed(() => {
+    const r = targetRect.value;
+    if (!r) {
+        return {
+            background: SCRIM_FULL,
+            clipPath: 'none',
+        };
+    }
+    const { top, left, width, height } = r;
+    const right = left + width;
+    const bottom = top + height;
+    return {
+        background: SCRIM,
+        clipPath: `polygon(evenodd, 0% 0%, 100% 0%, 100% 100%, 0% 100%, ${left}px ${top}px, ${right}px ${top}px, ${right}px ${bottom}px, ${left}px ${bottom}px)`,
+    };
+});
 </script>
 
 <template>
@@ -326,7 +371,11 @@ const spotlightStyle = computed(() => {
                 role="presentation"
                 aria-hidden="true"
             >
-                <div class="product-tour-backdrop" aria-hidden="true" />
+                <div
+                    class="product-tour-scrim"
+                    :style="scrimStyle"
+                    aria-hidden="true"
+                />
                 <div
                     v-if="spotlightStyle"
                     :class="spotlightClass"
@@ -379,55 +428,65 @@ const spotlightStyle = computed(() => {
     pointer-events: none;
 }
 
-.product-tour-backdrop {
+.product-tour-scrim {
     position: absolute;
     inset: 0;
-    background: rgba(2, 6, 23, 0.78);
     pointer-events: auto;
+    /* Oscuridad moderada: no tapa el contenido del recorte. */
+    background: rgba(15, 23, 42, 0.42);
 }
 
 .product-tour-spotlight {
     position: fixed;
     border-radius: 12px;
-    box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.78);
+    /* Solo aro + glow; el oscurecido lo hace el scrim con clip-path. */
+    box-shadow:
+        0 0 0 2px rgba(251, 191, 36, 0.95),
+        0 0 0 6px rgba(251, 191, 36, 0.22),
+        0 12px 36px rgba(15, 23, 42, 0.18);
     pointer-events: none;
     z-index: 2;
-    outline: 2px solid rgba(251, 191, 36, 0.9);
-    outline-offset: 2px;
+    background: transparent;
 }
 
 .product-tour-spotlight--nav {
     border-radius: 14px;
-    outline-width: 3px;
-    outline-offset: 3px;
     box-shadow:
-        0 0 0 9999px rgba(2, 6, 23, 0.82),
-        0 0 28px 6px rgba(251, 191, 36, 0.55);
+        0 0 0 3px rgba(251, 191, 36, 0.98),
+        0 0 0 8px rgba(251, 191, 36, 0.28),
+        0 0 28px 4px rgba(251, 191, 36, 0.45);
     animation: product-tour-spot-pulse 1.5s ease-in-out infinite;
 }
 
 .product-tour-spotlight--sidebar {
     border-radius: 16px;
-    outline-width: 3px;
-    outline-color: rgba(251, 191, 36, 0.95);
     box-shadow:
-        0 0 0 9999px rgba(2, 6, 23, 0.8),
-        inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+        0 0 0 3px rgba(251, 191, 36, 0.95),
+        0 0 0 8px rgba(251, 191, 36, 0.2),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 .product-tour-spotlight--panel {
+    border-radius: 14px;
     box-shadow:
-        0 0 0 9999px rgba(2, 6, 23, 0.78),
-        0 8px 32px rgba(0, 0, 0, 0.35);
+        0 0 0 2px rgba(251, 191, 36, 0.92),
+        0 0 0 7px rgba(251, 191, 36, 0.18),
+        0 10px 28px rgba(15, 23, 42, 0.16);
 }
 
 @keyframes product-tour-spot-pulse {
     0%,
     100% {
-        outline-color: rgba(251, 191, 36, 0.85);
+        box-shadow:
+            0 0 0 3px rgba(251, 191, 36, 0.9),
+            0 0 0 8px rgba(251, 191, 36, 0.22),
+            0 0 24px 4px rgba(251, 191, 36, 0.4);
     }
     50% {
-        outline-color: rgba(253, 224, 71, 1);
+        box-shadow:
+            0 0 0 3px rgba(253, 224, 71, 1),
+            0 0 0 10px rgba(253, 224, 71, 0.32),
+            0 0 32px 6px rgba(253, 224, 71, 0.5);
     }
 }
 
@@ -497,13 +556,26 @@ const spotlightStyle = computed(() => {
     color: #e2e8f0;
 }
 
-[data-theme='light'] .product-tour-card {
+:global([data-theme='light']) .product-tour-card {
     background: #fff;
     color: #0f172a;
     border-color: rgba(15, 23, 42, 0.1);
 }
 
-[data-theme='light'] .product-tour-card__body {
+:global([data-theme='light']) .product-tour-card__body {
     color: #475569;
+}
+
+:global([data-theme='light']) .product-tour-card__progress,
+:global([data-theme='light']) .product-tour-link {
+    color: #64748b;
+}
+
+:global([data-theme='light']) .product-tour-link:hover {
+    color: #0f172a;
+}
+
+:global([data-theme='light']) .product-tour-scrim {
+    background: rgba(15, 23, 42, 0.32) !important;
 }
 </style>

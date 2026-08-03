@@ -4,15 +4,18 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\FormUsage;
 use App\Enums\MembershipRole;
+use App\Enums\ServiceLine;
 use App\Http\Controllers\Controller;
 use App\Models\FormVersion;
 use App\Models\ReportTemplateVersion;
 use App\Models\RoutineType;
 use App\Support\CurrentCompany;
 use App\Services\Reports\FormReportFieldAlignment;
+use App\Services\Workflow\WorkflowRuntime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class RoutineTypeController extends Controller
@@ -54,6 +57,7 @@ class RoutineTypeController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:128'],
+            'service_line' => ['nullable', Rule::in(ServiceLine::values())],
         ]);
 
         $companyId = app(CurrentCompany::class)->id();
@@ -66,10 +70,14 @@ class RoutineTypeController extends Controller
             throw ValidationException::withMessages(['slug' => ['Ya existe un tipo con ese slug.']]);
         }
 
+        $workflow = app(WorkflowRuntime::class)->seedDefinitionForCompany($companyId);
+
         $type = RoutineType::query()->create([
             'company_id' => $companyId,
             'name' => $data['name'],
             'slug' => $slug,
+            'service_line' => $data['service_line'] ?? ServiceLine::Maintenance->value,
+            'workflow_definition_id' => $workflow->id,
             'is_active' => true,
         ]);
 
@@ -83,6 +91,7 @@ class RoutineTypeController extends Controller
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
+            'service_line' => ['sometimes', Rule::in(ServiceLine::values())],
         ]);
 
         $routineType->update($data);

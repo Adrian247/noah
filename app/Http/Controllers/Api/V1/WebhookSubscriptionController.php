@@ -62,7 +62,7 @@ class WebhookSubscriptionController extends Controller
         $result = $delivery->deliver($webhookSubscription, 'webhook.test', [
             'message' => 'Prueba de entrega Phoenix',
             'subscription_id' => $webhookSubscription->id,
-        ]);
+        ], bypassEventFilter: true);
 
         return response()->json(['data' => $result]);
     }

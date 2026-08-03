@@ -7,12 +7,17 @@ use App\Events\ExecutionSubmitted;
 use App\Mail\RoutinePendingValidationMail;
 use App\Models\CompanyMembership;
 use App\Models\User;
+use App\Services\Notifications\PushNotifier;
 use App\Services\Workflow\WorkflowDefinitionFactory;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class NotifySupervisorsOfPendingValidation
 {
+    public function __construct(
+        private readonly PushNotifier $push,
+    ) {}
+
     public function handle(ExecutionSubmitted $event): void
     {
         $routine = $event->routine;
@@ -30,7 +35,8 @@ class NotifySupervisorsOfPendingValidation
             ->whereIn('role', [MembershipRole::Supervisor, MembershipRole::Administrator])
             ->pluck('user_id');
 
-        $emails = User::query()->whereIn('id', $supervisorIds)->pluck('email')->unique();
+        $users = User::query()->whereIn('id', $supervisorIds)->get();
+        $emails = $users->pluck('email')->filter()->unique();
 
         if ($emails->isEmpty()) {
             Log::warning('ExecutionSubmitted: no supervisor/admin emails for company', [
@@ -52,5 +58,15 @@ class NotifySupervisorsOfPendingValidation
                 ]);
             }
         }
+
+        $this->push->notifyUsers(
+            $users->pluck('id')->all(),
+            'Rutina pendiente de validación',
+            'La rutina #'.$routine->id.' espera revisión del supervisor.',
+            [
+                'type' => 'routine_pending_validation',
+                'routine_id' => (string) $routine->id,
+            ],
+        );
     }
 }

@@ -41,10 +41,14 @@ class SyncRepository {
 
   Stream<List<PendingMediaData>> watchPendingMedia() => _media.watchPending();
 
-  Future<Map<String, dynamic>?> getRoutine(int id) async {
-    final row = await (_db.select(_db.localRoutines)
+  Future<LocalRoutine?> getLocalRoutine(int id) async {
+    return (_db.select(_db.localRoutines)
           ..where((t) => t.id.equals(id)))
         .getSingleOrNull();
+  }
+
+  Future<Map<String, dynamic>?> getRoutine(int id) async {
+    final row = await getLocalRoutine(id);
     if (row == null) {
       return null;
     }
@@ -133,7 +137,29 @@ class SyncRepository {
         );
 
     await (_db.update(_db.localRoutines)..where((t) => t.id.equals(routineId)))
-        .write(const LocalRoutinesCompanion(localSyncStatus: Value('pending_upload')));
+        .write(
+          LocalRoutinesCompanion(
+            status: const Value('pending_sync'),
+            localSyncStatus: const Value('pending_upload'),
+          ),
+        );
+
+    // Mantener payload coherente para la UI de estado.
+    final row = await (_db.select(_db.localRoutines)
+          ..where((t) => t.id.equals(routineId)))
+        .getSingleOrNull();
+    if (row != null) {
+      try {
+        final payload = Map<String, dynamic>.from(
+          jsonDecode(row.payloadJson) as Map,
+        );
+        payload['status'] = 'pending_sync';
+        await (_db.update(_db.localRoutines)..where((t) => t.id.equals(routineId)))
+            .write(LocalRoutinesCompanion(payloadJson: Value(jsonEncode(payload))));
+      } catch (_) {
+        // Si el payload está corrupto, el status de columna ya basta.
+      }
+    }
 
     await saveDraft(
       routineId: routineId,
@@ -329,6 +355,8 @@ class SyncRepository {
               localSyncStatus: Value(localStatus),
             ),
           );
+
+      await _seedDraftFromLatestExecutionIfNeeded(id, map);
     }
 
     final stale = await _db.select(_db.localRoutines).get();
@@ -357,6 +385,87 @@ class SyncRepository {
             payloadJson: Value(jsonEncode(supplies)),
           ),
         );
+  }
+
+  /// Si hay ejecución previa (p. ej. rechazada) y el borrador local está vacío, lo rellena.
+  Future<void> _seedDraftFromLatestExecutionIfNeeded(
+    int routineId,
+    Map<String, dynamic> routinePayload,
+  ) async {
+    try {
+      await _seedDraftFromLatestExecution(routineId, routinePayload);
+    } catch (_) {
+      // No tumbar el sync completo si falla la hidratación de borrador/fotos.
+    }
+  }
+
+  Future<void> _seedDraftFromLatestExecution(
+    int routineId,
+    Map<String, dynamic> routinePayload,
+  ) async {
+    final execution = routinePayload['latest_execution'];
+    if (execution is! Map) {
+      return;
+    }
+
+    final responses = execution['responses'];
+    if (responses is! Map || responses.isEmpty) {
+      return;
+    }
+
+    final existing = await getDraft(routineId);
+    if (existing != null) {
+      final decoded = jsonDecode(existing.responsesJson);
+      if (decoded is Map && decoded.isNotEmpty) {
+        // Aun con borrador, materializar fotos remotas que hayan quedado.
+        final materialized = await _media.materializeRemotePhotosInResponses(
+          routineId: routineId,
+          responses: Map<String, dynamic>.from(decoded),
+        );
+        await saveDraft(
+          routineId: routineId,
+          responses: materialized,
+          comments: existing.comments,
+          durationMinutes: existing.durationMinutes,
+          signatureLocalId: existing.signatureLocalId,
+          consumptions: _decodeConsumptionsJson(existing.consumptionsJson),
+        );
+        return;
+      }
+    }
+
+    final cleaned = Map<String, dynamic>.from(responses)
+      ..remove('technician_signature');
+    final materialized = await _media.materializeRemotePhotosInResponses(
+      routineId: routineId,
+      responses: cleaned,
+    );
+    final comments = execution['technician_comments']?.toString();
+    final duration = execution['duration_minutes'];
+
+    await saveDraft(
+      routineId: routineId,
+      responses: materialized,
+      comments: (comments != null && comments.trim().isNotEmpty) ? comments : null,
+      durationMinutes: duration is num ? duration.toInt() : null,
+      signatureLocalId: null,
+      consumptions: const [],
+    );
+  }
+
+  List<Map<String, dynamic>> _decodeConsumptionsJson(String raw) {
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) {
+        return const [];
+      }
+      return decoded
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    } catch (_) {
+      return const [];
+    }
   }
 }
 

@@ -15,6 +15,12 @@ const mapDark: Record<string, string> = {
     validated: 'bg-emerald-500/20 text-emerald-100 ring-1 ring-emerald-500/30',
     invoiced: 'bg-violet-500/20 text-violet-100 ring-1 ring-violet-500/30',
     issued: 'bg-emerald-500/20 text-emerald-100 ring-1 ring-emerald-500/30',
+    critical: 'bg-rose-500/25 text-rose-100 ring-1 ring-rose-500/40',
+    high: 'bg-orange-500/20 text-orange-100 ring-1 ring-orange-500/35',
+    medium: 'bg-amber-500/20 text-amber-100 ring-1 ring-amber-500/35',
+    low: 'bg-emerald-500/20 text-emerald-100 ring-1 ring-emerald-500/30',
+    active: 'bg-emerald-500/20 text-emerald-100 ring-1 ring-emerald-500/30',
+    inactive: 'bg-white/10 text-slate-300 ring-1 ring-white/15',
 };
 
 const mapLight: Record<string, string> = {
@@ -24,6 +30,12 @@ const mapLight: Record<string, string> = {
     validated: 'bg-emerald-100 text-emerald-950',
     invoiced: 'bg-violet-100 text-violet-950',
     issued: 'bg-emerald-100 text-emerald-950',
+    critical: 'bg-rose-100 text-rose-950',
+    high: 'bg-orange-100 text-orange-950',
+    medium: 'bg-amber-100 text-amber-950',
+    low: 'bg-emerald-100 text-emerald-950',
+    active: 'bg-emerald-100 text-emerald-950',
+    inactive: 'bg-slate-100 text-slate-700',
 };
 
 const portalStatusClass: Record<string, string> = {
@@ -40,6 +52,12 @@ const label: Record<string, string> = {
     draft: 'Borrador',
     published: 'Publicado',
     issued: 'Emitida',
+    critical: 'Crítico',
+    high: 'Alto',
+    medium: 'Medio',
+    low: 'Bajo',
+    active: 'Activo',
+    inactive: 'Inactivo',
 };
 
 const classes = computed(() => {

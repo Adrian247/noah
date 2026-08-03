@@ -111,9 +111,34 @@ flutter run --dart-define=API_BASE_URL=http://192.168.1.10:8888/api/v1
 Técnico Mein Company:
 
 - Email: `misael.palos@mein-company.com`
-- Contraseña: `phoenix_application` (o `phoenix.2026$` según demo)
+- Contraseña: `pyro.2026$` (demo actual)
 
 Ver `docs/DEMO_ENV.md` y `docs/PRUEBAS_MANUALES.md` (sección F) para probar el backend sin app.
+
+## Push notifications (FCM)
+
+Phoenix Campo registra el token del dispositivo en `POST /api/v1/mobile/device-tokens` tras el login. El backend envía push (además del correo) al asignar rutinas y en otros avisos de workflow.
+
+### Backend
+
+```env
+PHOENIX_PUSH_ENABLED=true
+PHOENIX_PUSH_DRIVER=log   # local/tests
+# PHOENIX_PUSH_DRIVER=fcm
+# FCM_PROJECT_ID=tu-proyecto
+# FCM_CREDENTIALS=/ruta/al/service-account.json
+```
+
+Con `QUEUE_CONNECTION=redis` hace falta un worker (`php artisan queue:work`).
+
+### App
+
+1. Crea un proyecto en [Firebase Console](https://console.firebase.google.com/) y añade la app Android `com.pyrosystems.phoenix_field` (e iOS si aplica).
+2. Sustituye `android/app/google-services.json` por el descargado (el del repo es placeholder).
+3. En el servidor, usa un service account con rol **Firebase Cloud Messaging API Admin** y `PHOENIX_PUSH_DRIVER=fcm`.
+4. iOS: configura APNs en Firebase y añade `GoogleService-Info.plist`.
+
+Sin proyecto Firebase real, la app compila pero no obtendrá token FCM; el backend con driver `log` deja traza en logs al disparar avisos.
 
 ## Flujo v0.7
 

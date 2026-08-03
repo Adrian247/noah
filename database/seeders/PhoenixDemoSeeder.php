@@ -4,8 +4,9 @@ namespace Database\Seeders;
 
 use App\Enums\FormUsage;
 use App\Enums\MembershipRole;
-use App\Enums\RoutineStatus;
+use App\Enums\ServiceLine;
 use App\Models\Asset;
+use App\Models\AssetClientAssignment;
 use App\Models\CatalogItem;
 use App\Models\Client;
 use App\Models\Company;
@@ -14,6 +15,7 @@ use App\Models\EquipmentType;
 use App\Models\FormDefinition;
 use App\Models\FormOptionCatalog;
 use App\Models\FormVersion;
+use App\Models\PredictiveAlgorithmVersion;
 use App\Models\PromptTemplate;
 use App\Models\ReportSectionTemplate;
 use App\Models\ReportTemplate;
@@ -25,21 +27,24 @@ use App\Models\Supplier;
 use App\Models\SupplyItem;
 use App\Models\SupplyType;
 use App\Models\User;
-use App\Services\Routines\DemoRoutineFactory;
-use App\Services\Reports\ReportPresetApplier;
-use App\Services\Workflow\WorkflowRuntime;
 use App\Services\Identity\CompanyAuthorizationService;
+use App\Services\Reports\ReportPresetApplier;
+use App\Services\Routines\DemoRoutineFactory;
+use App\Services\Workflow\WorkflowRuntime;
+use App\Support\DemoAccounts;
+use App\Support\PlatformAdmin;
+use App\Support\Predictive\FailureModeCatalog;
+use App\Support\Ai\OperationalAssistantPrompt;
+use App\Support\Predictive\OemCatalog;
+use App\Support\SupplyUnits;
 use Database\Seeders\Support\DemoClientLogoGenerator;
-use Database\Seeders\Support\DomGInventorySpreadsheetSeeder;
 use Database\Seeders\Support\DemoDesignDraftVersions;
+use Database\Seeders\Support\DomGInventorySpreadsheetSeeder;
 use Database\Seeders\Support\NormalizedSupplyFormSchemas;
 use Database\Seeders\Support\NormalizedVehicleFormSchema;
+use Database\Seeders\Support\TenantDemoProfile;
 use Database\Seeders\Support\VehicleRegistrationFormSchema;
-use App\Support\SupplyUnits;
-use App\Support\PlatformAdmin;
 use Illuminate\Database\Seeder;
-
-use App\Support\DemoAccounts;
 
 class PhoenixDemoSeeder extends Seeder
 {
@@ -58,8 +63,40 @@ class PhoenixDemoSeeder extends Seeder
         );
         PlatformAdmin::syncFlagFromConfig($platformAdmin);
 
-        foreach ([\Database\Seeders\Support\TenantDemoProfile::mein(), \Database\Seeders\Support\TenantDemoProfile::domG()] as $profile) {
-            $this->seedDemonstrationTenant($profile, $tenantPassword);
+        $companies = [];
+        foreach ([TenantDemoProfile::mein(), TenantDemoProfile::domG()] as $profile) {
+            $companies[] = $this->seedDemonstrationTenant($profile, $tenantPassword);
+        }
+        $companies[] = $this->seedVirginSandboxTenant(TenantDemoProfile::sandbox(), $tenantPassword);
+
+        // Catálogos predictivos: OEM global → catálogo de equipos de cada tenant; fallas por empresa.
+        OemCatalog::sync();
+        $algorithm = PredictiveAlgorithmVersion::query()->updateOrCreate(
+            ['semver' => '1.0.0'],
+            [
+                'status' => PredictiveAlgorithmVersion::STATUS_PUBLISHED,
+                'kind' => 'hazard_routines_v1',
+                'notes' => 'Versión inicial publicada: predicción sobre historial de rutinas aplicadas.',
+                'metrics' => ['baseline_kind' => 'hazard_routines_v1'],
+                'training_summary' => [
+                    'note' => 'Semilla demo. Reentrena desde Plataforma → Algoritmo predictivo.',
+                ],
+                'created_by' => $platformAdmin->id,
+                'published_by' => $platformAdmin->id,
+                'published_at' => now(),
+            ],
+        );
+        foreach ($companies as $company) {
+            if ($company->name === TenantDemoProfile::sandbox()->companyName) {
+                continue;
+            }
+
+            FailureModeCatalog::syncForCompany((int) $company->id);
+            OemCatalog::linkCompanyCatalog((int) $company->id);
+            $company->update([
+                'allow_predictive_training_collection' => true,
+                'predictive_algorithm_version_id' => $algorithm->id,
+            ]);
         }
 
         PromptTemplate::query()->updateOrCreate(
@@ -76,7 +113,7 @@ class PhoenixDemoSeeder extends Seeder
             ['company_id' => null, 'slug' => 'insights_assistant_v1', 'version' => 1],
             [
                 'provider' => 'openai',
-                'system_prompt' => 'Eres un asistente operativo de Phoenix. Responde en español, breve y factual. Usa SOLO datos de herramientas. No inventes rutinas, activos, montos ni IDs. Si faltan datos, dilo. Cita IDs presentes en resultados de tools.',
+                'system_prompt' => OperationalAssistantPrompt::default(),
                 'user_template' => '{{question}}',
                 'is_active' => true,
             ]
@@ -94,11 +131,62 @@ class PhoenixDemoSeeder extends Seeder
 
         app(CompanyAuthorizationService::class)->bootstrapAllCompanies();
 
+        $workflowRuntime = app(WorkflowRuntime::class);
+        foreach ($companies as $company) {
+            $workflowRuntime->syncStandardWorkflowForCompany((int) $company->id);
+        }
+
         DemoClientLogoGenerator::writeAssetFile();
     }
 
+    /**
+     * Tenant demo con configuración virgen estándar (como alta desde plataforma): empresa, roles y admin.
+     */
+    private function seedVirginSandboxTenant(TenantDemoProfile $profile, string $password): Company
+    {
+        if (! $profile->isSandbox()) {
+            throw new \InvalidArgumentException('seedVirginSandboxTenant requiere el perfil Sandbox.');
+        }
 
-    private function seedDemonstrationTenant(\Database\Seeders\Support\TenantDemoProfile $profile, string $password): Company
+        $company = Company::query()->updateOrCreate(
+            ['name' => $profile->companyName],
+            [
+                'legal_name' => $profile->companyLegalName,
+                'currency' => 'MXN',
+                'timezone' => 'America/Mexico_City',
+                'is_active' => true,
+                'form_max_image_size_kb' => 2048,
+                'form_allowed_image_mimes' => ['image/jpeg', 'image/png', 'image/webp'],
+                'allow_predictive_training_collection' => false,
+                'predictive_algorithm_version_id' => null,
+                'fiscal_provider' => config('phoenix.billing.fiscal.default_provider', 'sandbox'),
+            ]
+        );
+
+        app(CompanyAuthorizationService::class)->ensureCompanyRoles($company);
+
+        foreach ($profile->staff as $staffRow) {
+            $user = User::query()->updateOrCreate(
+                ['email' => $staffRow['email']],
+                ['name' => $staffRow['name'], 'password' => $password],
+            );
+
+            CompanyMembership::query()->updateOrCreate(
+                ['company_id' => $company->id, 'user_id' => $user->id],
+                [
+                    'role' => $staffRow['role'],
+                    'is_active' => true,
+                    'client_id' => null,
+                ],
+            );
+        }
+
+        app(WorkflowRuntime::class)->seedDefinitionForCompany($company->id);
+
+        return $company;
+    }
+
+    private function seedDemonstrationTenant(TenantDemoProfile $profile, string $password): Company
     {
         $company = Company::query()->updateOrCreate(
             ['name' => $profile->companyName],
@@ -281,6 +369,7 @@ class PhoenixDemoSeeder extends Seeder
             ]
         );
         $this->seedDemoClientLogo($demoClient);
+        $this->seedExtraDemoClients($company, $profile);
 
         $site = Site::query()->updateOrCreate(
             ['company_id' => $company->id, 'name' => $profile->siteName],
@@ -540,64 +629,64 @@ class PhoenixDemoSeeder extends Seeder
 
         if (! $profile->isDomG()) {
             foreach ([
-            [
-                'sku' => 'FIL-1230A153-OEM',
-                'supply_type_id' => $supplyTypeFiltros->id,
-                'name' => 'Filtro de aceite Mitsubishi OEM',
-                'unit' => 'pza',
-                'standard_cost' => 550.00,
-                'specifications' => [
-                    'marca' => 'Mitsubishi',
-                    'referencia_oem' => '1230A153',
-                    'posicion' => 'aceite',
-                    'unidad' => 'pza',
-                    'notas_mercado' => 'OEM original; rango estimado $500–$600 MXN.',
+                [
+                    'sku' => 'FIL-1230A153-OEM',
+                    'supply_type_id' => $supplyTypeFiltros->id,
+                    'name' => 'Filtro de aceite Mitsubishi OEM',
+                    'unit' => 'pza',
+                    'standard_cost' => 550.00,
+                    'specifications' => [
+                        'marca' => 'Mitsubishi',
+                        'referencia_oem' => '1230A153',
+                        'posicion' => 'aceite',
+                        'unidad' => 'pza',
+                        'notas_mercado' => 'OEM original; rango estimado $500–$600 MXN.',
+                    ],
                 ],
-            ],
-            [
-                'sku' => 'FIL-AIR-2030515-SAK',
-                'supply_type_id' => $supplyTypeFiltros->id,
-                'name' => 'Filtro de aire Sakura 2030515',
-                'unit' => 'pza',
-                'standard_cost' => 341.00,
-                'specifications' => [
-                    'marca' => 'Sakura',
-                    'referencia_oem' => '2030515',
-                    'posicion' => 'aire',
-                    'unidad' => 'pza',
-                    'notas_mercado' => 'Rango estimado $237–$445 MXN.',
+                [
+                    'sku' => 'FIL-AIR-2030515-SAK',
+                    'supply_type_id' => $supplyTypeFiltros->id,
+                    'name' => 'Filtro de aire Sakura 2030515',
+                    'unit' => 'pza',
+                    'standard_cost' => 341.00,
+                    'specifications' => [
+                        'marca' => 'Sakura',
+                        'referencia_oem' => '2030515',
+                        'posicion' => 'aire',
+                        'unidad' => 'pza',
+                        'notas_mercado' => 'Rango estimado $237–$445 MXN.',
+                    ],
                 ],
-            ],
-            [
-                'sku' => 'FRE-P54038-BRM',
-                'supply_type_id' => $supplyTypeFrenos->id,
-                'name' => 'Balatas delanteras Brembo P54038 (juego)',
-                'unit' => 'jgo',
-                'standard_cost' => 1268.00,
-                'specifications' => [
-                    'marca' => 'Brembo',
-                    'referencia_oem' => 'P54038',
-                    'posicion' => 'delanteras',
-                    'material' => 'Cerámicas',
-                    'unidad' => 'jgo',
-                    'notas_mercado' => 'Rango estimado $1,130–$1,406 MXN.',
+                [
+                    'sku' => 'FRE-P54038-BRM',
+                    'supply_type_id' => $supplyTypeFrenos->id,
+                    'name' => 'Balatas delanteras Brembo P54038 (juego)',
+                    'unit' => 'jgo',
+                    'standard_cost' => 1268.00,
+                    'specifications' => [
+                        'marca' => 'Brembo',
+                        'referencia_oem' => 'P54038',
+                        'posicion' => 'delanteras',
+                        'material' => 'Cerámicas',
+                        'unidad' => 'jgo',
+                        'notas_mercado' => 'Rango estimado $1,130–$1,406 MXN.',
+                    ],
                 ],
-            ],
-            [
-                'sku' => 'SUS-AMORT-GROB-PAR',
-                'supply_type_id' => $supplyTypeSuspension->id,
-                'name' => 'Amortiguadores delanteros GROB (par)',
-                'unit' => 'par',
-                'standard_cost' => 1698.00,
-                'specifications' => [
-                    'marca' => 'GROB',
-                    'referencia_oem' => 'AMORT-DEL-PAR',
-                    'posicion' => 'delanteros',
-                    'tecnologia' => 'gas',
-                    'unidad' => 'par',
-                    'notas_mercado' => 'Precio estimado $1,698 MXN (par).',
+                [
+                    'sku' => 'SUS-AMORT-GROB-PAR',
+                    'supply_type_id' => $supplyTypeSuspension->id,
+                    'name' => 'Amortiguadores delanteros GROB (par)',
+                    'unit' => 'par',
+                    'standard_cost' => 1698.00,
+                    'specifications' => [
+                        'marca' => 'GROB',
+                        'referencia_oem' => 'AMORT-DEL-PAR',
+                        'posicion' => 'delanteros',
+                        'tecnologia' => 'gas',
+                        'unidad' => 'par',
+                        'notas_mercado' => 'Precio estimado $1,698 MXN (par).',
+                    ],
                 ],
-            ],
             ] as $supplySeed) {
                 SupplyItem::query()->updateOrCreate(
                     ['company_id' => $company->id, 'sku' => $supplySeed['sku']],
@@ -854,6 +943,7 @@ class PhoenixDemoSeeder extends Seeder
             ['company_id' => $company->id, 'slug' => 'revision-mayor-vehiculo-premium'],
             [
                 'name' => 'Revisión mayor vehículo (premium)',
+                'service_line' => ServiceLine::Maintenance,
                 'form_version_id' => $formVersion->id,
                 'report_template_version_id' => $reportVersion->id,
                 'is_active' => true,
@@ -863,7 +953,45 @@ class PhoenixDemoSeeder extends Seeder
         $workflowDef = app(WorkflowRuntime::class)->seedDefinitionForCompany($company->id);
         $routineType->update(['workflow_definition_id' => $workflowDef->id]);
 
-        \App\Models\AssetClientAssignment::query()->updateOrCreate(
+        foreach ([
+            [
+                'slug' => 'orden-manufactura',
+                'name' => $profile->isDomG() ? 'Orden de producción' : 'Orden de manufactura',
+                'line' => ServiceLine::Fabrication,
+                'legacy_slugs' => ['fabricacion-estructuras'],
+            ],
+            [
+                'slug' => 'suministro-insumos-cliente',
+                'name' => 'Suministro de insumos a cliente',
+                'line' => ServiceLine::Supply,
+                'legacy_slugs' => [],
+            ],
+        ] as $extraType) {
+            if ($extraType['legacy_slugs'] !== []) {
+                RoutineType::query()
+                    ->where('company_id', $company->id)
+                    ->whereIn('slug', $extraType['legacy_slugs'])
+                    ->update([
+                        'slug' => $extraType['slug'],
+                        'name' => $extraType['name'],
+                        'service_line' => $extraType['line'],
+                    ]);
+            }
+
+            RoutineType::query()->updateOrCreate(
+                ['company_id' => $company->id, 'slug' => $extraType['slug']],
+                [
+                    'name' => $extraType['name'],
+                    'service_line' => $extraType['line'],
+                    'form_version_id' => $formVersion->id,
+                    'report_template_version_id' => $reportVersion->id,
+                    'workflow_definition_id' => $workflowDef->id,
+                    'is_active' => true,
+                ]
+            );
+        }
+
+        AssetClientAssignment::query()->updateOrCreate(
             [
                 'company_id' => $company->id,
                 'asset_id' => $asset->id,
@@ -933,7 +1061,7 @@ class PhoenixDemoSeeder extends Seeder
         return $company;
     }
 
-    private function ensureDemonstrationRoutine(Company $company, \Database\Seeders\Support\TenantDemoProfile $profile): void
+    private function ensureDemonstrationRoutine(Company $company, TenantDemoProfile $profile): void
     {
         $existingDemo = Routine::query()
             ->where('company_id', $company->id)
@@ -966,6 +1094,40 @@ class PhoenixDemoSeeder extends Seeder
         }
 
         $factory->createForCompany($company->id, $technician);
+    }
+
+    private function seedExtraDemoClients(Company $company, TenantDemoProfile $profile): void
+    {
+        $extras = [
+            [
+                'code' => $profile->isDomG() ? 'DOMG-INTERNO' : 'MEIN-INTERNO',
+                'trade_name' => 'Interno',
+                'legal_name' => $profile->isDomG()
+                    ? 'Trabajos internos Dom-G'
+                    : 'Trabajos internos Mein Company',
+            ],
+        ];
+
+        if (! $profile->isDomG()) {
+            $extras[] = [
+                'code' => 'MEIN-CLI-002',
+                'trade_name' => 'Presidencia Municipal Sombrerete',
+                'legal_name' => 'Presidencia Municipal de Sombrerete',
+            ];
+        }
+
+        foreach ($extras as $row) {
+            Client::query()->updateOrCreate(
+                ['company_id' => $company->id, 'code' => $row['code']],
+                [
+                    'legal_name' => $row['legal_name'],
+                    'trade_name' => $row['trade_name'],
+                    'tax_id' => null,
+                    'billing_email' => null,
+                    'is_active' => true,
+                ]
+            );
+        }
     }
 
     private function seedDemoClientLogo(Client $client): void

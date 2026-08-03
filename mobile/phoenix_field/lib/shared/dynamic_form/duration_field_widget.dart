@@ -88,7 +88,7 @@ class DurationFieldWidget extends StatelessWidget {
               child: Text(
                 'Total: $_totalMinutes min',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.white70,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
               ),
             ),

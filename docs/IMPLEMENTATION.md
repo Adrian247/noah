@@ -33,6 +33,8 @@
 | **Multi-tenant plataforma** (`/platform/tenants`, assume) | Implementado — cambio 036-platform-tenant-admin |
 | **Vinculación activo–cliente** por serie | Implementado |
 | **Rutina demo** (`POST /routines/demo`, sin rutina en seed) | Implementado |
+| **Mantenimiento predictivo** (rutinas aplicadas → riesgo, opt-in entrenamiento, semver de algoritmo, OEM↔catálogo, tools del asistente, `/api/v1/predictive/*`, UI `/app/predictive`) | Implementado — cambio 046, ADR-013; ver [PREDICTIVE_MAINTENANCE.md](PREDICTIVE_MAINTENANCE.md) |
+| **Servicio ML** `ml/phoenix-predict` (FastAPI + GBDT, opcional) | Implementado — apagado por defecto, degrada al motor de PHP |
 
 ## Frontend
 

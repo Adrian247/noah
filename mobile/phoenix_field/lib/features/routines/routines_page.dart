@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +8,8 @@ import 'package:phoenix_field/data/local/app_database.dart';
 import 'package:phoenix_field/data/repositories/sync_repository.dart';
 import 'package:phoenix_field/shared/routine/routine_schedule_filter.dart';
 import 'package:phoenix_field/shared/routine/routine_status_labels.dart';
+
+enum _StatusFilter { all, actionable, waiting }
 
 class RoutinesPage extends ConsumerStatefulWidget {
   const RoutinesPage({super.key});
@@ -19,6 +22,7 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
   bool _syncing = false;
   String? _syncError;
   bool _todayOnly = true;
+  _StatusFilter _statusFilter = _StatusFilter.actionable;
 
   Future<void> _refresh() async {
     setState(() {
@@ -28,12 +32,40 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
     try {
       await ref.read(syncRepositoryProvider).syncNow();
     } catch (e) {
-      setState(() => _syncError = e.toString());
+      setState(() => _syncError = _friendlySyncError(e));
     } finally {
       if (mounted) {
         setState(() => _syncing = false);
       }
     }
+  }
+
+  String _friendlySyncError(Object error) {
+    if (error is DioException) {
+      final status = error.response?.statusCode;
+      final data = error.response?.data;
+      String? serverMessage;
+      if (data is Map && data['message'] != null) {
+        serverMessage = data['message'].toString();
+      }
+      if (status == 401) {
+        return 'Sesión expirada. Cierra sesión e inicia de nuevo.';
+      }
+      if (status == 403) {
+        return serverMessage ??
+            'Sin permiso para sincronizar o descargar evidencias. Revisa empresa/rol.';
+      }
+      if (status == 422) {
+        return serverMessage ?? 'Datos de sync inválidos.';
+      }
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.connectionError ||
+          error.type == DioExceptionType.receiveTimeout) {
+        return 'Sin conexión con el servidor. Comprueba la URL API y la red.';
+      }
+      return serverMessage ?? 'Error de sync (${status ?? error.type.name}).';
+    }
+    return error.toString();
   }
 
   @override
@@ -42,13 +74,38 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
   }
 
+  bool _matchesStatusFilter(String status) {
+    switch (_statusFilter) {
+      case _StatusFilter.all:
+        return true;
+      case _StatusFilter.actionable:
+        return status == 'assigned' || status == 'rejected';
+      case _StatusFilter.waiting:
+        return status == 'pending_sync' ||
+            status == 'submitted' ||
+            status == 'pending_validation' ||
+            status == 'pending_upload';
+    }
+  }
+
+  String? _rejectionReason(Map<String, dynamic> payload) {
+    final execution = payload['latest_execution'];
+    if (execution is Map) {
+      final reason = execution['rejection_reason']?.toString().trim();
+      if (reason != null && reason.isNotEmpty) {
+        return reason;
+      }
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final routinesStream = ref.watch(syncRepositoryProvider).watchRoutines();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Rutinas de hoy'),
+        title: Text(_todayOnly ? 'Rutinas de hoy' : 'Todas las rutinas'),
         actions: [
           IconButton(
             onPressed: _syncing ? null : _refresh,
@@ -66,12 +123,15 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
         stream: routinesStream,
         builder: (context, snapshot) {
           final allRoutines = snapshot.data ?? [];
-          final routines = _todayOnly
-              ? allRoutines.where((routine) {
-                  final payload = _decodePayload(routine.payloadJson);
-                  return RoutineScheduleFilter.isScheduledToday(payload, DateTime.now());
-                }).toList()
-              : allRoutines;
+          final routines = allRoutines.where((routine) {
+            if (_todayOnly) {
+              final payload = _decodePayload(routine.payloadJson);
+              if (!RoutineScheduleFilter.isScheduledToday(payload, DateTime.now())) {
+                return false;
+              }
+            }
+            return _matchesStatusFilter(routine.status);
+          }).toList();
 
           return RefreshIndicator(
             onRefresh: _refresh,
@@ -88,6 +148,29 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
                     setState(() => _todayOnly = selection.first);
                   },
                 ),
+                const SizedBox(height: 10),
+                SegmentedButton<_StatusFilter>(
+                  segments: const [
+                    ButtonSegment(
+                      value: _StatusFilter.actionable,
+                      label: Text('Por hacer'),
+                      icon: Icon(Icons.play_arrow, size: 16),
+                    ),
+                    ButtonSegment(
+                      value: _StatusFilter.waiting,
+                      label: Text('En curso'),
+                      icon: Icon(Icons.hourglass_top, size: 16),
+                    ),
+                    ButtonSegment(
+                      value: _StatusFilter.all,
+                      label: Text('Todos'),
+                    ),
+                  ],
+                  selected: {_statusFilter},
+                  onSelectionChanged: (selection) {
+                    setState(() => _statusFilter = selection.first);
+                  },
+                ),
                 const SizedBox(height: 12),
                 if (_syncError != null)
                   Card(
@@ -102,9 +185,8 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
                     padding: const EdgeInsets.only(top: 48),
                     child: Center(
                       child: Text(
-                        _todayOnly
-                            ? 'No hay rutinas programadas para hoy. Prueba «Todas» o sincroniza.'
-                            : 'No hay rutinas asignadas. Desliza para sincronizar.',
+                        _emptyMessage(),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ),
@@ -112,25 +194,75 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
                   final payload = _decodePayload(routine.payloadJson);
                   final serverStatus = routine.status;
                   final scheduled = payload['scheduled_at']?.toString();
+                  final statusColor = routineStatusColor(serverStatus);
+                  final rejection = _rejectionReason(payload);
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      title: Text(_routineTitle(payload, routine.id)),
-                      subtitle: Text(
-                        [
-                          'Rutina: ${routineStatusLabel(serverStatus)}',
-                          if (scheduled != null && scheduled.isNotEmpty)
-                            'Programada: ${_formatScheduled(scheduled)}',
-                        ].join('\n'),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _SyncBadge(status: routine.localSyncStatus),
-                          const Icon(Icons.chevron_right),
-                        ],
-                      ),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
                       onTap: () => context.push('/routines/${routine.id}'),
+                      child: IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Container(width: 6, color: statusColor),
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            _routineTitle(payload, routine.id),
+                                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                          ),
+                                        ),
+                                        const Icon(Icons.chevron_right, size: 20),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 6,
+                                      crossAxisAlignment: WrapCrossAlignment.center,
+                                      children: [
+                                        RoutineStatusChip(status: serverStatus, compact: true),
+                                        _SyncBadge(status: routine.localSyncStatus),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      rejection != null
+                                          ? 'Rechazada antes: revisa el motivo en el detalle'
+                                          : routineStatusHint(serverStatus),
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            color: rejection != null
+                                                ? const Color(0xFFF87171)
+                                                : Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withValues(alpha: 0.72),
+                                          ),
+                                    ),
+                                    if (scheduled != null && scheduled.isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Programada: ${_formatScheduled(scheduled)}',
+                                        style: Theme.of(context).textTheme.labelMedium,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   );
                 }),
@@ -140,6 +272,16 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
         },
       ),
     );
+  }
+
+  String _emptyMessage() {
+    if (_todayOnly && _statusFilter == _StatusFilter.actionable) {
+      return 'No hay rutinas por hacer hoy. Prueba «En curso», «Todos» o sincroniza.';
+    }
+    if (_todayOnly) {
+      return 'No hay rutinas en este filtro para hoy.';
+    }
+    return 'No hay rutinas en este filtro. Desliza para sincronizar.';
   }
 
   Map<String, dynamic> _decodePayload(String payloadJson) {
@@ -153,8 +295,16 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
   String _routineTitle(Map<String, dynamic> map, int fallbackId) {
     final type = map['routine_type']?['name']?.toString();
     final asset = map['asset']?['tag']?.toString();
-    if (type != null && asset != null) {
-      return '$type — $asset';
+    final client = map['client']?['trade_name']?.toString() ??
+        map['client']?['legal_name']?.toString();
+    final subject = (asset != null && asset.isNotEmpty)
+        ? asset
+        : (client != null && client.isNotEmpty ? client : null);
+    if (type != null && subject != null) {
+      return '$type — $subject';
+    }
+    if (type != null) {
+      return type;
     }
     return 'Rutina #${map['id'] ?? fallbackId}';
   }

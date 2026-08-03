@@ -3,10 +3,13 @@
 namespace Tests\Unit\Services\Reports;
 
 use App\Models\Routine;
-use App\Models\RoutineExecution;
+use App\Models\User;
 use App\Services\Reports\ReportHtmlBuilder;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\Support\CreatesDemoRoutine;
+use Tests\Support\ReportPdfLayoutProbe;
 use Tests\TestCase;
 
 class ReportHtmlBuilderProductionTest extends TestCase
@@ -16,7 +19,7 @@ class ReportHtmlBuilderProductionTest extends TestCase
 
     private function routineWithExecution(): Routine
     {
-        $technician = \App\Models\User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
+        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
         $routine = $this->demoRoutine($technician)->load(['routineType.formVersion', 'company', 'asset']);
         $execution = $routine->latestExecution ?? $routine->executions()->create([
             'performed_by' => $technician->id,
@@ -239,7 +242,7 @@ class ReportHtmlBuilderProductionTest extends TestCase
             ],
         );
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)->setPaper('a4');
+        $pdf = Pdf::loadHTML($html)->setPaper('a4');
         $pdf->getDomPDF()->set_option('isPhpEnabled', true);
         $pdf = $pdf->output();
         $pageMarkers = substr_count($pdf, '/Type /Page');
@@ -325,7 +328,7 @@ class ReportHtmlBuilderProductionTest extends TestCase
 
         $this->assertStringContainsString('if ($PAGE_NUM >= 2)', $html);
 
-        $probe = \Tests\Support\ReportPdfLayoutProbe::fromHtml($html, true);
+        $probe = ReportPdfLayoutProbe::fromHtml($html, true);
 
         $this->assertSame(2, $probe->pageCount, 'Portada temática + cuerpo debe ser exactamente 2 páginas.');
         if (! $probe->bboxAvailable()) {
@@ -370,5 +373,65 @@ class ReportHtmlBuilderProductionTest extends TestCase
         $this->assertStringNotContainsString('@page report-content', $html);
         $this->assertStringNotContainsString('page: report-cover', $html);
         $this->assertStringNotContainsString('height: 773pt', $html);
+    }
+
+    public function test_image_gallery_uses_orientation_aware_layout(): void
+    {
+        $this->seed();
+
+        $routine = $this->routineWithExecution();
+        $execution = $routine->latestExecution;
+
+        $disk = Storage::disk(config('phoenix.evidence.disk', 'evidence'));
+        $landscapePath = 'executions/test/landscape.png';
+        $portraitPath = 'executions/test/portrait.png';
+        $disk->put($landscapePath, $this->pngBytes(240, 120));
+        $disk->put($portraitPath, $this->pngBytes(120, 240));
+
+        $fieldKey = 'foto_tablero';
+        $execution->update([
+            'responses' => [
+                $fieldKey => [
+                    ['path' => $landscapePath, 'caption' => 'Lateral'],
+                    ['path' => $portraitPath, 'caption' => 'Frontal'],
+                    ['path' => $landscapePath],
+                ],
+            ],
+        ]);
+        $execution->refresh();
+
+        $html = app(ReportHtmlBuilder::class)->build(
+            $routine,
+            $execution,
+            [
+                ['type' => 'subtitle', 'text' => 'Evidencias'],
+                ['type' => 'image', 'field' => $fieldKey],
+            ],
+            [],
+        );
+
+        $this->assertStringContainsString('report-image-block', $html);
+        $this->assertStringContainsString('report-gallery__row', $html);
+        $this->assertStringContainsString('report-figure--landscape', $html);
+        $this->assertStringContainsString('report-figure--portrait', $html);
+        $this->assertStringContainsString('report-figure--spacer', $html);
+        $this->assertStringContainsString('report-figure__frame', $html);
+        $this->assertStringContainsString('break-inside: avoid', $html);
+        $this->assertStringContainsString('Lateral', $html);
+    }
+
+    private function pngBytes(int $width, int $height): string
+    {
+        $image = imagecreatetruecolor($width, $height);
+        $this->assertNotFalse($image);
+        $bg = imagecolorallocate($image, 180, 180, 180);
+        imagefilledrectangle($image, 0, 0, $width, $height, $bg);
+        ob_start();
+        imagepng($image);
+        $binary = ob_get_clean();
+        imagedestroy($image);
+        $this->assertNotFalse($binary);
+
+        return $binary;
     }
 }

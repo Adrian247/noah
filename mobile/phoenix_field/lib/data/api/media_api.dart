@@ -32,6 +32,23 @@ class MediaApi {
     }
     throw StateError('Respuesta de subida inválida');
   }
+
+  /// Descarga bytes de una imagen de campo ya almacenada en el servidor.
+  Future<List<int>> fetchFormFieldMedia({
+    required int routineId,
+    required String path,
+  }) async {
+    final response = await _dio.get<List<int>>(
+      '/routines/$routineId/form-field-media',
+      queryParameters: {'path': path},
+      options: Options(responseType: ResponseType.bytes),
+    );
+    final data = response.data;
+    if (data == null || data.isEmpty) {
+      throw StateError('Imagen vacía');
+    }
+    return data;
+  }
 }
 
 final mediaApiProvider = Provider<MediaApi>((ref) => MediaApi(ref.watch(dioProvider)));

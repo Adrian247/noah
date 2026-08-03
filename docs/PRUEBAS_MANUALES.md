@@ -17,10 +17,11 @@ Guía para validar el producto en **http://localhost:8888** (Docker: `docker com
 
 | Email | Rol | Contraseña |
 |-------|-----|------------|
-| admin@pyro-systems.com | Administrador | phoenix_application |
-| claudio.rodriguez@mein-company.com | Supervisor | phoenix_application |
-| misael.palos@mein-company.com | Técnico | phoenix_application |
-| elena.sanchez@mein-company.com | Facturación | phoenix_application |
+| **admin@sandbox-demo.com** | **Administrador (Sandbox, por defecto)** | **pyro.2026$** |
+| admin@pyro-systems.com | Root plataforma | pyro.2026$ |
+| claudio.rodriguez@mein-company.com | Supervisor | pyro.2026$ |
+| misael.palos@mein-company.com | Técnico | pyro.2026$ |
+| elena.sanchez@mein-company.com | Facturación | pyro.2026$ |
 
 ---
 

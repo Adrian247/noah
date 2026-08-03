@@ -7,10 +7,10 @@ use App\Models\FormOptionCatalog;
 use App\Models\FormVersion;
 use App\Models\ReportSectionTemplate;
 use App\Models\ReportTemplate;
+use App\Models\ReportTemplateVersion;
 use App\Models\Routine;
 use App\Models\RoutineExecution;
 use App\Services\Forms\PhotoResponseNormalizer;
-use App\Services\Platform\PlatformTenantService;
 use Illuminate\Support\Facades\Storage;
 
 class ReportHtmlBuilder
@@ -33,7 +33,7 @@ class ReportHtmlBuilder
 
         $reportTemplateId = null;
         if ($reportTemplateVersionId !== null) {
-            $version = \App\Models\ReportTemplateVersion::query()->find($reportTemplateVersionId);
+            $version = ReportTemplateVersion::query()->find($reportTemplateVersionId);
             $reportTemplateId = $version?->report_template_id;
         }
 
@@ -362,7 +362,6 @@ class ReportHtmlBuilder
 
         return $this->renderDocument($routine, $execution, $components, $pageSettings, true, $thumbnail, $reportTemplateId);
     }
-
 
     /**
      * @param  array<int, array<string, mixed>>  $components
@@ -962,10 +961,83 @@ p { line-height: 1.5; margin: 0 0 10px; }
 .report-cover-body { margin-top: 24px; text-align: center !important; max-width: 36rem; margin-left: auto; margin-right: auto; }
 .report-cover-body p,
 .report-cover-body div { text-align: center !important; margin: 0.35em 0; }
-.report-image-caption { font-size: 9pt; color: #555; margin-top: 4px; }
-.report-gallery { margin: 12px 0; }
+.report-image-caption { font-size: 8.5pt; color: #555; margin: 6px 0 0; line-height: 1.3; }
+.report-image-block {
+  clear: both;
+  margin: 14px 0 20px;
+  page-break-inside: auto;
+  break-inside: auto;
+}
+.report-image-block > .report-field-label {
+  margin: 0 0 4px;
+  page-break-after: avoid;
+  break-after: avoid-page;
+}
+.report-image-block > .report-field-hint {
+  page-break-after: avoid;
+  break-after: avoid-page;
+}
+.report-gallery { margin: 4px 0 0; clear: both; width: 100%; }
+.report-gallery__row {
+  display: table;
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 10px 0;
+  margin: 0 0 12px;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.report-gallery__row:last-child { margin-bottom: 0; }
+.report-figure {
+  display: table-cell;
+  vertical-align: top;
+  text-align: center;
+  width: 50%;
+  padding: 0;
+  margin: 0;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.report-gallery--single .report-figure,
+.report-gallery__row--single .report-figure {
+  width: 100%;
+}
+.report-figure--spacer { visibility: hidden; }
+.report-figure__frame {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid {$borderColor};
+  border-radius: 4px;
+  background: #f8fafc;
+  padding: 6px;
+  overflow: hidden;
+}
+img.report-image {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.report-figure--landscape img.report-image { max-height: 168px; max-width: 100%; }
+.report-figure--portrait img.report-image { max-height: 220px; max-width: 78%; }
+.report-figure--square img.report-image { max-height: 190px; max-width: 88%; }
+.report-gallery--single .report-figure--landscape img.report-image { max-height: 210px; }
+.report-gallery--single .report-figure--portrait img.report-image { max-height: 300px; max-width: 52%; }
+.report-gallery--single .report-figure--square img.report-image { max-height: 240px; max-width: 70%; }
+h1, h2.report-subtitle {
+  clear: both;
+  page-break-after: avoid;
+  break-after: avoid-page;
+  margin-top: 18px;
+}
 .report-header, .report-footer { font-size: 9pt; color: #444; width: 100%; }
-.report-divider { border: 0; border-top: 1px solid {$borderColor}; margin: 16px 0; }
+.report-divider { border: 0; border-top: 1px solid {$borderColor}; margin: 16px 0; clear: both; }
 .report-rich table { width: 100%; border-collapse: collapse; margin: 8px 0; }
 .report-rich th, .report-rich td { border: 1px solid #ddd; padding: 4px 8px; font-size: 0.95em; }
 .report-rich pre { background: #1e293b; color: #e2e8f0; padding: 10px 12px; border-radius: 6px; overflow-x: auto; font-size: 8.5pt; margin: 10px 0; }
@@ -980,7 +1052,6 @@ p { line-height: 1.5; margin: 0 0 10px; }
 .report-rich pre code.language-php::before { content: "PHP"; }
 .report-rich pre code.language-bash::before,
 .report-rich pre code.language-shell::before { content: "Shell"; }
-img.report-image { max-width: 100%; max-height: 280px; margin: 8px 0; }
 {$themeCss}
 {$pdfCss}
 {$previewCss}
@@ -1332,15 +1403,34 @@ body.report-preview { margin: 0; padding: 12px 0 28px; background: #e5e7eb; over
         $label = $this->fieldLabel($field, $fieldContext);
         $hint = $this->photoFieldHint($field, $fieldContext);
 
-        $html = '<p class="report-field-label"><strong>'.$this->e($label).'</strong></p>';
+        $figures = [];
+        foreach ($items as $item) {
+            $figures[] = $this->renderSingleImage($item['path'], $item['caption'] ?? null);
+        }
+
+        $count = count($figures);
+        $galleryClass = 'report-gallery'.($count === 1 ? ' report-gallery--single' : '');
+
+        $html = '<div class="report-image-block">';
+        $html .= '<p class="report-field-label"><strong>'.$this->e($label).'</strong></p>';
         if ($hint !== '') {
             $html .= '<p class="report-field-hint">'.$this->e($hint).'</p>';
         }
-        $html .= '<div class="report-gallery">';
-        foreach ($items as $item) {
-            $html .= $this->renderSingleImage($item['path'], $item['caption'] ?? null);
+        $html .= '<div class="'.$galleryClass.'">';
+        foreach (array_chunk($figures, 2) as $row) {
+            $rowClass = 'report-gallery__row';
+            $isLoneInGallery = count($row) === 1 && $count === 1;
+            if ($isLoneInGallery) {
+                $rowClass .= ' report-gallery__row--single';
+            }
+            $html .= '<div class="'.$rowClass.'">'.implode('', $row);
+            if (count($row) === 1 && $count > 1) {
+                // Equilibra la última fila impar en layout de 2 columnas.
+                $html .= '<div class="report-figure report-figure--spacer" aria-hidden="true"></div>';
+            }
+            $html .= '</div>';
         }
-        $html .= '</div>';
+        $html .= '</div></div>';
 
         return $this->wrapBlock($html, $component, 11);
     }
@@ -1366,29 +1456,45 @@ body.report-preview { margin: 0; padding: 12px 0 28px; background: #e5e7eb; over
     private function renderSingleImage(string $path, ?string $caption): string
     {
         if ($path === '__preview_placeholder__') {
-            return '<div style="background:#e5e7eb;height:120px;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:10pt;">Imagen de ejemplo</div>'
-                .($caption ? '<p class="report-image-caption">'.e($caption).'</p>' : '');
+            return $this->wrapReportFigure(
+                '<div class="report-figure__frame" style="min-height:110px;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:10pt;">Imagen de ejemplo</div>',
+                $caption,
+                'square',
+            );
         }
 
         $diskName = config('phoenix.evidence.disk', 'evidence');
         $disk = Storage::disk($diskName);
         if (! $disk->exists($path)) {
-            return '<p class="meta">[Imagen no disponible]</p>';
+            return '<div class="report-figure report-figure--square"><p class="meta">[Imagen no disponible]</p></div>';
         }
 
         $mime = $disk->mimeType($path) ?: 'image/jpeg';
         $binary = $disk->get($path);
         $src = ReportPdfImageEncoder::toEmbeddedSrc($binary, $mime);
         if ($src === null) {
-            return '<p class="meta">[Imagen no compatible para PDF — use JPEG o PNG]</p>';
+            return '<div class="report-figure report-figure--square"><p class="meta">[Imagen no compatible para PDF — use JPEG o PNG]</p></div>';
         }
-        $img = '<img class="report-image" src="'.$src.'" alt="" />';
 
+        $orientation = ReportPdfImageEncoder::orientation($binary);
+        $img = '<div class="report-figure__frame"><img class="report-image" src="'.$src.'" alt="" /></div>';
+
+        return $this->wrapReportFigure($img, $caption, $orientation);
+    }
+
+    private function wrapReportFigure(string $mediaHtml, ?string $caption, string $orientation): string
+    {
+        $safeOrientation = in_array($orientation, ['landscape', 'portrait', 'square'], true)
+            ? $orientation
+            : 'square';
+
+        $html = '<figure class="report-figure report-figure--'.$safeOrientation.'">'.$mediaHtml;
         if ($caption !== null && $caption !== '') {
-            $img .= '<p class="report-image-caption">'.e($caption).'</p>';
+            $html .= '<figcaption class="report-image-caption">'.e($caption).'</figcaption>';
         }
+        $html .= '</figure>';
 
-        return $img;
+        return $html;
     }
 
     private function renderStoredPublicImage(string $path, string $class): string

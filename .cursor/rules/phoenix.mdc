@@ -10,6 +10,6 @@ alwaysApply: true
 - Antes de implementar: leer `openspec/AGENTS.md`, glosario, ADRs y dominio relevante.
 - Arquitectura: monolito modular Laravel + Vue; motores de formularios, reportes y workflow; IA solo vía AI Gateway.
 - Usar lenguaje del glosario: `openspec/glossary/ubiquitous-language.md`.
-- **Ritual demo (obligatorio al cerrar tareas):** si tocaste seeders, usuarios demo, permisos o login → ejecutar `docker compose exec app php artisan phoenix:refresh-demo` y **decir al usuario** las credenciales (`docs/DEMO_ENV.md`). Root: `admin@pyro-systems.com` / `pyro.2026$`; tenants: `phoenix.2026$` (o variables `PHOENIX_DEMO_*`).
+- **Ritual demo (obligatorio al cerrar tareas):** si tocaste seeders, usuarios demo, permisos o login → ejecutar `docker compose exec app php artisan phoenix:refresh-demo` y **decir al usuario** las credenciales (`docs/DEMO_ENV.md`). Cuenta por defecto: `admin@sandbox-demo.com` / `pyro.2026$`; todas las demo comparten la misma contraseña.
 - Atajo solo contraseñas: `phoenix:ensure-demo --reset-credentials`.
 - **UI / temas:** al tocar estilos, popovers, tablas o formularios, validar contraste y legibilidad en **tema oscuro y claro** (`data-theme`); usar tokens `--portal-*` y patrones de `app.css` (p. ej. tooltips, pickers), no colores fijos solo para un tema.

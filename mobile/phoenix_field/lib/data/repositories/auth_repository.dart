@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phoenix_field/core/config/app_config.dart';
 import 'package:phoenix_field/core/network/api_url_resolver.dart';
 import 'package:phoenix_field/core/network/dio_provider.dart';
+import 'package:phoenix_field/core/push/push_notification_service.dart';
 import 'package:phoenix_field/core/security/app_lock_provider.dart';
 import 'package:phoenix_field/core/sync/background_sync_service.dart';
 import 'package:phoenix_field/data/api/auth_api.dart';
@@ -84,10 +85,18 @@ class AuthRepository {
     );
     await _session.setApiBaseUrl(baseUrl);
     await BackgroundSyncService.enable();
+    final push = _ref.read(pushNotificationServiceProvider);
+    if (!push.isReady) {
+      await push.initialize();
+    }
+    await push.registerIfAuthenticated();
   }
 
   Future<void> logout() async {
     await BackgroundSyncService.disable();
+    try {
+      await _ref.read(pushNotificationServiceProvider).unregister();
+    } catch (_) {}
     try {
       await _authApi.logout();
     } catch (_) {

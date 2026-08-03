@@ -12,22 +12,32 @@ class WebhookDeliveryService
      * @param  array<string, mixed>  $payload
      * @return array{success: bool, status: string, http_status?: int}
      */
-    public function deliver(WebhookSubscription $subscription, string $event, array $payload): array
-    {
+    public function deliver(
+        WebhookSubscription $subscription,
+        string $event,
+        array $payload,
+        bool $bypassEventFilter = false,
+    ): array {
         if (! $subscription->is_active) {
             return ['success' => false, 'status' => 'inactive'];
         }
 
         $events = $subscription->events ?? [];
-        if (! in_array($event, $events, true) && ! in_array('*', $events, true)) {
+        if (
+            ! $bypassEventFilter
+            && ! in_array($event, $events, true)
+            && ! in_array('*', $events, true)
+        ) {
             return ['success' => false, 'status' => 'event_not_subscribed'];
         }
 
-        $body = json_encode([
-            'event' => $event,
-            'occurred_at' => now()->toIso8601String(),
-            'data' => $payload,
-        ], JSON_THROW_ON_ERROR);
+        $occurredAt = now()->toIso8601String();
+        $body = app(WebhookPayloadFormatter::class)->encode(
+            $subscription->url,
+            $event,
+            $payload,
+            $occurredAt,
+        );
 
         $request = Http::timeout(15)->withHeaders([
             'Content-Type' => 'application/json',

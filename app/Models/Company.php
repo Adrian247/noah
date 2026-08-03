@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Company extends Model
@@ -24,6 +25,8 @@ class Company extends Model
         'ai_monthly_token_quota',
         'ai_monthly_vision_quota',
         'ai_enabled',
+        'allow_predictive_training_collection',
+        'predictive_algorithm_version_id',
         'fiscal_enabled',
         'fiscal_provider',
         'fiscal_settings',
@@ -41,6 +44,7 @@ class Company extends Model
             'ai_monthly_token_quota' => 'integer',
             'ai_monthly_vision_quota' => 'integer',
             'ai_enabled' => 'boolean',
+            'allow_predictive_training_collection' => 'boolean',
             'fiscal_enabled' => 'boolean',
             'fiscal_settings' => 'array',
         ];
@@ -54,5 +58,10 @@ class Company extends Model
     public function memberships(): HasMany
     {
         return $this->hasMany(CompanyMembership::class);
+    }
+
+    public function predictiveAlgorithmVersion(): BelongsTo
+    {
+        return $this->belongsTo(PredictiveAlgorithmVersion::class, 'predictive_algorithm_version_id');
     }
 }

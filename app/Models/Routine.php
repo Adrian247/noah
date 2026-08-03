@@ -17,6 +17,7 @@ class Routine extends Model
         'company_id',
         'site_id',
         'asset_id',
+        'client_id',
         'routine_type_id',
         'assigned_to',
         'created_by',
@@ -41,6 +42,11 @@ class Routine extends Model
     public function asset(): BelongsTo
     {
         return $this->belongsTo(Asset::class);
+    }
+
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
     }
 
     public function routineType(): BelongsTo

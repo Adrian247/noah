@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import { api } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
 import ReadOnlyNotice from '@/components/ui/ReadOnlyNotice.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
@@ -24,6 +25,7 @@ type FormRow = {
 };
 
 const { canWriteModule } = useModuleAccess();
+const confirm = useConfirm();
 const toast = useToast();
 const router = useRouter();
 const canWrite = computed(() => canWriteModule('design_forms'));
@@ -34,6 +36,7 @@ const name = ref('');
 const usage = ref('routine');
 const showCreate = ref(false);
 const creating = ref(false);
+const deletingId = ref<number | null>(null);
 
 async function load() {
     loading.value = true;
@@ -75,15 +78,22 @@ async function createForm() {
 }
 
 async function removeForm(row: FormRow) {
-    if (!window.confirm(`¿Eliminar el formulario «${row.name}»? Esta acción no se puede deshacer.`)) {
+    const accepted = await confirm(
+        `¿Eliminar el formulario «${row.name}»? Esta acción no se puede deshacer.`,
+        { title: 'Eliminar formulario', confirmLabel: 'Eliminar', danger: true },
+    );
+    if (!accepted) {
         return;
     }
+    deletingId.value = row.id;
     try {
         await api(`/design/forms/${row.id}`, { method: 'DELETE' });
         toast.success('Formulario eliminado.');
         await load();
     } catch (e) {
         toast.error((e as Error).message);
+    } finally {
+        deletingId.value = null;
     }
 }
 
@@ -176,6 +186,7 @@ onMounted(load);
                             icon="trash"
                             label="Eliminar formulario"
                             variant="danger"
+                            :disabled="deletingId === f.id"
                             @click="removeForm(f)"
                         />
                     </div>

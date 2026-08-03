@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+
+# Datos extraídos de bitácoras de cliente y modelos entrenados: no se versionan.
+data/
+artifacts/

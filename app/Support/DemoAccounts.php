@@ -8,6 +8,11 @@ class DemoAccounts
 {
     public const ROOT_EMAIL = 'admin@pyro-systems.com';
 
+    /** Cuenta prefijada en login y pruebas manuales (tenant Sandbox virgen). */
+    public const DEFAULT_LOGIN_EMAIL = 'admin@sandbox-demo.com';
+
+    public const LEGACY_DEFAULT_LOGIN_EMAIL = 'admin@pyro-systems.com';
+
     public static function rootPassword(): string
     {
         return (string) config('phoenix.demo_root_password');
@@ -25,7 +30,7 @@ class DemoAccounts
     {
         $emails = [self::ROOT_EMAIL];
 
-        foreach ([TenantDemoProfile::mein(), TenantDemoProfile::domG()] as $profile) {
+        foreach ([TenantDemoProfile::mein(), TenantDemoProfile::domG(), TenantDemoProfile::sandbox()] as $profile) {
             foreach ($profile->staff as $row) {
                 $emails[] = strtolower($row['email']);
             }

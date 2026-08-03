@@ -9,4 +9,5 @@ Flujo para implementación alineada con `openspec/`:
 
 Los archivos en `archive/` son registro histórico; la spec vigente sigue en `vision/`, `domain/`, `design/`, etc.
 
-**Cambios activos:** ninguno (todos archivados en `openspec/archive/`).
+**Cambios activos:** ninguno (todos archivados en `openspec/archive/`; el último es
+[046-predictive-maintenance](../archive/046-predictive-maintenance/)).

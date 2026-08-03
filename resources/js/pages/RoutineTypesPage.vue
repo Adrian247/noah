@@ -28,6 +28,7 @@ type RoutineType = {
     id: number;
     name: string;
     slug: string;
+    service_line?: string;
     is_active: boolean;
     workflow_definition_id?: number | null;
     form_version_id?: number | null;
@@ -41,6 +42,18 @@ type RoutineType = {
         missing_images: string[];
         checked: boolean;
     };
+};
+
+const SERVICE_LINE_OPTIONS = [
+    { value: 'maintenance', label: 'Mantenimiento' },
+    { value: 'fabrication', label: 'Manufactura' },
+    { value: 'supply', label: 'Suministro' },
+];
+
+const SERVICE_LINE_LABELS: Record<string, string> = {
+    maintenance: 'Mantenimiento',
+    fabrication: 'Manufactura',
+    supply: 'Suministro',
 };
 
 const { canWriteModule } = useModuleAccess();
@@ -57,6 +70,7 @@ const canAssignWorkflow = computed(() => canWriteModule('design_workflows'));
 const routineTypeTableColumns = computed((): TableColumnDef[] => {
     const cols: TableColumnDef[] = [
         { id: 'name', label: 'Nombre', cellClass: 'py-3 pr-2' },
+        { id: 'service_line', label: 'Línea de servicio', cellClass: 'py-3' },
         { id: 'status', label: 'Estado', cellClass: 'py-3' },
         { id: 'form', label: 'Formulario (publicado)', cellClass: 'max-w-xs py-3 pr-2' },
         { id: 'report', label: 'Reporte (publicado)', cellClass: 'max-w-xs py-3 pr-2' },
@@ -77,6 +91,7 @@ const loading = ref(true);
 const showCreate = ref(false);
 const newName = ref('');
 const newSlug = ref('');
+const newServiceLine = ref('maintenance');
 const creating = ref(false);
 
 const emptyOption = { value: '', label: '— Sin enlazar —' };
@@ -162,10 +177,12 @@ async function createType() {
             body: JSON.stringify({
                 name: newName.value.trim(),
                 slug: newSlug.value.trim() || undefined,
+                service_line: newServiceLine.value,
             }),
         });
         newName.value = '';
         newSlug.value = '';
+        newServiceLine.value = 'maintenance';
         showCreate.value = false;
         toast.success('Tipo de rutina creado.');
         await load();
@@ -173,6 +190,22 @@ async function createType() {
         toast.error((e as Error).message);
     } finally {
         creating.value = false;
+    }
+}
+
+async function saveServiceLine(type: RoutineType, serviceLine: string) {
+    if (serviceLine === (type.service_line ?? 'maintenance')) {
+        return;
+    }
+    try {
+        await api(`/routine-types/${type.id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ service_line: serviceLine }),
+        });
+        toast.success('Línea de servicio actualizada.');
+        await load();
+    } catch (e) {
+        toast.error((e as Error).message);
     }
 }
 
@@ -284,6 +317,12 @@ onMounted(load);
                     class="min-w-[12rem]"
                     placeholder="auto-desde-nombre"
                 />
+                <MaterialSelect
+                    v-model="newServiceLine"
+                    label="Línea de servicio *"
+                    class="min-w-[12rem]"
+                    :options="SERVICE_LINE_OPTIONS"
+                />
                 <AppButton :disabled="creating" @click="createType">Crear</AppButton>
                 <AppButton variant="ghost" @click="showCreate = false">Cancelar</AppButton>
             </div>
@@ -307,6 +346,19 @@ onMounted(load);
                 </template>
                 <span v-else class="text-portal-heading font-medium">{{ (row as RoutineType).name }}</span>
                 <p class="text-portal-muted mt-1 font-mono text-xs">{{ (row as RoutineType).slug }}</p>
+            </template>
+            <template #service_line="{ row }">
+                <MaterialSelect
+                    v-if="canWrite"
+                    compact
+                    :model-value="(row as RoutineType).service_line ?? 'maintenance'"
+                    label="Línea"
+                    :options="SERVICE_LINE_OPTIONS"
+                    @update:model-value="(v) => saveServiceLine(row as RoutineType, String(v))"
+                />
+                <span v-else class="text-portal-muted text-sm">
+                    {{ SERVICE_LINE_LABELS[(row as RoutineType).service_line ?? 'maintenance'] ?? 'Mantenimiento' }}
+                </span>
             </template>
             <template #status="{ row }">
                 <span

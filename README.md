@@ -8,6 +8,7 @@ Plataforma configurable para gestión de mantenimiento industrial: catálogos, r
 | Diagramas | [openspec/diagrams/README.md](openspec/diagrams/README.md) |
 | Guía para Cursor | [openspec/AGENTS.md](openspec/AGENTS.md) |
 | Estado del código | [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) |
+| Mantenimiento predictivo | [docs/PREDICTIVE_MAINTENANCE.md](docs/PREDICTIVE_MAINTENANCE.md) |
 
 ## Stack
 
@@ -51,7 +52,7 @@ npm install && npm run build
 | Mailpit | http://localhost:8025 |
 | MinIO | http://localhost:9001 |
 
-Demo: `admin@pyro-systems.com` / `phoenix_application` — ritual y cuentas: [docs/DEMO_ENV.md](docs/DEMO_ENV.md).
+Demo: **`admin@sandbox-demo.com`** / **`pyro.2026$`** (Sandbox) — ritual y más cuentas: [docs/DEMO_ENV.md](docs/DEMO_ENV.md).
 
 ## Licencia
 

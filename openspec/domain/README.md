@@ -10,6 +10,7 @@ Documentos por bounded context. Mapa: [bounded-contexts.md](../architecture/boun
 | [catalogs.md](catalogs.md) | Maestros de equipo y proveedores |
 | [inventory.md](inventory.md) | Insumos y consumos |
 | [maintenance.md](maintenance.md) | Rutinas y ejecuciones |
+| [predictive.md](predictive.md) | Bitácoras, modos de falla y predicción |
 | [forms.md](forms.md) | Definiciones de formulario |
 | [reports.md](reports.md) | Plantillas y PDF generados |
 | [workflows.md](workflows.md) | Flujos de aprobación y automatización |

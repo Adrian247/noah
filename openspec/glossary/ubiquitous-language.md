@@ -23,8 +23,11 @@ Glosario acordado entre negocio, diseño y desarrollo. Usar estos términos en U
 
 | Término | Definición |
 |---------|------------|
-| **Tipo de rutina** | Plantilla configurable: formulario + reporte + workflow (+ reglas). |
-| **Rutina** | Instancia de trabajo de campo o taller asociada a un activo y un tipo de rutina. **Agregado principal en MVP** (`Routine`). |
+| **Tipo de rutina** | Plantilla configurable: formulario + reporte + workflow (+ reglas) y **línea de servicio**. |
+| **Línea de servicio** | Clasificación del tipo de rutina: `maintenance` (Mantenimiento), `fabrication` (Manufactura), `supply` (Suministro). |
+| **Manufactura** | Línea de trabajo productivo o de obra para un **cliente** (estructuras, obra civil, textiles, bordados, diseño, etc.). El **tipo de rutina** concreta el oficio; la línea no asume un producto fijo. Código API: `fabrication`. |
+| **Rutina** | Instancia de trabajo asociada a un tipo de rutina. Mantenimiento exige **activo**; manufactura/suministro exigen **cliente** (activo opcional). **Agregado principal** (`Routine`). |
+| **Suministro** | Servicio de compra/reventa de insumos a un cliente (≠ **Proveedor** del catálogo maestro). |
 | **Orden de trabajo** | Término de negocio opcional en UI; en dominio MVP es **sinónimo de Rutina**. Reservado para fase posterior si se separa planificación (backlog) de ejecución (campo). |
 | **Mantenimiento** | Concepto amplio de intervención; en documentación suele referirse al bounded context, no a una tabla. |
 | **Evidencia** | Fotografía, firma, archivo o dato que prueba la ejecución. |
@@ -70,6 +73,22 @@ Glosario acordado entre negocio, diseño y desarrollo. Usar estos términos en U
 | **Cola local** | Eventos pendientes de envío en el dispositivo. |
 | **Sincronización** | Intercambio idempotente de eventos servidor ↔ dispositivo. |
 | **Source of truth** | El servidor; el móvil reconcilia hacia él. |
+
+## Predictivo
+
+| Término | Definición |
+|---------|------------|
+| **Bitácora de turno** | Renglón por activo, día y turno con horas, consumos y horómetro (`EquipmentShiftLog`). |
+| **Episodio de falla** | Una indisponibilidad completa, aunque abarque varios turnos (`EquipmentFailure`). Contar renglones en lugar de episodios infla la tasa. |
+| **Modo de falla** | Clasificación canónica de la avería, con síntomas, causas y señales que la anticipan (`FailureMode`). |
+| **Clase de equipo** | Clase funcional canónica: `SCOOPTRAM`, `JUMBO`, `QUEBRADORA`… Los alias de piso (`SS`, `scoop`, `LHD`) se resuelven a ella. |
+| **Ventana de predicción** | Días hacia adelante que cubre la predicción (7, 14 o 30). |
+| **Fallas esperadas** | Valor esperado de fallas en la ventana. Es lo que define el nivel de riesgo. |
+| **Probabilidad** | P(al menos una falla en la ventana). Se reporta, pero no ordena: se satura en flotas de alta tasa. |
+| **Factor / driver** | Cada evidencia observable que sube el riesgo sobre la línea base, con su aporte relativo. |
+| **Precursor** | Código de alarma de máquina que antecede a un modo de falla. |
+| **Confianza** | Cuánto historial respalda la predicción; no es su probabilidad. |
+| **Cobertura** | Periodo observable de un activo para etiquetar entrenamiento: historial de rutinas aplicadas o, en corpus de referencia, bitácora. Sin cobertura futura no hay etiqueta posible. |
 
 ## Seguridad
 

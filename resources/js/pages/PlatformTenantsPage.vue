@@ -538,6 +538,7 @@ onMounted(load);
                 <UserAvatar
                     :name="(row as TenantRow).name"
                     :avatar-url="tenantLogoUrl(row as TenantRow)"
+                    image-fit="contain"
                     size="sm"
                 />
             </template>
@@ -554,7 +555,7 @@ onMounted(load);
             <template #actions="{ row }">
                 <div class="table-row-actions platform-tenant-row-actions">
                     <IconActionButton
-                        icon="building"
+                        icon="buildings"
                         label="Abrir workspace del cliente"
                         :disabled="enteringWorkspaceId === (row as TenantRow).id"
                         @click="openTenantWorkspace(row as TenantRow)"

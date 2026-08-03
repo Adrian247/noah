@@ -39,7 +39,7 @@ class PhoenixModuleCatalog
             [
                 'id' => 'assets',
                 'label' => 'Activos',
-                'nav_routes' => ['/app/assets'],
+                'nav_routes' => ['/app/assets', '/app/predictive'],
                 'read' => ['assets.view', 'assets.manage'],
                 'write' => ['assets.manage'],
             ],

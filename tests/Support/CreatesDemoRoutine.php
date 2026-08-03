@@ -11,10 +11,19 @@ trait CreatesDemoRoutine
 {
     protected function demoRoutine(?User $technician = null): Routine
     {
-        $company = Company::query()->firstOrFail();
         $technician ??= User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
 
-        return app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
+        // La empresa sale de la membresía del técnico: con `Company::first()` la rutina caía en una
+        // empresa arbitraria (Postgres no garantiza orden sin `ORDER BY`) y las peticiones que
+        // mandan `X-Company-Id` respondían 403 o 404 de forma intermitente.
+        $companyId = $technician->memberships()
+            ->where('is_active', true)
+            ->orderBy('company_id')
+            ->value('company_id');
+
+        $companyId ??= Company::query()->orderBy('id')->firstOrFail()->id;
+
+        return app(DemoRoutineFactory::class)->createForCompany((int) $companyId, $technician);
     }
 
     /**

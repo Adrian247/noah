@@ -6,6 +6,7 @@ use App\Models\AiInvocation;
 use App\Services\AI\AiGateway;
 use App\Services\Identity\CompanyAuthorizationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\Support\UsesMeinCompany;
 use Tests\TestCase;
 
@@ -89,5 +90,40 @@ class AiGatewayAssistantTest extends TestCase
         $this->assertNotNull($result);
         $this->assertSame('list_clients', $result['tool_calls'][0]['name'] ?? null);
         $this->assertTrue($result['tool_calls'][0]['ok'] ?? false);
+    }
+
+    public function test_local_assistant_routes_client_demand_prediction(): void
+    {
+        config(['phoenix.ai.default_provider' => 'local']);
+
+        $company = $this->meinCompany();
+        $admin = $this->meinUser('emilio.sanchez@mein-company.com');
+        $result = app(AiGateway::class)->invokeAssistant(
+            'Demanda de manufactura a clientes',
+            $company->id,
+            $admin,
+        );
+
+        $this->assertNotNull($result);
+        $this->assertSame('predict_client_demand', $result['tool_calls'][0]['name'] ?? null);
+        $this->assertTrue($result['tool_calls'][0]['ok'] ?? false);
+    }
+
+    public function test_local_assistant_clarifies_ambiguous_equipment_prediction(): void
+    {
+        config(['phoenix.ai.default_provider' => 'local']);
+
+        $company = $this->meinCompany();
+        $admin = $this->meinUser('emilio.sanchez@mein-company.com');
+        $result = app(AiGateway::class)->invokeAssistant(
+            'Quiero una predicción de fallas',
+            $company->id,
+            $admin,
+        );
+
+        $this->assertNotNull($result);
+        $this->assertSame([], $result['tool_calls']);
+        $this->assertStringContainsString('demanda', Str::lower($result['answer']));
+        $this->assertStringContainsString('flota', Str::lower($result['answer']));
     }
 }

@@ -7,6 +7,7 @@ import { useToast } from '@/composables/useToast';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
 import MaterialSelect from '@/components/ui/MaterialSelect.vue';
+import AppButton from '@/components/ui/AppButton.vue';
 import IconActionButton from '@/components/ui/IconActionButton.vue';
 import { formUsageLabel } from '@/lib/formUsage';
 

@@ -6,8 +6,10 @@ use App\Models\AiInvocation;
 use App\Models\PromptTemplate;
 use App\Models\Routine;
 use App\Models\User;
+use App\Services\AI\Contracts\AiProviderContract;
 use App\Services\AI\Contracts\AiTool;
 use App\Services\AI\Tools\AiToolRegistry;
+use App\Support\Ai\OperationalAssistantPrompt;
 use App\Support\CurrentCompany;
 use Illuminate\Support\Str;
 
@@ -26,7 +28,7 @@ class AiGateway
         private readonly AssistantDashboardBuilder $dashboardBuilder,
     ) {}
 
-    private function provider(): \App\Services\AI\Contracts\AiProviderContract
+    private function provider(): AiProviderContract
     {
         return $this->providerResolver->resolve();
     }
@@ -101,12 +103,7 @@ class AiGateway
         array $history = [],
     ): ?array {
         $template = PromptTemplate::activeFor('insights_assistant_v1', $companyId);
-        $system = $template?->system_prompt ?? <<<'PROMPT'
-Eres un asistente operativo de Phoenix. Responde en español, breve y factual.
-Usa SOLO datos obtenidos de las herramientas. No inventes rutinas, activos, montos ni IDs.
-Si el usuario pide KPIs, dashboard o indicadores, usa get_operational_kpis.
-Si faltan datos, dilo. Cita IDs presentes en los resultados de herramientas.
-PROMPT;
+        $system = $template?->system_prompt ?? OperationalAssistantPrompt::default();
 
         $enrichedQuestion = $pageContext !== null && trim($pageContext) !== ''
             ? trim($question)."\n\nContexto de pantalla: ".$pageContext
@@ -460,6 +457,18 @@ PROMPT;
             $normalized = Str::lower(Str::ascii(trim($normalized.' '.$recent)));
         }
 
+        $clarifyPrediction = $this->predictiveClarificationNeeded($normalized);
+        if ($clarifyPrediction !== null) {
+            return [
+                'answer' => $clarifyPrediction,
+                'sources' => [],
+                'provider' => 'local',
+                'tool_calls' => [],
+                'conversation_id' => $conversationId ?: (string) Str::uuid(),
+                'presentation' => null,
+            ];
+        }
+
         $toolPlan = $this->selectLocalToolPlan($normalized, $pageContext, $user, $companyId);
         if ($toolPlan === []) {
             return [
@@ -499,7 +508,7 @@ PROMPT;
         }
 
         if ($sections === []) {
-            $answer = 'Puedo ayudarte con rutinas, clientes, facturas, sitios, KPIs, auditoría, activos o insumos. Prueba: «Muéstrame el dashboard de KPIs»';
+            $answer = 'Puedo ayudarte con rutinas (mantenimiento, manufactura o suministro), clientes, facturas, sitios, KPIs, predicción de equipos o demanda a clientes. Prueba: «Muéstrame el dashboard de KPIs» o «Demanda de manufactura».';
         } else {
             $answer = implode("\n\n", $sections);
         }
@@ -589,6 +598,11 @@ PROMPT;
             return [['name' => 'get_operational_kpis', 'arguments' => []]];
         }
 
+        $predictive = $this->buildPredictiveToolPlan($normalized);
+        if ($predictive !== []) {
+            return $predictive;
+        }
+
         $selected = [];
         if (Str::contains($normalized, ['cliente', 'clientes', 'razon social', 'rfc'])) {
             $selected[] = ['name' => 'list_clients', 'arguments' => ['limit' => 10]];
@@ -618,6 +632,157 @@ PROMPT;
         return $selected;
     }
 
+    /**
+     * Ruteo de intención predictiva para el proveedor local (sin LLM).
+     *
+     * Demanda de manufactura/suministro → predict_client_demand.
+     * Tag concreto → ficha de salud; flota/clase → ranking de riesgo de equipos.
+     *
+     * @return list<array{name: string, arguments: array<string, mixed>}>
+     */
+    private function buildPredictiveToolPlan(string $normalized): array
+    {
+        if ($this->wantsClientDemandIntent($normalized)) {
+            $arguments = ['limit' => 10];
+            if (Str::contains($normalized, ['suministro', 'insumo', 'compra a cliente', 'reventa'])) {
+                $arguments['service_line'] = 'supply';
+            } elseif (Str::contains($normalized, [
+                'manufactura', 'fabricacion', 'produccion', 'obra', 'bordado', 'textil',
+            ])) {
+                $arguments['service_line'] = 'fabrication';
+            }
+
+            return [['name' => 'predict_client_demand', 'arguments' => $arguments]];
+        }
+
+        if (! $this->wantsEquipmentPredictiveIntent($normalized)) {
+            return [];
+        }
+
+        if (Str::contains($normalized, ['modo de falla', 'modos de falla', 'taxonomia', 'catalogo de fallas'])) {
+            return [['name' => 'list_failure_modes', 'arguments' => []]];
+        }
+
+        // Sin equipo/clase/flota el plan queda vacío: answerWithLocalTools ya aclaró.
+        if ($this->predictiveClarificationNeeded($normalized) !== null) {
+            return [];
+        }
+
+        $horizon = preg_match('/(\d{1,2})\s*dias/', $normalized, $days) === 1 ? (int) $days[1] : null;
+
+        // Un tag explícito (SS-305, JB 101, VQ207) desplaza la consulta al equipo puntual.
+        if (preg_match('/\b([a-z]{2,4})[\s\-_]?(\d{2,4})\b/', $normalized, $tag) === 1) {
+            return [[
+                'name' => 'get_equipment_health',
+                'arguments' => ['tag' => strtoupper($tag[1]).'-'.$tag[2]],
+            ]];
+        }
+
+        $arguments = ['limit' => 10];
+        if ($horizon !== null) {
+            $arguments['horizon_days'] = $horizon;
+        }
+
+        $class = $this->extractEquipmentClassFromQuestion($normalized);
+        if ($class !== null) {
+            $arguments['equipment_class'] = $class;
+        }
+
+        return [['name' => 'predict_equipment_failures', 'arguments' => $arguments]];
+    }
+
+    private function wantsClientDemandIntent(string $normalized): bool
+    {
+        return Str::contains($normalized, [
+            'demanda',
+            'manufactura',
+            'fabricacion',
+            'suministro',
+            'que cliente',
+            'cual cliente',
+            'clientes pediran',
+            'cliente pedira',
+            'pedido de cliente',
+            'orden de produccion',
+            'orden de manufactura',
+            'predict_client',
+            'servicio a cliente',
+            'trabajos a cliente',
+        ]);
+    }
+
+    private function wantsEquipmentPredictiveIntent(string $normalized): bool
+    {
+        if ($this->wantsClientDemandIntent($normalized)) {
+            return false;
+        }
+
+        return Str::contains($normalized, [
+            'predic', 'va a fallar', 'por fallar', 'riesgo', 'probabilidad de falla',
+            'fallas esperadas', 'proxima falla', 'mantenimiento predictivo', 'salud del equipo',
+        ]);
+    }
+
+    /**
+     * Si el usuario pide predicción sin indicar equipo, clase, flota ni demanda de cliente, se pide aclaración.
+     */
+    private function predictiveClarificationNeeded(string $normalized): ?string
+    {
+        if ($this->wantsClientDemandIntent($normalized)) {
+            return null;
+        }
+
+        if (! $this->wantsEquipmentPredictiveIntent($normalized)) {
+            return null;
+        }
+
+        if (Str::contains($normalized, ['modo de falla', 'modos de falla', 'taxonomia', 'catalogo de fallas'])) {
+            return null;
+        }
+
+        if (preg_match('/\b([a-z]{2,4})[\s\-_]?(\d{2,4})\b/', $normalized) === 1) {
+            return null;
+        }
+
+        if ($this->extractEquipmentClassFromQuestion($normalized) !== null) {
+            return null;
+        }
+
+        if (Str::contains($normalized, ['toda la flota', 'todas las flotas', 'todos los equipos', 'flota completa', 'parque completo'])) {
+            return null;
+        }
+
+        return 'Puedo estimar dos cosas distintas: '
+            .'1) Riesgo de falla en equipos (mantenimiento) — indica el tag (p. ej. SS-305), la clase '
+            .'(scooptram, camión, jumbo…) o di «toda la flota». '
+            .'2) Demanda de manufactura o suministro a clientes — di «demanda de clientes», «manufactura» o «suministro». '
+            .'El análisis de equipos usa rutinas de mantenimiento; el de demanda, rutinas ligadas a cliente.';
+    }
+
+    private function extractEquipmentClassFromQuestion(string $normalized): ?string
+    {
+        $map = [
+            'scooptram' => 'SCOOPTRAM',
+            'scoop' => 'SCOOPTRAM',
+            'lhd' => 'SCOOPTRAM',
+            'camion' => 'CAMION_BAJO_PERFIL',
+            'jumbo' => 'JUMBO',
+            'quebradora' => 'QUEBRADORA',
+            'molino' => 'MOLINO',
+            'filtro' => 'FILTRO',
+            'banda' => 'BANDA_TRANSPORTADORA',
+            'bomba' => 'BOMBA',
+        ];
+
+        foreach ($map as $needle => $class) {
+            if (Str::contains($normalized, $needle)) {
+                return $class;
+            }
+        }
+
+        return null;
+    }
+
     private function formatLocalToolAnswer(string $toolName, mixed $data): string
     {
         if (! is_array($data)) {
@@ -629,11 +794,17 @@ PROMPT;
         }
 
         if ($toolName === 'get_routine') {
+            $subject = $data['asset_tag']
+                ?? (isset($data['client_name']) ? 'cliente '.$data['client_name'] : null)
+                ?? 'sin sujeto';
+            $line = isset($data['service_line_label']) ? ' · '.$data['service_line_label'] : '';
+
             return sprintf(
-                "Rutina #%s (%s) en activo %s, estado %s. Actualizada: %s.",
+                'Rutina #%s (%s%s) en %s, estado %s. Actualizada: %s.',
                 $data['id'] ?? '—',
                 $data['type'] ?? '—',
-                $data['asset_tag'] ?? '—',
+                $line,
+                $subject,
                 $data['status'] ?? '—',
                 $data['updated_at'] ?? '—',
             );
@@ -653,6 +824,31 @@ PROMPT;
             );
         }
 
+        if ($toolName === 'predict_equipment_failures') {
+            return $this->formatPredictions($data);
+        }
+
+        if ($toolName === 'predict_client_demand') {
+            return $this->formatClientDemand($data);
+        }
+
+        if ($toolName === 'get_equipment_health') {
+            return $this->formatEquipmentHealth($data);
+        }
+
+        if ($toolName === 'list_failure_modes') {
+            $modes = collect($data['failure_modes'] ?? [])->take(12)->map(fn (array $mode) => sprintf(
+                '- %s · %s (%s)',
+                $mode['code'] ?? '—',
+                $mode['name'] ?? '—',
+                $mode['system'] ?? '—',
+            ))->implode("\n");
+
+            return $modes === ''
+                ? 'El catálogo de modos de falla está vacío.'
+                : sprintf("Modos de falla (%d en total):\n%s", (int) ($data['total'] ?? 0), $modes);
+        }
+
         if ($data === []) {
             return match ($toolName) {
                 'list_recent_routines' => 'No hay rutinas recientes registradas.',
@@ -667,13 +863,21 @@ PROMPT;
         }
 
         $lines = match ($toolName) {
-            'list_recent_routines' => collect($data)->map(fn (array $row) => sprintf(
-                '- Rutina #%s (%s) en %s — estado %s',
-                $row['id'] ?? '—',
-                $row['type'] ?? '—',
-                $row['asset_tag'] ?? '—',
-                $row['status'] ?? '—',
-            )),
+            'list_recent_routines' => collect($data)->map(function (array $row) {
+                $subject = $row['asset_tag']
+                    ?? (isset($row['client_name']) ? 'cliente '.$row['client_name'] : null)
+                    ?? 'sin sujeto';
+                $line = isset($row['service_line_label']) ? ' · '.$row['service_line_label'] : '';
+
+                return sprintf(
+                    '- Rutina #%s (%s%s) en %s — estado %s',
+                    $row['id'] ?? '—',
+                    $row['type'] ?? '—',
+                    $line,
+                    $subject,
+                    $row['status'] ?? '—',
+                );
+            }),
             'list_audit_entries' => collect($data)->map(fn (array $row) => sprintf(
                 '- %s sobre %s#%s (%s)',
                 $row['action'] ?? '—',
@@ -726,6 +930,136 @@ PROMPT;
         return $heading."\n".$lines->implode("\n");
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function formatPredictions(array $data): string
+    {
+        $predictions = $data['predictions'] ?? [];
+        if ($predictions === []) {
+            return 'No hay equipos con historial suficiente para predecir fallas con ese filtro.';
+        }
+
+        $lines = [];
+        foreach (array_slice($predictions, 0, 10) as $prediction) {
+            $lines[] = sprintf(
+                '- %s · riesgo %s · %.0f %% de falla en %d días · modo probable: %s',
+                $prediction['tag'] ?? 'Activo #'.($prediction['asset_id'] ?? '—'),
+                $prediction['risk_level'] ?? '—',
+                (float) ($prediction['probability'] ?? 0) * 100,
+                (int) ($data['horizon_days'] ?? 0),
+                $prediction['top_failure_mode']['name'] ?? 'sin determinar',
+            );
+            foreach (array_slice($prediction['why'] ?? [], 0, 2) as $why) {
+                $lines[] = '  · '.$why;
+            }
+        }
+
+        $summary = $data['risk_summary'] ?? [];
+
+        return sprintf(
+            "Riesgo de falla a %d días (corte %s, %d equipos evaluados: %d crítico, %d alto, %d medio, %d bajo):\n%s",
+            (int) ($data['horizon_days'] ?? 0),
+            (string) ($data['as_of'] ?? '—'),
+            (int) ($data['evaluated_assets'] ?? 0),
+            (int) ($summary['critical'] ?? 0),
+            (int) ($summary['high'] ?? 0),
+            (int) ($summary['medium'] ?? 0),
+            (int) ($summary['low'] ?? 0),
+            implode("\n", $lines),
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function formatClientDemand(array $data): string
+    {
+        $predictions = $data['predictions'] ?? [];
+        if ($predictions === []) {
+            $notes = $data['notes'] ?? null;
+            if (is_array($notes) && isset($notes[0]) && is_string($notes[0])) {
+                return $notes[0];
+            }
+            if (is_string($notes) && $notes !== '') {
+                return $notes;
+            }
+
+            return 'No hay historial suficiente de manufactura o suministro con cliente para estimar demanda.';
+        }
+
+        $lines = [];
+        foreach (array_slice($predictions, 0, 10) as $prediction) {
+            $lines[] = sprintf(
+                '- %s · %s (%s) · score %.2f · %d rutinas · última %s',
+                $prediction['client_name'] ?? 'Cliente #'.($prediction['client_id'] ?? '—'),
+                $prediction['routine_type_name'] ?? 'tipo',
+                $prediction['service_line_label'] ?? ($prediction['service_line'] ?? '—'),
+                (float) ($prediction['score'] ?? 0),
+                (int) ($prediction['routines_in_lookback'] ?? 0),
+                $prediction['last_routine_at'] ?? '—',
+            );
+        }
+
+        $linesFilter = is_array($data['service_lines'] ?? null)
+            ? implode(', ', $data['service_lines'])
+            : 'manufactura/suministro';
+
+        return sprintf(
+            "Demanda estimada a clientes (%s, horizonte %d días):\n%s",
+            $linesFilter,
+            (int) ($data['horizon_days'] ?? 30),
+            implode("\n", $lines),
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function formatEquipmentHealth(array $data): string
+    {
+        $asset = $data['asset'] ?? [];
+        $reliability = $data['reliability'] ?? [];
+        $prediction = $data['prediction'] ?? [];
+
+        $lines = [sprintf(
+            '%s (%s%s) · corte %s',
+            $asset['tag'] ?? 'Equipo',
+            $asset['equipment_class'] ?? 'sin clase',
+            isset($asset['manufacturer']) ? ', '.$asset['manufacturer'].' '.($asset['model'] ?? '') : '',
+            (string) ($data['as_of'] ?? '—'),
+        )];
+
+        $lines[] = sprintf(
+            '- Riesgo %s · %.0f %% de falla en %d días · modo probable: %s',
+            $prediction['risk_level'] ?? '—',
+            (float) ($prediction['probability'] ?? 0) * 100,
+            (int) ($prediction['horizon_days'] ?? 0),
+            $prediction['top_failure_mode']['name'] ?? 'sin determinar',
+        );
+        $lines[] = sprintf(
+            '- Horómetro %s h · disponibilidad 7d %s · MTBF %s h · MTTR %s h',
+            $reliability['hour_meter'] ?? '—',
+            isset($reliability['availability_7d']) ? round((float) $reliability['availability_7d'] * 100, 1).' %' : '—',
+            $reliability['mtbf_hours'] ?? '—',
+            $reliability['mttr_hours'] ?? '—',
+        );
+        $lines[] = sprintf(
+            '- Fallas 30d: %s · 90d: %s · cumplimiento de preventivo 90d: %s',
+            $reliability['failures_30d'] ?? 0,
+            $reliability['failures_90d'] ?? 0,
+            isset($reliability['pm_compliance_90d'])
+                ? round((float) $reliability['pm_compliance_90d'] * 100).' %'
+                : 'sin plan registrado',
+        );
+
+        foreach (array_slice($prediction['drivers'] ?? [], 0, 4) as $driver) {
+            $lines[] = '  · '.$driver['evidence'];
+        }
+
+        return implode("\n", $lines);
+    }
+
     private function stringifyData(mixed $data): string
     {
         if (! is_array($data)) {
@@ -766,7 +1100,7 @@ PROMPT;
 
         $labels = array_map(static fn (array $s) => $s['label'], $sources);
 
-        return "Resumen basado en herramientas (".implode(', ', array_column($toolTrace, 'name'))."):\n- "
+        return 'Resumen basado en herramientas ('.implode(', ', array_column($toolTrace, 'name'))."):\n- "
             .implode("\n- ", array_slice($labels, 0, 10));
     }
 

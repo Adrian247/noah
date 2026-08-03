@@ -1,0 +1,13 @@
+# Subproyecto ML de mantenimiento predictivo de Phoenix.
+# Se fijan versiones mayores para que el modelo entrenado siga cargando.
+
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+scikit-learn==1.6.0
+numpy==2.0.2
+joblib==1.4.2
+openpyxl==3.1.5
+
+# Extra opcional: red neuronal Keras como modelo alterno (ver README, sección "Elección de modelo").
+# tensorflow==2.18.0

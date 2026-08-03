@@ -78,14 +78,15 @@ const navGroups = computed(() => {
                 { to: '/app/routines', label: 'Rutinas', icon: 'clipboard-list', moduleId: 'routines', tourAnchor: 'nav-routines' },
                 { to: '/app/inventory', label: 'Inventario', icon: 'archive', moduleId: 'inventory', tourAnchor: 'nav-inventory' },
                 { to: '/app/assets', label: 'Activos', icon: 'cube', moduleId: 'assets', tourAnchor: 'nav-assets' },
+                { to: '/app/predictive', label: 'Predictivo', icon: 'activity', moduleId: 'assets', tourAnchor: 'nav-predictive' },
             ]),
         },
         {
             label: 'Catálogos',
             items: filterNavItems([
-                { to: '/app/catalog/items', label: 'Equipos', icon: 'wrench', moduleId: 'catalog_items', tourAnchor: 'nav-catalog-items' },
+                { to: '/app/catalog/items', label: 'Equipos', icon: 'factory', moduleId: 'catalog_items', tourAnchor: 'nav-catalog-items' },
                 { to: '/app/catalog/suppliers', label: 'Proveedores', icon: 'truck', moduleId: 'catalog_suppliers', tourAnchor: 'nav-catalog-suppliers' },
-                { to: '/app/catalog/clients', label: 'Clientes', icon: 'building', moduleId: 'clients', tourAnchor: 'nav-clients' },
+                { to: '/app/catalog/clients', label: 'Clientes', icon: 'briefcase', moduleId: 'clients', tourAnchor: 'nav-clients' },
                 { to: '/app/sites', label: 'Sitios', icon: 'map-pin', moduleId: 'sites', tourAnchor: 'nav-sites' },
             ]),
         },
@@ -145,8 +146,14 @@ const navGroups = computed(() => {
                 {
                     to: '/app/platform/tenants',
                     label: 'Clientes de plataforma',
-                    icon: 'building',
+                    icon: 'buildings',
                     tourAnchor: 'nav-platform-tenants',
+                },
+                {
+                    to: '/app/platform/predictive',
+                    label: 'Algoritmo predictivo',
+                    icon: 'cpu',
+                    tourAnchor: 'nav-platform-predictive',
                 },
                 {
                     to: '/app/platform/role-permissions',
