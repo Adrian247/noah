@@ -255,14 +255,14 @@ const sizeClass = computed(() => (props.size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'));
             />
         </template>
         <template v-else-if="name === 'assistant'">
-            <!-- Robot / bot -->
-            <rect x="7" y="9" width="10" height="8" rx="2" />
-            <path d="M12 9V6.5" />
-            <circle cx="12" cy="5.5" r="1" fill="currentColor" stroke="none" />
-            <path d="M5.5 12H7M17 12h1.5" />
-            <circle cx="10" cy="12.5" r="0.85" fill="currentColor" stroke="none" />
-            <circle cx="14" cy="12.5" r="0.85" fill="currentColor" stroke="none" />
-            <path d="M10 15.2h4" />
+            <!-- Robot / bot — ocupa más el viewBox para legibilidad en FAB -->
+            <rect x="5" y="8" width="14" height="11" rx="2.5" />
+            <path d="M12 8V5" />
+            <circle cx="12" cy="4" r="1.25" fill="currentColor" stroke="none" />
+            <path d="M3.5 12.5H5M19 12.5h1.5" />
+            <circle cx="9.25" cy="12.25" r="1.1" fill="currentColor" stroke="none" />
+            <circle cx="14.75" cy="12.25" r="1.1" fill="currentColor" stroke="none" />
+            <path d="M9 16.25h6" />
         </template>
     </svg>
 </template>

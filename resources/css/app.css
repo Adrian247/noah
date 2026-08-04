@@ -5285,11 +5285,12 @@
 }
 
 .phoenix-assistant-fab__icon {
-    width: 1.35rem !important;
-    height: 1.35rem !important;
+    width: 1.85rem !important;
+    height: 1.85rem !important;
     max-width: none;
     color: inherit;
     overflow: visible;
+    stroke-width: 2.1;
     animation: phoenix-assistant-fab-idle 2.8s ease-in-out infinite;
 }
 
