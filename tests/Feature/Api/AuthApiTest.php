@@ -40,11 +40,11 @@ class AuthApiTest extends TestCase
         $this->seed();
 
         $mein = $this->postJson('/api/v1/auth/login', [
-            'email' => 'claudio.rodriguez@mein-company.com',
+            'email' => 'supervisor@sandbox-demo.com',
             'password' => config('phoenix.demo_password'),
         ])->assertOk();
 
-        $mein->assertJsonPath('companies.0.billing_contact_email', 'elena.sanchez@mein-company.com');
+        $mein->assertJsonPath('companies.0.billing_contact_email', 'billing@sandbox-demo.com');
 
         $dom = $this->postJson('/api/v1/auth/login', [
             'email' => 'gilberto-sanchez@dom-g.com',
@@ -57,7 +57,7 @@ class AuthApiTest extends TestCase
     public function test_user_can_change_own_password(): void
     {
         $this->seed();
-        $user = User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
+        $user = User::query()->where('email', 'technician@sandbox-demo.com')->firstOrFail();
         Sanctum::actingAs($user);
 
         $this->putJson('/api/v1/auth/password', [
@@ -73,7 +73,7 @@ class AuthApiTest extends TestCase
     public function test_user_cannot_change_password_with_wrong_current_password(): void
     {
         $this->seed();
-        $user = User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
+        $user = User::query()->where('email', 'technician@sandbox-demo.com')->firstOrFail();
         Sanctum::actingAs($user);
 
         $this->putJson('/api/v1/auth/password', [

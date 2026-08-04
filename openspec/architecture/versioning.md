@@ -9,12 +9,12 @@
 
 | Artefacto | Versionado |
 |-----------|------------|
-| Formulario | FormVersion publicada; rutinas enlazan versión al crear |
+| Formulario | FormVersion publicada; servicios enlazan versión al crear |
 | Plantilla reporte | ReportTemplateVersion |
 | Workflow | WorkflowDefinition version |
 | Prompt IA | PromptTemplate version |
 
-Regla: **ejecuciones en curso** no cambian de versión de formulario/plantilla hasta nueva rutina o política explícita de migración (futuro).
+Regla: **ejecuciones en curso** no cambian de versión de formulario/plantilla hasta nueva servicio o política explícita de migración (futuro).
 
 ## Móvil
 

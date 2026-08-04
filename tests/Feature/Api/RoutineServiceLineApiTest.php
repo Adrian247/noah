@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Api;
 
-use App\Enums\ServiceLine;
+use App\Enums\ServiceCategory;
 use App\Models\Client;
 use App\Models\RoutineType;
 use App\Models\Site;
@@ -24,19 +24,19 @@ class RoutineServiceLineApiTest extends TestCase
         parent::setUp();
         $this->seed();
         $this->companyId = (int) $this->meinCompany()->id;
-        Sanctum::actingAs(User::query()->where('email', 'emilio.sanchez@mein-company.com')->firstOrFail());
+        Sanctum::actingAs(User::query()->where('email', 'admin@sandbox-demo.com')->firstOrFail());
     }
 
-    public function test_fabrication_routine_requires_client_and_allows_null_asset(): void
+    public function test_manufacturing_service_requires_client_and_allows_null_asset(): void
     {
         $type = RoutineType::withoutGlobalScope('company')
             ->where('company_id', $this->companyId)
-            ->where('service_line', ServiceLine::Fabrication)
+            ->where('service_category', ServiceCategory::Manufacturing)
             ->firstOrFail();
 
         $client = Client::withoutGlobalScope('company')
             ->where('company_id', $this->companyId)
-            ->where('code', 'MEIN-CLI-001')
+            ->where('code', 'SANDBOX-CLI-001')
             ->firstOrFail();
 
         $site = Site::withoutGlobalScope('company')
@@ -53,14 +53,14 @@ class RoutineServiceLineApiTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.client_id', $client->id)
             ->assertJsonPath('data.asset_id', null)
-            ->assertJsonPath('data.routine_type.service_line', 'fabrication');
+            ->assertJsonPath('data.routine_type.service_category', 'manufacturing');
     }
 
-    public function test_maintenance_routine_requires_asset(): void
+    public function test_maintenance_service_requires_asset(): void
     {
         $type = RoutineType::withoutGlobalScope('company')
             ->where('company_id', $this->companyId)
-            ->where('service_line', ServiceLine::Maintenance)
+            ->where('service_category', ServiceCategory::Maintenance)
             ->firstOrFail();
 
         $site = Site::withoutGlobalScope('company')

@@ -35,7 +35,7 @@ class SupplyTypeController extends Controller
     public function formOptions(): JsonResponse
     {
         $forms = FormDefinition::query()
-            ->where('usage', FormUsage::Supply)
+            ->where('usage', FormUsage::Inventory)
             ->orderBy('name')
             ->get(['id', 'name', 'slug']);
 
@@ -73,7 +73,7 @@ class SupplyTypeController extends Controller
 
         $this->formGuard->assertUsageForCompany(
             $data['default_form_definition_id'] ?? null,
-            FormUsage::Supply,
+            FormUsage::Inventory,
             $companyId,
         );
 
@@ -97,7 +97,7 @@ class SupplyTypeController extends Controller
         if (array_key_exists('default_form_definition_id', $data)) {
             $this->formGuard->assertUsageForCompany(
                 $data['default_form_definition_id'],
-                FormUsage::Supply,
+                FormUsage::Inventory,
                 $companyId,
             );
         }

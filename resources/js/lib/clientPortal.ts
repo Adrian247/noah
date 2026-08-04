@@ -12,7 +12,7 @@ const STEP_LABELS: Record<string, string> = {
 };
 
 const TRIGGER_LABELS: Record<string, string> = {
-    routine_assigned: 'Rutina asignada',
+    routine_assigned: 'Servicio asignado',
     execution_submitted: 'Ejecución enviada',
     routine_validated: 'Servicio validado',
     routine_rejected: 'Servicio rechazado',

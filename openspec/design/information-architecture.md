@@ -13,9 +13,9 @@ flowchart TB
   Money[Facturación]
   Admin[Administración]
 
-  Home --> KPIs[Resumen: pendientes validación, rutinas hoy]
+  Home --> KPIs[Resumen: pendientes validación, servicios hoy]
 
-  Ops --> Rutinas[Lista de rutinas]
+  Ops --> Servicios[Lista de servicios]
   Ops --> Activos[Activos por sitio]
   Ops --> Costos[Costos por período]
 
@@ -23,7 +23,7 @@ flowchart TB
   Cat --> Insumos[Insumos y stock]
   Cat --> Proveedores[Proveedores]
 
-  Design --> TiposR[Tipo de rutina]
+  Design --> TiposR[Tipo de servicio]
   Design --> Formularios[Formularios]
   Design --> Reportes[Plantillas de reporte]
   Design --> Flujos[Workflows]
@@ -52,9 +52,9 @@ flowchart TB
 
 | Pantalla | Usuario | Objetivo |
 |----------|---------|----------|
-| Lista rutinas + filtros | Supervisor, Admin | Ver estado y abrir detalle |
-| Detalle rutina / ejecución | Supervisor | Validar, ver evidencias, texto IA |
-| Editor tipo de rutina | Admin | Enlazar form + reporte + workflow |
+| Lista servicios + filtros | Supervisor, Admin | Ver estado y abrir detalle |
+| Detalle servicio / ejecución | Supervisor | Validar, ver evidencias, texto IA |
+| Editor tipo de servicio | Admin | Enlazar form + reporte + workflow |
 | Diseñador de reporte | Admin | WYSIWYG componentes → PDF |
 | Catálogo activos | Admin | CRUD activo + sitio |
 | Borrador factura | Facturación | Completar y emitir |

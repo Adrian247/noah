@@ -17,7 +17,7 @@ class WorkflowAvailableActionsTest extends TestCase
     {
         $this->seed();
         $company = Company::query()->first();
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->first();
         $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
         $routine->load('workflowInstance.definition');
         $instance = $routine->workflowInstance;
@@ -28,7 +28,7 @@ class WorkflowAvailableActionsTest extends TestCase
         $actions = app(WorkflowRuntime::class)->availableActions($instance->fresh('definition'));
 
         $byTrigger = collect($actions)->keyBy('trigger');
-        $this->assertSame('Rutina a Facturar', $byTrigger['approved']['label'] ?? '');
+        $this->assertSame('Servicio a facturar', $byTrigger['approved']['label'] ?? '');
         $this->assertSame('Rechazo', $byTrigger['rejected']['label'] ?? '');
     }
 }

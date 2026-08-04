@@ -315,7 +315,7 @@ class ReportDesignerApiTest extends TestCase
     public function test_tenant_admin_can_delete_unlinked_report_template(): void
     {
         $this->seed();
-        $tenantAdmin = User::query()->where('email', 'emilio.sanchez@mein-company.com')->first();
+        $tenantAdmin = User::query()->where('email', 'admin@sandbox-demo.com')->first();
         $this->assertNotNull($tenantAdmin);
         $companyId = $tenantAdmin->memberships()->where('is_active', true)->value('company_id');
         $this->assertNotNull($companyId);

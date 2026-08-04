@@ -9,7 +9,7 @@
 
 | Patrón | Uso |
 |--------|-----|
-| List + detail | Rutinas, activos, facturas |
+| List + detail | Servicios, activos, facturas |
 | Master-detail | Catálogo → ítem |
 | Wizard | Onboarding empresa (futuro) |
 | Full-screen designer | Formularios y reportes |
@@ -17,12 +17,12 @@
 
 ## Estados vacíos
 
-- Copy orientado a acción (“Crea tu primer tipo de rutina”).
+- Copy orientado a acción (“Crea tu primer tipo de servicio”).
 - Ilustración ligera opcional.
 
 ## Tablas
 
-- Filtros por estado de rutina, sitio, técnico, rango fechas.
+- Filtros por estado de servicio, sitio, técnico, rango fechas.
 - Export CSV fase posterior.
 
 ## Formularios dinámicos

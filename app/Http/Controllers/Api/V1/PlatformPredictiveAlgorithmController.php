@@ -21,7 +21,53 @@ class PlatformPredictiveAlgorithmController extends Controller
         return response()->json(['data' => $this->service->list()]);
     }
 
+    public function corpus(Request $request): JsonResponse
+    {
+        return response()->json([
+            'data' => $this->service->corpusAvailability($request->query('kind')),
+        ]);
+    }
+
     public function train(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'notes' => ['nullable', 'string', 'max:2000'],
+            'kind' => ['nullable', 'string', 'max:64'],
+            'document_ids' => ['nullable', 'array', 'max:20'],
+            'document_ids.*' => ['integer'],
+            'run_regression' => ['nullable', 'boolean'],
+        ]);
+
+        /** @var User $actor */
+        $actor = $request->user();
+
+        try {
+            $version = $this->service->train($actor, [
+                'bump' => 'minor',
+                'notes' => $data['notes'] ?? null,
+                'kind' => $data['kind'] ?? null,
+                'document_ids' => $data['document_ids'] ?? [],
+                'run_regression' => $data['run_regression'] ?? true,
+            ]);
+        } catch (InvalidArgumentException $e) {
+            abort(422, $e->getMessage());
+        }
+
+        return response()->json(['data' => $version], 201);
+    }
+
+    public function regression(Request $request, PredictiveAlgorithmVersion $version): JsonResponse
+    {
+        try {
+            $report = $this->service->runRegressionForVersion($version);
+        } catch (InvalidArgumentException $e) {
+            abort(422, $e->getMessage());
+        }
+
+        return response()->json(['data' => $report]);
+    }
+
+    public function updateNotes(Request $request, PredictiveAlgorithmVersion $version): JsonResponse
     {
         $data = $request->validate([
             'notes' => ['nullable', 'string', 'max:2000'],
@@ -30,17 +76,9 @@ class PlatformPredictiveAlgorithmController extends Controller
         /** @var User $actor */
         $actor = $request->user();
 
-        try {
-            // La UI de plataforma siempre genera minor; patch/major van por artisan.
-            $version = $this->service->train($actor, [
-                'bump' => 'minor',
-                'notes' => $data['notes'] ?? null,
-            ]);
-        } catch (InvalidArgumentException $e) {
-            abort(422, $e->getMessage());
-        }
+        $updated = $this->service->updateNotes($version, $actor, $data['notes'] ?? null);
 
-        return response()->json(['data' => $version], 201);
+        return response()->json(['data' => $updated]);
     }
 
     public function publish(Request $request, PredictiveAlgorithmVersion $version): JsonResponse

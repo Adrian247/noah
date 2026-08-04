@@ -5,8 +5,16 @@ Guía operativa del módulo. Arquitectura:
 
 ## Idea central
 
-**La predicción analiza el historial de rutinas aplicadas a los activos** (validadas /
-pendientes de facturación / facturadas). Estima qué equipos atender primero y por qué.
+Tres familias de algoritmo (entrenables solo por el administrador de sistema):
+
+| Familia | Kind | Pregunta |
+|---------|------|----------|
+| Mantenimiento | `maintenance_hazard_v2` | ¿Qué equipos / artículos requieren servicio de mantenimiento? |
+| Manufactura | `manufacturing_demand_v1` | ¿Qué clientes pedirán pronto un servicio de fabricación? |
+| Inventario | `inventory_demand_v1` | ¿Qué clientes solicitarán compra de artículos del catálogo? |
+
+**La predicción de mantenimiento** analiza el historial de servicios aplicados a activos
+(validados / pendientes de facturación / facturados). Estima qué equipos atender primero y por qué.
 
 Las bitácoras Excel (planta 4400, San Martín) son **corpus de referencia para entrenar y
 regresión del motor**, no se cargan en cada predicción ni son la fuente operativa del producto.
@@ -25,23 +33,36 @@ regresión del motor**, no se cargan en cada predicción ni son la fuente operat
 
 En **Configuración → Mantenimiento predictivo**:
 
-1. **Permitir a Phoenix recopilar información de rutinas para entrenamiento** — opt-in
-   legal. Phoenix usa el historial de rutinas solo dentro de la plataforma para mejorar el
+1. **Permitir a Phoenix recopilar información de servicios para entrenamiento** — opt-in
+   legal. Phoenix usa el historial de servicios solo dentro de la plataforma para mejorar el
    algoritmo; no se vende ni se expone fuera de la aplicación, salvo obligación legal.
-2. **Versión del algoritmo predictivo** — solo versiones **publicadas** por el administrador
+2. **Versión del algoritmo de mantenimiento** — solo versiones **publicadas** por el administrador
    de sistema.
 
 ## Entrenamiento (administrador de sistema)
 
-En **Plataforma → Algoritmo predictivo** (`/app/platform/predictive`):
+En **Plataforma → Algoritmos predictivos** (`/app/platform/predictive`):
 
-1. Entrenar genera una versión **draft** con semver (`major` / `minor` / `patch`).
-2. El corpus son rutinas validadas de empresas con opt-in.
-3. **Publicar** hace la versión seleccionable por los clientes.
-4. **Archivar** la retira; las empresas que la tenían quedan sin versión fija (usan la
-   publicada más reciente).
-5. Cada movimiento se registra en auditoría (`predictive.algorithm_*`,
-   `predictive.company_settings_updated`).
+1. Lee la guía en pantalla: documento ≠ regresión.
+2. Descarga la **plantilla JSON o CSV** del algoritmo (botones en la UI) o usa los archivos en
+   [`resources/predictive/training-templates/`](../resources/predictive/training-templates/).
+3. Sustituye códigos de ejemplo por tags/clientes/artículos reales y súbela (opcional).
+4. Entrenar genera una versión **draft** con semver, calibración y **reporte de regresión**
+   (AUC / filas) vía backtest sobre empresas con opt-in.
+5. **Publicar** hace la versión usable (mantenimiento seleccionable por empresas;
+   manufactura/inventario aplican calibración publicada automáticamente).
+6. **Archivar** la retira; el botón **Regresión** re-corre el backtest sin subir archivo.
+7. Auditoría: `predictive.algorithm_*`, `predictive.company_settings_updated`,
+   `predictive.training_document_*`.
+
+### Formatos de documentos
+
+- **Mantenimiento:** `asset_tag`, `as_of`, `horizon_days`, `label_failed`
+- **Manufactura:** `client_code`, `service_type`, `occurred_at`, `quantity`
+- **Inventario:** `client_code`, `catalog_item_code`, `requested_at`, `quantity`
+
+Contrato JSON: `phoenix.predictive.training/v1`. Endpoint de plantilla:
+`GET /api/v1/platform/predictive/training-documents/templates/{kind}?format=json|csv`.
 
 ## Catálogo OEM ↔ catálogo de equipos
 
@@ -57,7 +78,7 @@ p = 1 − e^(−E)
 λ_ajustada = λ_activo · Π factores
 ```
 
-Fuente primaria de features: rutinas aplicadas (frecuencia, duración, consumos, backlog,
+Fuente primaria de features: servicios aplicados (frecuencia, duración, consumos, backlog,
 cumplimiento). Señales de bitácoras de referencia enriquecen si existen, pero **no son
 requisito**.
 
@@ -69,14 +90,16 @@ Cada predicción trae `drivers` con evidencia citables.
 ## Asistente
 
 Tools: `predict_equipment_failures`, `get_equipment_health`, `list_failure_modes`,
-`predict_client_demand`.
+`predict_client_demand`, `predict_inventory_demand`.
 
-El asistente distingue dos intenciones:
+El asistente distingue tres intenciones:
 
 - **Equipos (mantenimiento):** pide tag, clase o flota antes de ejecutar. Con tag llama
   `get_equipment_health`; con clase/flota, `predict_equipment_failures`.
-- **Demanda a cliente (manufactura / suministro):** con «demanda», «manufactura» o
-  «suministro» llama `predict_client_demand` (historial de rutinas ligadas a cliente).
+- **Demanda de manufactura/instalación:** con «demanda», «manufactura» o «instalación»
+  llama `predict_client_demand`.
+- **Demanda de inventario:** con «demanda de inventario / artículos / solicitud de compra»
+  llama `predict_inventory_demand`.
 
 Las instrucciones de sistema viven en `App\Support\Ai\OperationalAssistantPrompt` (seeder +
 agente + fallback del gateway).

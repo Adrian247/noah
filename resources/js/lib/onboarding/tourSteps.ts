@@ -161,7 +161,7 @@ export const TOUR_STEP_DEFS: TourStepDef[] = [
     {
         id: '32-integrations',
         moduleId: 'integrations',
-        route: '/app/integrations',
+        route: '/app/integrations/webhooks',
         target: '[data-tour="page-integrations"]',
         padding: 10,
         spotlight: 'panel',

@@ -11,7 +11,7 @@ flowchart TB
   Tabs --> Cola[Cola sync]
   Tabs --> Perfil[Perfil]
 
-  Hoy --> Detalle[Detalle rutina]
+  Hoy --> Detalle[Detalle servicio]
   Detalle --> Form[Formulario dinámico]
   Form --> Evidencia[Cámara / galería]
   Form --> Tiempos[Registro tiempos]
@@ -22,7 +22,7 @@ flowchart TB
 
 | Pantalla | Contenido |
 |----------|-----------|
-| Lista “Hoy” | Rutinas asignadas, badge offline/sync/error |
+| Lista “Hoy” | Servicios asignados, badge offline/sync/error |
 | Detalle | Activo, sitio, tipo, instrucciones |
 | Formulario | Render desde definición JSON (mismos tipos que web) |
 | Cámara | Compresión ligera, cola de subida |
@@ -31,13 +31,13 @@ flowchart TB
 
 ## Offline
 
-- SQLite: rutinas, respuestas, eventos outbox, catálogos cacheados.
+- SQLite: servicios, respuestas, eventos outbox, catálogos cacheados.
 - Indicador global: verde (sync OK), amarillo (pendiente), rojo (error persistente).
-- Finalizar rutina **nunca** bloqueado por red.
+- Finalizar servicio **nunca** bloqueado por red.
 
 ## Tiempos
 
-- Cronómetro opcional por rutina o por tarea (configurable en tipo de rutina).
+- Cronómetro opcional por servicio o por tarea (configurable en tipo de servicio).
 - Persistir duración en ejecución para costos.
 
 ## Seguridad
@@ -50,6 +50,6 @@ flowchart TB
 | Capacidad | Web | Móvil |
 |-----------|-----|-------|
 | Diseñar formularios | Sí | No |
-| Ejecutar rutina | Sí (limitado) | Sí (principal) |
+| Ejecutar servicio | Sí (limitado) | Sí (principal) |
 | Validar | Sí | No (v1) |
 | Facturar | Sí | No |

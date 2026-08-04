@@ -480,8 +480,8 @@ ensureEnd();
                 Acción rechazo
             </button>
             <p class="text-portal-muted mt-3 text-xs leading-relaxed">
-                Rutina es el inicio. Las flechas son acciones con nombre y correo opcional. Emisión de factura cierra la
-                rutina y envía notificaciones.
+                Servicio es el inicio. Las flechas son acciones con nombre y correo opcional. Emisión de factura cierra el
+                servicio y envía notificaciones.
             </p>
         </aside>
 
@@ -566,7 +566,7 @@ ensureEnd();
             <template v-else-if="selectedNode?.kind === 'routine'">
                 <p class="text-portal-heading font-medium">{{ selectedNode.label }}</p>
                 <p class="text-portal-muted mb-2 text-xs">
-                    Correo al asignar la rutina a un técnico.
+                    Correo al asignar el servicio a un técnico.
                 </p>
                 <label class="mt-1 flex items-center gap-2 text-xs">
                     <input

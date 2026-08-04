@@ -48,7 +48,7 @@ async function analyze() {
             <div>
                 <h3 class="text-portal-heading text-sm font-semibold">Asistencia IA</h3>
                 <p class="text-portal-muted text-xs">
-                    Narrativa factual y costo estimado con datos de esta rutina.
+                    Narrativa factual y costo estimado con datos de este servicio.
                 </p>
             </div>
             <div class="flex flex-wrap gap-2">

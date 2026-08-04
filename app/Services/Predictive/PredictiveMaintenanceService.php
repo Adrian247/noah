@@ -3,7 +3,7 @@
 namespace App\Services\Predictive;
 
 use App\Enums\RoutineStatus;
-use App\Enums\ServiceLine;
+use App\Enums\ServiceCategory;
 use App\Models\Asset;
 use App\Models\Company;
 use App\Models\EquipmentEvent;
@@ -69,11 +69,11 @@ class PredictiveMaintenanceService
         if ($assets->isEmpty()) {
             $latestRoutine = $this->latestValidatedRoutineAt($companyId);
 
-            $notes = ['No hay activos con rutinas de mantenimiento aplicadas que coincidan con el filtro.'];
+            $notes = ['No hay activos con servicios de mantenimiento aplicados que coincidan con el filtro.'];
             if ($latestRoutine === null) {
                 $notes = [
-                    'Esta empresa aún no tiene rutinas de mantenimiento validadas sobre activos. '
-                    .'Aplica y valida rutinas de mantenimiento sobre equipos para poder predecir.',
+                    'Esta empresa aún no tiene servicios de mantenimiento validados sobre activos. '
+                    .'Aplica y valida servicios de mantenimiento sobre equipos para poder predecir.',
                 ];
             }
 
@@ -96,11 +96,12 @@ class PredictiveMaintenanceService
 
         $assetIds = $assets->pluck('id')->map(fn ($id) => (int) $id)->all();
         $featureSets = $this->features->forAssets($companyId, $assetIds, $asOf);
+        $engine = $this->calibratedEngine($companyId);
 
         $predictions = [];
         foreach ($assets as $asset) {
             $assetFeatures = $featureSets[(int) $asset->id] ?? ['asset_id' => (int) $asset->id];
-            $predictions[] = $this->engine->predict(
+            $predictions[] = $engine->predict(
                 $companyId,
                 $assetFeatures,
                 [
@@ -160,7 +161,7 @@ class PredictiveMaintenanceService
     {
         $date = $asOf ? CarbonImmutable::parse($asOf) : $this->defaultAsOf($companyId);
         $features = $this->features->forAssets($companyId, [(int) $asset->id], $date)[(int) $asset->id] ?? [];
-        $prediction = $this->engine->predict($companyId, $features, [
+        $prediction = $this->calibratedEngine($companyId)->predict($companyId, $features, [
             'tag' => $asset->tag,
             'name' => $asset->metadata['name'] ?? $asset->tag,
             'equipment_class' => $asset->equipmentClass(),
@@ -296,7 +297,7 @@ class PredictiveMaintenanceService
      */
     public function trainingDataset(int $companyId, int $horizonDays = 14, int $strideDays = 7): array
     {
-        // Cobertura por activo: preferir bitácora de referencia si existe; si no, rutinas aplicadas.
+        // Cobertura por activo: preferir bitácora de referencia si existe; si no, servicios aplicados.
         // Etiquetar un corte cuya ventana futura cae fuera de la cobertura produce un cero
         // artificial ("no falló" cuando en realidad no hay datos).
         $coverage = $this->assetCoverageSpans($companyId);
@@ -309,7 +310,7 @@ class PredictiveMaintenanceService
                 'rows' => [],
                 'total' => 0,
                 'positives' => 0,
-                'notes' => ['Sin cobertura de rutinas ni bitácoras de referencia para etiquetar.'],
+                'notes' => ['Sin cobertura de servicios ni bitácoras de referencia para etiquetar.'],
             ];
         }
 
@@ -468,9 +469,10 @@ class PredictiveMaintenanceService
             ->all();
 
         $scored = [];
+        $engine = $this->calibratedEngine($companyId);
         foreach ($dataset['rows'] as $row) {
             $assetId = (int) $row['asset_id'];
-            $prediction = $this->engine->predict(
+            $prediction = $engine->predict(
                 $companyId,
                 $row,
                 $context[$assetId] ?? [],
@@ -655,7 +657,7 @@ class PredictiveMaintenanceService
                 ->values();
         }
 
-        // Sin filtro explícito, solo equipos con rutinas de mantenimiento validadas.
+        // Sin filtro explícito, solo equipos con servicios de mantenimiento validadas.
         if (empty($filters['asset_ids']) && empty($filters['tags'])) {
             $withRoutines = Routine::withoutGlobalScope('company')
                 ->where('routines.company_id', $companyId)
@@ -665,7 +667,7 @@ class PredictiveMaintenanceService
                     RoutineStatus::PendingBilling->value,
                     RoutineStatus::Invoiced->value,
                 ])
-                ->whereHas('routineType', fn ($q) => $q->where('service_line', ServiceLine::Maintenance->value))
+                ->whereHas('routineType', fn ($q) => $q->where('service_category', ServiceCategory::Maintenance->value))
                 ->distinct()
                 ->pluck('asset_id')
                 ->map(fn ($id) => (int) $id)
@@ -744,7 +746,7 @@ class PredictiveMaintenanceService
                 'expected_downtime_hours' => $prediction['expected_downtime_hours'],
                 'drivers' => json_encode($prediction['drivers']),
                 'features' => json_encode($featureSets[$assetId] ?? []),
-                'model_kind' => $prediction['model_kind'] ?? 'hazard_routines_v1',
+                'model_kind' => $prediction['model_kind'] ?? PredictiveFailureEngine::MODEL_VERSION,
                 'model_version' => $descriptor['version'] ?? $prediction['model_version'],
                 'predictive_algorithm_version_id' => $algorithmId,
                 'feature_source' => 'routines',
@@ -793,20 +795,45 @@ class PredictiveMaintenanceService
         if ($alg === null) {
             $alg = PredictiveAlgorithmVersion::query()
                 ->where('status', PredictiveAlgorithmVersion::STATUS_PUBLISHED)
+                ->whereIn('kind', [
+                    \App\Enums\PredictiveAlgorithmKind::Maintenance->value,
+                    \App\Enums\PredictiveAlgorithmKind::LEGACY_MAINTENANCE,
+                ])
                 ->orderByDesc('published_at')
                 ->first();
         }
 
         return [
-            'kind' => $usedMl ? 'ml' : 'hazard_routines_v1',
+            'kind' => $usedMl ? 'ml' : PredictiveFailureEngine::MODEL_VERSION,
             'version' => $alg?->semver ?? $version ?? PredictiveFailureEngine::MODEL_VERSION,
             'algorithm_version_id' => $alg?->id,
             'algorithm_semver' => $alg?->semver,
+            'algorithm_kind' => $alg?->kind,
             'ml_model_version' => $usedMl ? $version : null,
             'feature_source' => 'routines',
             'ml_service_enabled' => $this->mlClient->enabled(),
             'ml_service_used' => $usedMl,
         ];
+    }
+
+    private function calibratedEngine(int $companyId): PredictiveFailureEngine
+    {
+        $company = Company::query()->with('predictiveAlgorithmVersion')->find($companyId);
+        $alg = $company?->predictiveAlgorithmVersion;
+        if ($alg === null) {
+            $alg = PredictiveAlgorithmVersion::query()
+                ->where('status', PredictiveAlgorithmVersion::STATUS_PUBLISHED)
+                ->whereIn('kind', [
+                    \App\Enums\PredictiveAlgorithmKind::Maintenance->value,
+                    \App\Enums\PredictiveAlgorithmKind::LEGACY_MAINTENANCE,
+                ])
+                ->orderByDesc('published_at')
+                ->first();
+        }
+
+        $calibration = is_array($alg?->calibration) ? $alg->calibration : null;
+
+        return $this->engine->withCalibration($calibration);
     }
 
     /**
@@ -935,7 +962,7 @@ class PredictiveMaintenanceService
     }
 
     /**
-     * Sin fecha explícita usa la última rutina validada. Así la demo con historial reciente
+     * Sin fecha explícita usa el último servicio validado. Así la demo con historial reciente
      * no queda vacía por cortar en "hoy" sin actividad.
      */
     private function defaultAsOf(int $companyId): CarbonImmutable

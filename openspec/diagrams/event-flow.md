@@ -24,4 +24,4 @@ flowchart TD
   RV --> IDC
 ```
 
-Los pasos exactos los define el **Workflow** por tipo de rutina.
+Los pasos exactos los define el **Workflow** por tipo de servicio.

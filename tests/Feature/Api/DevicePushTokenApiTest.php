@@ -23,7 +23,7 @@ class DevicePushTokenApiTest extends TestCase
     {
         $this->seed();
         $company = $this->meinCompany();
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->firstOrFail();
         Sanctum::actingAs($technician);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
@@ -59,7 +59,7 @@ class DevicePushTokenApiTest extends TestCase
         Queue::fake();
 
         $admin = User::query()->where('email', 'admin@pyro-systems.com')->firstOrFail();
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->firstOrFail();
         $company = $this->meinCompany();
 
         DevicePushToken::query()->create([

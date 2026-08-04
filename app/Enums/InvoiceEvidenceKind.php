@@ -10,6 +10,6 @@ enum InvoiceEvidenceKind: string
     /** CFDI / factura timbrada SAT (un solo archivo activo por prefactura). */
     case SatCfdi = 'sat_cfdi';
 
-    /** PDF del reporte de inspección generado para la rutina vinculada (referencia, sin copia duplicada). */
+    /** PDF del reporte de inspección generado para el servicio vinculado (referencia, sin copia duplicada). */
     case RoutineReport = 'routine_report';
 }

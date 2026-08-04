@@ -135,7 +135,7 @@ class PredictiveAiToolsTest extends TestCase
         ]);
 
         $this->assertFalse($result['model']['ml_service_used']);
-        $this->assertSame('hazard_routines_v1', $result['model']['kind']);
+        $this->assertSame('hazard-v2', $result['model']['kind']);
         $this->assertSame('routines', $result['model']['feature_source']);
         $this->assertNotEmpty($result['predictions']);
     }

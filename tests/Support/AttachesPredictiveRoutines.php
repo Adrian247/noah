@@ -29,7 +29,7 @@ trait AttachesPredictiveRoutines
         $type = RoutineType::withoutGlobalScope('company')
             ->where('company_id', $companyId)
             ->where('is_active', true)
-            ->where('service_line', \App\Enums\ServiceLine::Maintenance->value)
+            ->where('service_category', \App\Enums\ServiceCategory::Maintenance->value)
             ->first();
 
         if ($type === null) {

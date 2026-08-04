@@ -87,8 +87,8 @@ class RoutineTypeDesignApiTest extends TestCase
     public function test_tenant_admin_can_link_published_report_to_routine_type(): void
     {
         $this->seed();
-        $company = Company::query()->where('name', 'Mein Company')->firstOrFail();
-        $tenantAdmin = User::query()->where('email', 'emilio.sanchez@mein-company.com')->firstOrFail();
+        $company = Company::query()->where('name', 'Sandbox')->firstOrFail();
+        $tenantAdmin = User::query()->where('email', 'admin@sandbox-demo.com')->firstOrFail();
         $type = RoutineType::query()->where('company_id', $company->id)->firstOrFail();
 
         $formVersion = FormVersion::query()
@@ -135,8 +135,8 @@ class RoutineTypeDesignApiTest extends TestCase
     public function test_tenant_admin_can_manage_routine_types_without_workflow_design(): void
     {
         $this->seed();
-        $company = Company::query()->where('name', 'Mein Company')->firstOrFail();
-        $tenantAdmin = User::query()->where('email', 'emilio.sanchez@mein-company.com')->firstOrFail();
+        $company = Company::query()->where('name', 'Sandbox')->firstOrFail();
+        $tenantAdmin = User::query()->where('email', 'admin@sandbox-demo.com')->firstOrFail();
         $type = RoutineType::query()->where('company_id', $company->id)->firstOrFail();
 
         Sanctum::actingAs($tenantAdmin);

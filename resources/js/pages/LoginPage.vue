@@ -30,7 +30,7 @@ type PortalContent = {
 const capabilities = [
     {
         num: '01',
-        title: 'Rutinas y validación',
+        title: 'Servicios y validación',
         text: 'Ejecución en campo, evidencias y aprobación de supervisores.',
     },
     {
@@ -107,15 +107,12 @@ async function submit() {
 }
 
 const DEMO_EMAIL = 'admin@sandbox-demo.com';
-const LEGACY_DEMO_EMAIL = 'admin@pyro-systems.com';
+const ROOT_EMAIL = 'admin@pyro-systems.com';
 const DEMO_PASSWORD = 'pyro.2026$';
 
+/** Prefill solo si el campo está vacío; no reescribe correos válidos (p. ej. root de plataforma). */
 function applyDemoCredentials() {
-    if (
-        email.value === ''
-        || email.value === LEGACY_DEMO_EMAIL
-        || email.value === DEMO_EMAIL
-    ) {
+    if (email.value.trim() === '') {
         email.value = DEMO_EMAIL;
     }
     if (password.value === '' || password.value === 'password') {
@@ -125,7 +122,9 @@ function applyDemoCredentials() {
 
 function onPasswordFocus() {
     passwordReadonly.value = false;
-    applyDemoCredentials();
+    if (password.value === '' || password.value === 'password') {
+        password.value = DEMO_PASSWORD;
+    }
 }
 
 onMounted(() => {
@@ -205,10 +204,12 @@ onMounted(() => {
                             {{ loading ? 'Entrando…' : 'Iniciar sesión' }}
                         </AppButton>
                         <p class="text-center text-xs text-slate-500">
-                            Demo local (Sandbox):
-                            <span class="font-mono text-slate-400">admin@sandbox-demo.com</span>
+                            Demo:
+                            <span class="font-mono text-slate-400">{{ DEMO_EMAIL }}</span>
+                            · Root:
+                            <span class="font-mono text-slate-400">{{ ROOT_EMAIL }}</span>
                             /
-                            <span class="font-mono text-slate-400">pyro.2026$</span>
+                            <span class="font-mono text-slate-400">{{ DEMO_PASSWORD }}</span>
                         </p>
                     </form>
 
@@ -256,7 +257,7 @@ onMounted(() => {
                     <p class="mt-5 max-w-xl text-base leading-relaxed text-slate-300/95 xl:text-lg">
                         {{
                             portal?.service_description ??
-                            'Rutinas, validación, evidencias y facturación en una sola plataforma.'
+                            'Servicios, validación, evidencias y facturación en una sola plataforma.'
                         }}
                     </p>
                     <ul

@@ -25,7 +25,7 @@ Vista de dominio del **Dynamic Report Engine**. Motor: [report-engine.md](../arc
 
 ## Invariantes
 
-- Plantilla publicada inmutable; rutinas nuevas usan versión vigente al crearse.
+- Plantilla publicada inmutable; servicios nuevos usan versión vigente al crearse.
 - Regenerar PDF no altera datos de ejecución; nueva instancia GeneratedReport o versión de documento (política: una versión “oficial” post-validación).
 
 ## Eventos

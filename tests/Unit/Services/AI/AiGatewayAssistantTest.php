@@ -27,7 +27,7 @@ class AiGatewayAssistantTest extends TestCase
         config(['phoenix.ai.default_provider' => 'local']);
 
         $company = $this->meinCompany();
-        $admin = $this->meinUser('emilio.sanchez@mein-company.com');
+        $admin = $this->meinUser('admin@sandbox-demo.com');
         $result = app(AiGateway::class)->invokeAssistant('¿Qué rutinas hay activas?', $company->id, $admin);
 
         $this->assertNotNull($result);
@@ -35,7 +35,7 @@ class AiGatewayAssistantTest extends TestCase
         $this->assertNotEmpty($result['tool_calls']);
         $this->assertSame('list_recent_routines', $result['tool_calls'][0]['name']);
         $this->assertTrue($result['tool_calls'][0]['ok']);
-        $this->assertStringContainsString('Rutinas recientes', $result['answer']);
+        $this->assertStringContainsString('Servicios recientes', $result['answer']);
         $this->assertArrayHasKey('conversation_id', $result);
         $this->assertNotEmpty($result['conversation_id']);
         $this->assertArrayHasKey('presentation', $result);
@@ -63,7 +63,7 @@ class AiGatewayAssistantTest extends TestCase
         config(['phoenix.ai.default_provider' => 'local']);
 
         $company = $this->meinCompany();
-        $admin = $this->meinUser('emilio.sanchez@mein-company.com');
+        $admin = $this->meinUser('admin@sandbox-demo.com');
         $result = app(AiGateway::class)->invokeAssistant(
             'Muéstrame el dashboard de KPIs',
             $company->id,
@@ -84,7 +84,7 @@ class AiGatewayAssistantTest extends TestCase
         config(['phoenix.ai.default_provider' => 'local']);
 
         $company = $this->meinCompany();
-        $admin = $this->meinUser('emilio.sanchez@mein-company.com');
+        $admin = $this->meinUser('admin@sandbox-demo.com');
         $result = app(AiGateway::class)->invokeAssistant('Lista clientes', $company->id, $admin);
 
         $this->assertNotNull($result);
@@ -97,7 +97,7 @@ class AiGatewayAssistantTest extends TestCase
         config(['phoenix.ai.default_provider' => 'local']);
 
         $company = $this->meinCompany();
-        $admin = $this->meinUser('emilio.sanchez@mein-company.com');
+        $admin = $this->meinUser('admin@sandbox-demo.com');
         $result = app(AiGateway::class)->invokeAssistant(
             'Demanda de manufactura a clientes',
             $company->id,
@@ -114,7 +114,7 @@ class AiGatewayAssistantTest extends TestCase
         config(['phoenix.ai.default_provider' => 'local']);
 
         $company = $this->meinCompany();
-        $admin = $this->meinUser('emilio.sanchez@mein-company.com');
+        $admin = $this->meinUser('admin@sandbox-demo.com');
         $result = app(AiGateway::class)->invokeAssistant(
             'Quiero una predicción de fallas',
             $company->id,

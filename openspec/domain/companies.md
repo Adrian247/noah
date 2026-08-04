@@ -16,7 +16,7 @@ Tenant (empresa), sitios físicos/lógicos y configuración organizacional.
 
 - Pertenece a una empresa.
 - Nombre, dirección, geolocalización opcional.
-- Activos y rutinas se asocian a sitio.
+- Activos y servicios se asocian a sitio.
 
 ## Multitenancy
 

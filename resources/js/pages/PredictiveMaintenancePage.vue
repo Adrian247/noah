@@ -110,9 +110,10 @@ const toast = useToast();
 
 const showAdvanced = ref(false);
 const hasPredicted = ref(false);
-const viewMode = ref<'assets' | 'clients'>('assets');
+const viewMode = ref<'assets' | 'clients' | 'inventory'>('assets');
 const loading = ref(false);
 const demandLoading = ref(false);
+const inventoryLoading = ref(false);
 const sites = ref<Site[]>([]);
 const payload = ref<PredictionsPayload | null>(null);
 const demandPayload = ref<{
@@ -131,7 +132,22 @@ const demandPayload = ref<{
     }>;
     notes?: string[];
 } | null>(null);
-const demandLine = ref('');
+const inventoryPayload = ref<{
+    as_of: string;
+    horizon_days: number;
+    predictions: Array<{
+        client_id: number;
+        client_name: string;
+        catalog_item_code: string;
+        item_name: string;
+        expected_requests: number;
+        probability: number;
+        score: number;
+        drivers: Array<{ code: string; label: string; evidence: string }>;
+    }>;
+    notes?: string[];
+} | null>(null);
+const demandLine = ref('manufacturing');
 const health = ref<HealthPayload | null>(null);
 const healthLoading = ref(false);
 const selectedAssetId = ref<number | null>(null);
@@ -169,9 +185,9 @@ const filteredPredictions = computed(() => {
 const predictionColumns = computed((): TableColumnDef[] => [
     { id: 'tag', label: 'Equipo' },
     { id: 'risk', label: 'Prioridad' },
-    { id: 'mode', label: 'Qué puede fallar' },
+    { id: 'mode', label: 'Modo probable' },
     { id: 'why', label: 'Por qué' },
-    { id: 'chance', label: 'Chance de falla' },
+    { id: 'chance', label: 'Chance (equipo)' },
 ]);
 
 function fmtPct(value: number | null | undefined, digits = 0): string {
@@ -189,7 +205,7 @@ function topMode(row: Prediction): string {
 }
 
 function topDriver(row: Prediction): string {
-    return row.drivers?.[0]?.label ?? 'Historial de rutinas del equipo';
+    return row.drivers?.[0]?.label ?? 'Historial de servicios del equipo';
 }
 
 function riskPlain(level: string): string {
@@ -232,7 +248,7 @@ async function predictFleet() {
         payload.value = res.data;
         hasPredicted.value = true;
         if (res.data.evaluated_assets === 0) {
-            toast.warning(res.data.notes?.[0] ?? 'No hay activos con rutinas aplicadas para evaluar.');
+            toast.warning(res.data.notes?.[0] ?? 'No hay activos con servicios aplicados para evaluar.');
         }
     } catch (e) {
         toast.error((e as Error).message);
@@ -265,6 +281,29 @@ async function predictDemand() {
     }
 }
 
+async function predictInventory() {
+    inventoryLoading.value = true;
+    try {
+        const qs = new URLSearchParams({
+            horizon_days: horizonDays.value,
+            limit: '50',
+        });
+        const explicitAsOf = asOf.value.trim();
+        if (explicitAsOf) qs.set('as_of', explicitAsOf);
+        const res = await api<{ data: NonNullable<typeof inventoryPayload.value> }>(
+            `/predictive/inventory-demand?${qs}`,
+        );
+        inventoryPayload.value = res.data;
+        if ((res.data.predictions?.length ?? 0) === 0) {
+            toast.warning(res.data.notes?.[0] ?? 'Sin demanda de inventario estimable.');
+        }
+    } catch (e) {
+        toast.error((e as Error).message);
+    } finally {
+        inventoryLoading.value = false;
+    }
+}
+
 async function openHealth(assetId: number) {
     healthLoading.value = true;
     selectedAssetId.value = assetId;
@@ -291,8 +330,16 @@ function closeHealth() {
 
 const demandColumns = computed((): TableColumnDef[] => [
     { id: 'client', label: 'Cliente' },
-    { id: 'type', label: 'Tipo de rutina' },
-    { id: 'line', label: 'Línea' },
+    { id: 'type', label: 'Tipo de servicio' },
+    { id: 'line', label: 'Categoría' },
+    { id: 'expected', label: 'Esperado' },
+    { id: 'chance', label: 'Probabilidad' },
+    { id: 'why', label: 'Por qué' },
+]);
+
+const inventoryColumns = computed((): TableColumnDef[] => [
+    { id: 'client', label: 'Cliente' },
+    { id: 'item', label: 'Artículo' },
     { id: 'expected', label: 'Esperado' },
     { id: 'chance', label: 'Probabilidad' },
     { id: 'why', label: 'Por qué' },
@@ -311,8 +358,8 @@ onMounted(async () => {
 <template>
     <div class="portal-page" data-tour="predictive">
         <PageHeader
-            title="Mantenimiento predictivo"
-            subtitle="Estima riesgo en equipos (mantenimiento) o demanda de servicios a clientes (manufactura / suministro)."
+            title="Predictivo"
+            subtitle="Riesgo en equipos (mantenimiento), demanda de manufactura e inventario (solicitud de artículos)."
         />
 
         <div class="mb-4 flex flex-wrap gap-2">
@@ -322,7 +369,7 @@ onMounted(async () => {
                 :class="{ 'filter-chip--active': viewMode === 'assets' }"
                 @click="viewMode = 'assets'"
             >
-                Equipos
+                Mantenimiento
             </button>
             <button
                 type="button"
@@ -333,7 +380,18 @@ onMounted(async () => {
                     if (!demandPayload) void predictDemand();
                 "
             >
-                Demanda de clientes
+                Manufactura
+            </button>
+            <button
+                type="button"
+                class="filter-chip"
+                :class="{ 'filter-chip--active': viewMode === 'inventory' }"
+                @click="
+                    viewMode = 'inventory';
+                    if (!inventoryPayload) void predictInventory();
+                "
+            >
+                Inventario
             </button>
         </div>
 
@@ -342,7 +400,7 @@ onMounted(async () => {
             class="mb-5 rounded-2xl border border-[color:var(--portal-border)] bg-[color:var(--portal-surface)] p-4 sm:p-5"
         >
             <p class="text-portal-muted mb-4 text-sm leading-relaxed">
-                Ranking de clientes según historial de rutinas de manufactura o suministro.
+                Ranking de clientes según historial de servicios de manufactura o instalación.
             </p>
             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
                 <MaterialSelect
@@ -352,11 +410,11 @@ onMounted(async () => {
                 />
                 <MaterialSelect
                     v-model="demandLine"
-                    label="Línea de servicio"
+                    label="Categoría"
                     :options="[
-                        { value: '', label: 'Manufactura y suministro' },
-                        { value: 'fabrication', label: 'Manufactura' },
-                        { value: 'supply', label: 'Suministro' },
+                        { value: 'manufacturing', label: 'Manufactura' },
+                        { value: 'installation', label: 'Instalación' },
+                        { value: '', label: 'Ambas' },
                     ]"
                 />
                 <AppButton type="button" class="w-full lg:w-auto" :disabled="demandLoading" @click="predictDemand">
@@ -387,14 +445,68 @@ onMounted(async () => {
             </ConfigurableDataTable>
         </section>
 
+        <section
+            v-if="viewMode === 'inventory'"
+            class="mb-5 rounded-2xl border border-[color:var(--portal-border)] bg-[color:var(--portal-surface)] p-4 sm:p-5"
+        >
+            <p class="text-portal-muted mb-4 text-sm leading-relaxed">
+                Probabilidad de que un cliente final solicite compra de artículos del catálogo (demanda de inventario).
+            </p>
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_auto] lg:items-end">
+                <MaterialSelect
+                    v-model="horizonDays"
+                    label="Horizonte"
+                    :options="HORIZON_OPTIONS"
+                />
+                <AppButton
+                    type="button"
+                    class="w-full lg:w-auto"
+                    :disabled="inventoryLoading"
+                    @click="predictInventory"
+                >
+                    {{ inventoryLoading ? 'Calculando…' : 'Predecir inventario' }}
+                </AppButton>
+            </div>
+            <ConfigurableDataTable
+                v-if="inventoryPayload"
+                class="mt-4"
+                table-id="predictive-inventory-demand"
+                :columns="inventoryColumns"
+                :rows="inventoryPayload.predictions"
+                :row-key="(row) => `${(row as any).client_id}-${(row as any).catalog_item_code}`"
+                empty-text="Sin predicciones de inventario."
+            >
+                <template #client="{ row }">
+                    <span class="font-medium text-portal-heading">{{ (row as any).client_name }}</span>
+                </template>
+                <template #item="{ row }">
+                    <span class="text-portal-heading">{{ (row as any).item_name }}</span>
+                    <p class="text-portal-muted font-mono text-[11px]">{{ (row as any).catalog_item_code }}</p>
+                </template>
+                <template #expected="{ row }">{{ Number((row as any).expected_requests).toFixed(2) }}</template>
+                <template #chance="{ row }">{{ fmtPct(Number((row as any).probability)) }}</template>
+                <template #why="{ row }">
+                    <span class="text-portal-muted text-sm">
+                        {{ (row as any).drivers?.[0]?.evidence ?? '—' }}
+                    </span>
+                </template>
+            </ConfigurableDataTable>
+        </section>
+
         <template v-if="viewMode === 'assets'">
         <section
             class="mb-5 rounded-2xl border border-[color:var(--portal-border)] bg-[color:var(--portal-surface)] p-4 sm:p-5"
         >
+            <p class="text-portal-muted mb-3 text-sm leading-relaxed">
+                Estima el riesgo de falla del <strong class="text-portal-heading">equipo completo</strong> en el
+                horizonte y prioriza un <strong class="text-portal-heading">modo de falla</strong> (sistema o tipo,
+                p.&nbsp;ej. hidráulico o motor). No predice qué pieza o componente concreto fallará; los componentes
+                solo pueden aparecer como evidencia que sube el riesgo.
+            </p>
             <ol class="text-portal-muted mb-4 list-decimal space-y-1 pl-5 text-sm leading-relaxed">
                 <li>Elige el horizonte (cuántos días adelante mirar).</li>
                 <li>Pulsa <strong class="text-portal-heading">Predecir flota</strong> (o filtra por clase/equipo).</li>
-                <li>Haz clic en un activo para ver la evidencia basada en sus rutinas.</li>
+                <li>Haz clic en un activo para ver la evidencia basada en sus servicios.</li>
             </ol>
 
             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
@@ -425,7 +537,7 @@ onMounted(async () => {
                 v-if="payload.evaluated_assets === 0"
                 class="mb-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm leading-relaxed"
             >
-                <p class="font-medium text-portal-heading">No hay historial de rutinas para predecir</p>
+                <p class="font-medium text-portal-heading">No hay historial de servicios para predecir</p>
                 <p class="text-portal-muted mt-1">
                     {{ payload.notes?.[0] }}
                 </p>
@@ -437,7 +549,7 @@ onMounted(async () => {
                         Resultado · próximos {{ payload.horizon_days }} días
                     </h2>
                     <p class="text-portal-muted mt-1 text-sm">
-                        {{ payload.evaluated_assets }} activos con rutinas
+                        {{ payload.evaluated_assets }} activos con servicios
                         <template v-if="urgentCount > 0">
                             · <strong class="text-portal-heading">{{ urgentCount }}</strong> prioritarios
                         </template>
@@ -495,8 +607,9 @@ onMounted(async () => {
                     <div v-else-if="!health" class="text-portal-muted py-6 text-sm leading-relaxed">
                         <p class="text-portal-heading mb-2 font-medium">Detalle del activo</p>
                         <p>
-                            Selecciona un equipo. La evidencia sale del historial de rutinas aplicadas
-                            (frecuencia, atrasos, consumos, comentarios de falla).
+                            Selecciona un equipo. Verás el riesgo del activo, el modo de falla más probable y la
+                            evidencia del historial de servicios (frecuencia, atrasos, consumos, comentarios). No
+                            indica una pieza concreta.
                         </p>
                     </div>
                     <div v-else class="space-y-4">
@@ -517,8 +630,17 @@ onMounted(async () => {
                         </div>
                         <p class="text-sm text-portal-heading">
                             {{ riskPlain(String(health.prediction?.risk_level ?? '')) }}
-                            Chance: <strong>{{ fmtPct(Number(health.prediction?.probability)) }}</strong>
+                            Chance de falla del equipo:
+                            <strong>{{ fmtPct(Number(health.prediction?.probability)) }}</strong>
                             (E={{ fmtNum(Number(health.prediction?.expected_failures)) }}).
+                        </p>
+                        <p
+                            v-if="health.prediction?.top_failure_mode?.name || health.prediction?.failure_modes?.[0]?.name"
+                            class="text-portal-muted text-xs leading-relaxed"
+                        >
+                            Modo más probable:
+                            <span class="text-portal-heading">{{ topMode(health.prediction) }}</span>
+                            (sistema o tipo de falla, no componente).
                         </p>
                         <section>
                             <h4 class="text-portal-muted mb-2 text-xs font-semibold uppercase">Por qué</h4>

@@ -36,7 +36,7 @@ class WorkflowStepMail extends Mailable
             text: 'mail.workflow-step',
             with: [
                 'routineId' => $this->routine->id,
-                'typeName' => $this->routine->routineType?->name ?? 'Rutina',
+                'typeName' => $this->routine->routineType?->name ?? 'Servicio',
                 'assetTag' => $this->routine->asset?->tag ?? '—',
                 'body' => $this->mailMessage,
                 'bodyText' => $bodyText,

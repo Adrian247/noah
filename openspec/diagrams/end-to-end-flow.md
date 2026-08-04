@@ -8,14 +8,14 @@ flowchart TD
     A1[Crear formulario]
     A2[Crear plantilla reporte]
     A3[Definir workflow]
-    A4[Publicar tipo de rutina]
+    A4[Publicar tipo de servicio]
     A1 --> A4
     A2 --> A4
     A3 --> A4
   end
 
   subgraph field [Campo - Técnico]
-    B1[Asignar rutina]
+    B1[Asignar servicio]
     B2[Ejecutar captura evidencias tiempos]
     B3[Finalizar local / sync]
     B1 --> B2 --> B3

@@ -12,7 +12,7 @@ import AppButton from '@/components/ui/AppButton.vue';
 import IconActionButton from '@/components/ui/IconActionButton.vue';
 import ConfigurableDataTable from '@/components/ui/ConfigurableDataTable.vue';
 import { tableActionsColumn, type TableColumnDef } from '@/lib/tableColumns';
-import { routinesSectionNav } from '@/lib/sectionNav';
+import { routinesSectionNav, SERVICE_CATEGORY_LABELS } from '@/lib/sectionNav';
 
 type WorkflowDef = { id: number; name: string; status?: string };
 type VersionOption = { id: number; version: number };
@@ -28,7 +28,7 @@ type RoutineType = {
     id: number;
     name: string;
     slug: string;
-    service_line?: string;
+    service_category?: string;
     is_active: boolean;
     workflow_definition_id?: number | null;
     form_version_id?: number | null;
@@ -44,17 +44,11 @@ type RoutineType = {
     };
 };
 
-const SERVICE_LINE_OPTIONS = [
+const SERVICE_CATEGORY_OPTIONS = [
     { value: 'maintenance', label: 'Mantenimiento' },
-    { value: 'fabrication', label: 'Manufactura' },
-    { value: 'supply', label: 'Suministro' },
+    { value: 'manufacturing', label: 'Fabricación' },
+    { value: 'installation', label: 'Instalación' },
 ];
-
-const SERVICE_LINE_LABELS: Record<string, string> = {
-    maintenance: 'Mantenimiento',
-    fabrication: 'Manufactura',
-    supply: 'Suministro',
-};
 
 const { canWriteModule } = useModuleAccess();
 const toast = useToast();
@@ -70,7 +64,7 @@ const canAssignWorkflow = computed(() => canWriteModule('design_workflows'));
 const routineTypeTableColumns = computed((): TableColumnDef[] => {
     const cols: TableColumnDef[] = [
         { id: 'name', label: 'Nombre', cellClass: 'py-3 pr-2' },
-        { id: 'service_line', label: 'Línea de servicio', cellClass: 'py-3' },
+        { id: 'category', label: 'Categoría', cellClass: 'py-3' },
         { id: 'status', label: 'Estado', cellClass: 'py-3' },
         { id: 'form', label: 'Formulario (publicado)', cellClass: 'max-w-xs py-3 pr-2' },
         { id: 'report', label: 'Reporte (publicado)', cellClass: 'max-w-xs py-3 pr-2' },
@@ -91,7 +85,7 @@ const loading = ref(true);
 const showCreate = ref(false);
 const newName = ref('');
 const newSlug = ref('');
-const newServiceLine = ref('maintenance');
+const newServiceCategory = ref('maintenance');
 const creating = ref(false);
 
 const emptyOption = { value: '', label: '— Sin enlazar —' };
@@ -145,7 +139,7 @@ async function load() {
     try {
         const typesRes = await api<{ data: RoutineType[] }>('/routine-types?all=1');
         const [formsRes, reportsRes] = await Promise.all([
-            api<{ data: FormCatalog[] }>('/design/forms?usage=routine'),
+            api<{ data: FormCatalog[] }>('/design/forms?usage=service'),
             api<{ data: ReportCatalog[] }>('/design/reports'),
         ]);
         types.value = typesRes.data;
@@ -177,14 +171,14 @@ async function createType() {
             body: JSON.stringify({
                 name: newName.value.trim(),
                 slug: newSlug.value.trim() || undefined,
-                service_line: newServiceLine.value,
+                service_category: newServiceCategory.value,
             }),
         });
         newName.value = '';
         newSlug.value = '';
-        newServiceLine.value = 'maintenance';
+        newServiceCategory.value = 'maintenance';
         showCreate.value = false;
-        toast.success('Tipo de rutina creado.');
+        toast.success('Tipo de servicio creado.');
         await load();
     } catch (e) {
         toast.error((e as Error).message);
@@ -193,16 +187,16 @@ async function createType() {
     }
 }
 
-async function saveServiceLine(type: RoutineType, serviceLine: string) {
-    if (serviceLine === (type.service_line ?? 'maintenance')) {
+async function saveServiceCategory(type: RoutineType, category: string) {
+    if (category === (type.service_category ?? 'maintenance')) {
         return;
     }
     try {
         await api(`/routine-types/${type.id}`, {
             method: 'PUT',
-            body: JSON.stringify({ service_line: serviceLine }),
+            body: JSON.stringify({ service_category: category }),
         });
-        toast.success('Línea de servicio actualizada.');
+        toast.success('Categoría actualizada.');
         await load();
     } catch (e) {
         toast.error((e as Error).message);
@@ -273,7 +267,7 @@ async function saveFormVersion(type: RoutineType, formVersionId: string) {
                 form_version_id: formVersionId ? Number(formVersionId) : null,
             }),
         });
-        toast.success('Formulario enlazado al tipo de rutina.');
+        toast.success('Formulario enlazado al tipo de servicio.');
         await load();
     } catch (e) {
         toast.error((e as Error).message);
@@ -288,7 +282,7 @@ async function saveReportVersion(type: RoutineType, reportVersionId: string) {
                 report_template_version_id: reportVersionId ? Number(reportVersionId) : null,
             }),
         });
-        toast.success('Reporte enlazado al tipo de rutina.');
+        toast.success('Reporte enlazado al tipo de servicio.');
         await load();
     } catch (e) {
         toast.error((e as Error).message);
@@ -302,7 +296,7 @@ onMounted(load);
     <div class="portal-page" data-tour="page-routine-types">
         <SectionSubnav :items="routinesSectionNav" />
         <PageHeader
-            title="Tipos de rutina"
+            title="Tipos de servicio"
             subtitle="Crea tipos y enlaza formulario e informe publicados (se valida la alineación de campos). Solo se pueden elegir versiones publicadas del informe."
         />
         <div v-if="canWrite" class="mb-4 flex flex-wrap items-end gap-3">
@@ -318,17 +312,17 @@ onMounted(load);
                     placeholder="auto-desde-nombre"
                 />
                 <MaterialSelect
-                    v-model="newServiceLine"
-                    label="Línea de servicio *"
+                    v-model="newServiceCategory"
+                    label="Categoría *"
                     class="min-w-[12rem]"
-                    :options="SERVICE_LINE_OPTIONS"
+                    :options="SERVICE_CATEGORY_OPTIONS"
                 />
                 <AppButton :disabled="creating" @click="createType">Crear</AppButton>
                 <AppButton variant="ghost" @click="showCreate = false">Cancelar</AppButton>
             </div>
         </div>
         <p v-if="loading" class="text-portal-muted">Cargando…</p>
-        <ReadOnlyNotice v-if="!loading && !canWrite" module-label="Tipos de rutina" />
+        <ReadOnlyNotice v-if="!loading && !canWrite" module-label="Tipos de servicio" />
         <ConfigurableDataTable
             v-if="!loading"
             table-id="routine-types"
@@ -347,17 +341,17 @@ onMounted(load);
                 <span v-else class="text-portal-heading font-medium">{{ (row as RoutineType).name }}</span>
                 <p class="text-portal-muted mt-1 font-mono text-xs">{{ (row as RoutineType).slug }}</p>
             </template>
-            <template #service_line="{ row }">
+            <template #category="{ row }">
                 <MaterialSelect
                     v-if="canWrite"
                     compact
-                    :model-value="(row as RoutineType).service_line ?? 'maintenance'"
-                    label="Línea"
-                    :options="SERVICE_LINE_OPTIONS"
-                    @update:model-value="(v) => saveServiceLine(row as RoutineType, String(v))"
+                    :model-value="(row as RoutineType).service_category ?? 'maintenance'"
+                    label="Categoría"
+                    :options="SERVICE_CATEGORY_OPTIONS"
+                    @update:model-value="(v) => saveServiceCategory(row as RoutineType, String(v))"
                 />
                 <span v-else class="text-portal-muted text-sm">
-                    {{ SERVICE_LINE_LABELS[(row as RoutineType).service_line ?? 'maintenance'] ?? 'Mantenimiento' }}
+                    {{ SERVICE_CATEGORY_LABELS[(row as RoutineType).service_category ?? 'maintenance'] ?? 'Mantenimiento' }}
                 </span>
             </template>
             <template #status="{ row }">
@@ -377,7 +371,9 @@ onMounted(load);
                     :options="formSelectOptions()"
                     @update:model-value="(v) => saveFormVersion(row as RoutineType, String(v))"
                 />
-                <p v-if="!formOptions.length" class="mt-1 text-xs text-amber-600">Publica un formulario en D1.</p>
+                <p v-if="!formOptions.length" class="mt-1 text-xs text-amber-600">
+                    No hay formularios de servicio publicados. Créalos y publícalos en Diseño → Formularios.
+                </p>
             </template>
             <template #report="{ row }">
                 <MaterialSelect
@@ -430,12 +426,12 @@ onMounted(load);
                 <div class="table-row-actions">
                     <IconActionButton
                         icon="power"
-                        :label="(row as RoutineType).is_active ? 'Desactivar tipo de rutina' : 'Activar tipo de rutina'"
+                        :label="(row as RoutineType).is_active ? 'Desactivar tipo de servicio' : 'Activar tipo de servicio'"
                         @click="toggleActive(row as RoutineType)"
                     />
                     <IconActionButton
                         icon="trash"
-                        label="Eliminar tipo de rutina"
+                        label="Eliminar tipo de servicio"
                         variant="danger"
                         @click="deleteType(row as RoutineType)"
                     />

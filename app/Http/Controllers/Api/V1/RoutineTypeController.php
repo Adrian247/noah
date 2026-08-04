@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\FormUsage;
 use App\Enums\MembershipRole;
-use App\Enums\ServiceLine;
+use App\Enums\ServiceCategory;
 use App\Http\Controllers\Controller;
 use App\Models\FormVersion;
 use App\Models\ReportTemplateVersion;
@@ -57,7 +57,7 @@ class RoutineTypeController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:128'],
-            'service_line' => ['nullable', Rule::in(ServiceLine::values())],
+            'service_category' => ['nullable', Rule::in(ServiceCategory::values())],
         ]);
 
         $companyId = app(CurrentCompany::class)->id();
@@ -76,7 +76,7 @@ class RoutineTypeController extends Controller
             'company_id' => $companyId,
             'name' => $data['name'],
             'slug' => $slug,
-            'service_line' => $data['service_line'] ?? ServiceLine::Maintenance->value,
+            'service_category' => $data['service_category'] ?? ServiceCategory::Maintenance->value,
             'workflow_definition_id' => $workflow->id,
             'is_active' => true,
         ]);
@@ -91,7 +91,7 @@ class RoutineTypeController extends Controller
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
-            'service_line' => ['sometimes', Rule::in(ServiceLine::values())],
+            'service_category' => ['sometimes', Rule::in(ServiceCategory::values())],
         ]);
 
         $routineType->update($data);
@@ -106,7 +106,7 @@ class RoutineTypeController extends Controller
         $this->authorizeAdministrator($request);
 
         if ($routineType->routines()->exists()) {
-            return response()->json(['message' => 'No se puede eliminar: hay rutinas de este tipo. Desactívalo en su lugar.'], 422);
+            return response()->json(['message' => 'No se puede eliminar: hay servicios de este tipo. Desactívalo en su lugar.'], 422);
         }
 
         $routineType->delete();
@@ -176,9 +176,9 @@ class RoutineTypeController extends Controller
             ]);
         }
 
-        if ($version->definition?->usage !== FormUsage::Routine) {
+        if ($version->definition?->usage?->canonical() !== FormUsage::Service) {
             throw ValidationException::withMessages([
-                'form_version_id' => ['El formulario debe ser de uso Rutina.'],
+                'form_version_id' => ['El formulario debe ser de uso Servicio.'],
             ]);
         }
     }

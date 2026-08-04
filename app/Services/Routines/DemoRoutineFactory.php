@@ -21,7 +21,7 @@ class DemoRoutineFactory
         'filtros_cambio_aceite' => 'si',
     ];
 
-    /** Fotos por campo en rutina demo (galerías). */
+    /** Fotos por campo en servicio demo (galerías). */
     private const MULTI_PHOTO_DEMO_COUNTS = [
         'foto_frenos' => 4,
         'foto_neumaticos' => 3,
@@ -80,8 +80,8 @@ class DemoRoutineFactory
         $routine->executions()->create([
             'performed_by' => $assignee->id,
             'responses' => $responses,
-            'technician_comments' => 'Rutina demo — datos sintéticos para prueba rápida.',
-            'corrected_comments' => 'Rutina demo — datos sintéticos para prueba rápida.',
+            'technician_comments' => 'Servicio demo — datos sintéticos para prueba rápida.',
+            'corrected_comments' => 'Servicio demo — datos sintéticos para prueba rápida.',
             'duration_minutes' => 75,
             'status' => 'draft',
         ]);
@@ -90,7 +90,7 @@ class DemoRoutineFactory
     }
 
     /**
-     * Regenera respuestas (incl. fotos demo) para una rutina demo existente según el formulario publicado actual.
+     * Regenera respuestas (incl. fotos demo) para un servicio demo existente según el formulario publicado actual.
      */
     public function refreshDemoResponses(Routine $routine): void
     {
@@ -118,8 +118,8 @@ class DemoRoutineFactory
         $routine->executions()->create([
             'performed_by' => $assignee,
             'responses' => $responses,
-            'technician_comments' => 'Rutina demo — datos sintéticos para prueba rápida.',
-            'corrected_comments' => 'Rutina demo — datos sintéticos para prueba rápida.',
+            'technician_comments' => 'Servicio demo — datos sintéticos para prueba rápida.',
+            'corrected_comments' => 'Servicio demo — datos sintéticos para prueba rápida.',
             'duration_minutes' => 75,
             'status' => 'draft',
         ]);

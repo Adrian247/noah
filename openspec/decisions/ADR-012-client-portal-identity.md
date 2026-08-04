@@ -6,14 +6,14 @@ Propuesto (vinculado a cambio **032**).
 
 ## Contexto
 
-Los clientes comerciales (`Client`) hoy son catálogo para facturación, sin usuarios propios. Se requiere acceso **solo lectura** a facturas autorizadas y rutinas de equipos vinculados por número de serie, sin mezclar datos entre clientes ni exponer el backoffice de la empresa.
+Los clientes comerciales (`Client`) hoy son catálogo para facturación, sin usuarios propios. Se requiere acceso **solo lectura** a facturas autorizadas y servicios de equipos vinculados por número de serie, sin mezclar datos entre clientes ni exponer el backoffice de la empresa.
 
 ## Decisión (propuesta)
 
 1. Extender membresía con `client_id` opcional; si está presente, el usuario es **usuario portal** de ese cliente en la empresa.
 2. Rol `client` en `MembershipRole` (nombre UI: «Cliente») con permisos mínimos vía Spatie (`portal.invoices.view`, `portal.routines.view`, `portal.invoices.download`).
 3. API dedicada bajo `/api/v1/portal/*` con autorización que **siempre** filtra por `membership.client_id`.
-4. Facturas visibles solo si `client_portal_visible` y emitidas; rutinas solo si el activo tiene asignación activa `asset_client_assignments` al mismo cliente.
+4. Facturas visibles solo si `client_portal_visible` y emitidas; servicios solo si el activo tiene asignación activa `asset_client_assignments` al mismo cliente.
 
 ## Consecuencias
 

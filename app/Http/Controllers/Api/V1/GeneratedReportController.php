@@ -42,7 +42,7 @@ class GeneratedReportController extends Controller
 
         return Storage::disk($report->disk)->download(
             $report->path,
-            'reporte-rutina-'.$report->routine_id.'.pdf',
+            'reporte-servicio-'.$report->routine_id.'.pdf',
             ['Cache-Control' => 'no-store, no-cache, must-revalidate'],
         );
     }

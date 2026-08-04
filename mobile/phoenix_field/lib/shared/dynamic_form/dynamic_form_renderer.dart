@@ -201,7 +201,7 @@ class _FieldWidget extends StatelessWidget {
           contentPadding: EdgeInsets.zero,
           title: Text('$label${required ? ' *' : ''}'),
           subtitle: Text(
-            value == null ? 'Se captura al finalizar la rutina' : 'Firma registrada',
+            value == null ? 'Se captura al finalizar el servicio' : 'Firma registrada',
           ),
           leading: const Icon(Icons.draw_outlined),
         ),

@@ -5,9 +5,13 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\MembershipRole;
 use App\Http\Controllers\Controller;
 use App\Models\AuditEntry;
+use App\Models\Company;
+use App\Models\CompanyMembership;
 use App\Models\Routine;
 use App\Models\WorkflowInstance;
+use App\Support\AccessChannel;
 use App\Support\CurrentCompany;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -22,8 +26,12 @@ class AuditController extends Controller
 
         $entries = AuditEntry::query()
             ->with('actor:id,name,email')
-            ->where('company_id', $companyId)
+            ->tap(fn (Builder $q) => $this->constrainVisibleToCompany($q, $companyId))
+            ->when($request->query('actor_user_id'), fn ($q, $actorId) => $q->where('actor_user_id', (int) $actorId))
             ->when($request->query('action'), fn ($q, $action) => $q->where('action', 'like', '%'.$action.'%'))
+            ->when($request->query('access_channel'), function ($q, $channel) {
+                $q->where('metadata->access_channel', $channel);
+            })
             ->when($request->query('correlation_id'), fn ($q, $id) => $q->where('correlation_id', $id))
             ->when($request->query('routine_id'), function ($q, $routineId) use ($companyId) {
                 $this->constrainToRoutine($q, (int) $routineId, $companyId);
@@ -62,8 +70,12 @@ class AuditController extends Controller
         $perPage = max(1, min(50, (int) $request->query('per_page', 20)));
 
         $base = AuditEntry::query()
-            ->where('company_id', $companyId)
+            ->tap(fn (Builder $q) => $this->constrainVisibleToCompany($q, $companyId))
             ->whereNotNull('correlation_id')
+            ->when($request->query('actor_user_id'), fn ($q, $actorId) => $q->where('actor_user_id', (int) $actorId))
+            ->when($request->query('access_channel'), function ($q, $channel) {
+                $q->where('metadata->access_channel', $channel);
+            })
             ->when($request->query('routine_id'), function ($q, $routineId) use ($companyId) {
                 $this->constrainToRoutine($q, (int) $routineId, $companyId);
             })
@@ -125,7 +137,40 @@ class AuditController extends Controller
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<\App\Models\AuditEntry>  $query
+     * Eventos de la empresa + accesos (login/logout) de miembros + acciones de plataforma sobre el tenant.
+     *
+     * @param  Builder<\App\Models\AuditEntry>  $query
+     */
+    private function constrainVisibleToCompany(Builder $query, int $companyId): void
+    {
+        $memberIds = CompanyMembership::query()
+            ->where('company_id', $companyId)
+            ->where('is_active', true)
+            ->pluck('user_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $query->where(function (Builder $scope) use ($companyId, $memberIds) {
+            $scope->where('company_id', $companyId);
+
+            if ($memberIds !== []) {
+                $scope->orWhere(function (Builder $auth) use ($memberIds) {
+                    $auth->whereNull('company_id')
+                        ->whereIn('action', ['auth.login', 'auth.logout'])
+                        ->whereIn('actor_user_id', $memberIds);
+                });
+            }
+
+            $scope->orWhere(function (Builder $platform) use ($companyId) {
+                $platform->whereNull('company_id')
+                    ->where('subject_type', Company::class)
+                    ->where('subject_id', $companyId);
+            });
+        });
+    }
+
+    /**
+     * @param  Builder<\App\Models\AuditEntry>  $query
      */
     private function constrainToRoutine($query, int $routineId, int $companyId): void
     {
@@ -144,7 +189,7 @@ class AuditController extends Controller
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<\App\Models\AuditEntry>  $query
+     * @param  Builder<\App\Models\AuditEntry>  $query
      */
     private function constrainBySearch($query, string $q, int $companyId): void
     {
@@ -169,6 +214,8 @@ class AuditController extends Controller
         $query->where(function ($inner) use ($q, $matchingCorrelations) {
             $inner->where('action', 'like', '%'.$q.'%')
                 ->orWhere('correlation_id', 'like', '%'.$q.'%')
+                ->orWhere('metadata->access_channel', 'like', '%'.$q.'%')
+                ->orWhere('metadata->device_name', 'like', '%'.$q.'%')
                 ->orWhereHas('actor', function ($actor) use ($q) {
                     $actor->where('name', 'like', '%'.$q.'%')
                         ->orWhere('email', 'like', '%'.$q.'%');
@@ -305,6 +352,10 @@ class AuditController extends Controller
         }
 
         $subjectClass = $entry->subject_type ? class_basename($entry->subject_type) : null;
+        $metadata = is_array($entry->metadata) ? $entry->metadata : [];
+        $channel = isset($metadata['access_channel']) && is_string($metadata['access_channel'])
+            ? $metadata['access_channel']
+            : null;
 
         return [
             'id' => $entry->id,
@@ -314,6 +365,11 @@ class AuditController extends Controller
             'subject_type_label' => $subjectClass,
             'subject_id' => $entry->subject_id,
             'metadata' => $entry->metadata,
+            'access_channel' => $channel,
+            'access_channel_label' => $channel ? AccessChannel::label($channel) : null,
+            'device_name' => isset($metadata['device_name']) && is_string($metadata['device_name'])
+                ? $metadata['device_name']
+                : null,
             'ip' => $entry->ip,
             'occurred_at' => $entry->occurred_at,
             'actor' => $entry->actor

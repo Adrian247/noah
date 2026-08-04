@@ -3,19 +3,20 @@
 namespace App\Services\Predictive;
 
 use App\Enums\RoutineStatus;
-use App\Enums\ServiceLine;
+use App\Enums\ServiceCategory;
 use App\Models\Client;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Predicción de demanda de servicios a cliente (manufactura / suministro)
- * a partir del historial de rutinas aplicadas (sin activo obligatorio).
+ * Predicción de demanda de servicios a cliente (fabricación / instalación)
+ * a partir del historial de servicios aplicados (sin artículo obligatorio).
  */
 class ClientDemandPredictionService
 {
     /**
      * @param  array{
+     *     service_category?: string|null,
      *     service_line?: string|null,
      *     client_id?: int|null,
      *     horizon_days?: int|null,
@@ -32,7 +33,7 @@ class ClientDemandPredictionService
             ? CarbonImmutable::parse($filters['as_of'])
             : CarbonImmutable::today();
 
-        $lines = $this->resolveLines($filters['service_line'] ?? null);
+        $categories = $this->resolveCategories($filters['service_category'] ?? $filters['service_line'] ?? null);
         $lookbackDays = max(90, $horizonDays * 3);
         $from = $asOf->subDays($lookbackDays)->startOfDay();
 
@@ -49,7 +50,7 @@ class ClientDemandPredictionService
                     ->whereRaw('e.id = (select max(id) from routine_executions where routine_id = r.id)');
             })
             ->where('r.company_id', $companyId)
-            ->whereIn('t.service_line', $lines)
+            ->whereIn('t.service_category', $categories)
             ->whereNotNull('r.client_id')
             ->whereIn('r.status', $validated)
             ->where(function ($q) use ($from, $asOf) {
@@ -65,11 +66,11 @@ class ClientDemandPredictionService
         }
 
         $rows = $query
-            ->groupBy('r.client_id', 'r.routine_type_id', 't.service_line', 't.name')
+            ->groupBy('r.client_id', 'r.routine_type_id', 't.service_category', 't.name')
             ->selectRaw(
                 'r.client_id,
                  r.routine_type_id,
-                 t.service_line,
+                 t.service_category,
                  t.name as routine_type_name,
                  COUNT(*) as routines,
                  MAX(COALESCE(e.validated_at, r.scheduled_at)) as last_at,
@@ -82,11 +83,12 @@ class ClientDemandPredictionService
                 'as_of' => $asOf->toDateString(),
                 'horizon_days' => $horizonDays,
                 'lookback_days' => $lookbackDays,
-                'service_lines' => $lines,
+                'service_categories' => $categories,
+                'service_lines' => $categories,
                 'evaluated' => 0,
                 'predictions' => [],
                 'notes' => [
-                    'No hay rutinas validadas de manufactura o suministro con cliente en el periodo analizado.',
+                    'No hay servicios validados de fabricación o instalación con cliente en el periodo analizado.',
                 ],
             ];
         }
@@ -106,11 +108,11 @@ class ClientDemandPredictionService
             $ratePerDay = $routines / max(1, $lookbackDays);
             $expected = round($ratePerDay * $horizonDays, 3);
 
-            // Recencia: más reciente ⇒ mayor score; frecuencia refuerza.
             $recencyBoost = 1 + max(0, (45 - $daysSince) / 45);
             $score = round($expected * $recencyBoost, 4);
             $probability = round(min(0.95, max(0.05, 1 - exp(-$score))), 4);
 
+            $category = ServiceCategory::tryFrom((string) $row->service_category) ?? ServiceCategory::Manufacturing;
             $client = $clients->get((int) $row->client_id);
             $predictions[] = [
                 'client_id' => (int) $row->client_id,
@@ -120,9 +122,9 @@ class ClientDemandPredictionService
                     ?? 'Cliente #'.$row->client_id,
                 'routine_type_id' => (int) $row->routine_type_id,
                 'routine_type_name' => (string) $row->routine_type_name,
-                'service_line' => (string) $row->service_line,
-                'service_line_label' => ServiceLine::tryFrom((string) $row->service_line)?->label()
-                    ?? (string) $row->service_line,
+                'service_category' => $category->value,
+                'service_line' => $category->value,
+                'service_line_label' => $category->label(),
                 'routines_in_lookback' => $routines,
                 'last_routine_at' => $last?->toDateString(),
                 'days_since_last' => $daysSince,
@@ -134,7 +136,7 @@ class ClientDemandPredictionService
                         'code' => 'frecuencia',
                         'label' => 'Frecuencia histórica',
                         'evidence' => sprintf(
-                            '%d rutinas en %d días (%.2f / día).',
+                            '%d servicios en %d días (%.2f / día).',
                             $routines,
                             $lookbackDays,
                             $ratePerDay,
@@ -144,8 +146,8 @@ class ClientDemandPredictionService
                         'code' => 'recencia',
                         'label' => 'Recencia',
                         'evidence' => $last
-                            ? sprintf('Última rutina el %s (hace %d días).', $last->toDateString(), $daysSince)
-                            : 'Sin fecha de última rutina.',
+                            ? sprintf('Último servicio el %s (hace %d días).', $last->toDateString(), $daysSince)
+                            : 'Sin fecha de último servicio.',
                     ],
                 ],
             ];
@@ -158,7 +160,8 @@ class ClientDemandPredictionService
             'as_of' => $asOf->toDateString(),
             'horizon_days' => $horizonDays,
             'lookback_days' => $lookbackDays,
-            'service_lines' => $lines,
+            'service_categories' => $categories,
+            'service_lines' => $categories,
             'evaluated' => count($predictions),
             'returned' => count($ranked),
             'predictions' => $ranked,
@@ -169,17 +172,25 @@ class ClientDemandPredictionService
     /**
      * @return list<string>
      */
-    private function resolveLines(?string $line): array
+    private function resolveCategories(?string $line): array
     {
         if ($line === null || trim($line) === '' || $line === 'demand') {
-            return [ServiceLine::Fabrication->value, ServiceLine::Supply->value];
+            return [ServiceCategory::Manufacturing->value, ServiceCategory::Installation->value];
         }
 
-        $parsed = ServiceLine::tryFrom($line);
-        if ($parsed === ServiceLine::Fabrication || $parsed === ServiceLine::Supply) {
+        $legacyMap = [
+            'fabrication' => ServiceCategory::Manufacturing->value,
+            'supply' => ServiceCategory::Manufacturing->value,
+        ];
+        if (isset($legacyMap[$line])) {
+            return [$legacyMap[$line]];
+        }
+
+        $parsed = ServiceCategory::tryFrom($line);
+        if ($parsed === ServiceCategory::Manufacturing || $parsed === ServiceCategory::Installation) {
             return [$parsed->value];
         }
 
-        return [ServiceLine::Fabrication->value, ServiceLine::Supply->value];
+        return [ServiceCategory::Manufacturing->value, ServiceCategory::Installation->value];
     }
 }

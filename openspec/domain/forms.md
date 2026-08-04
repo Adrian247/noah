@@ -26,7 +26,7 @@ Vista de dominio del **Dynamic Forms Engine**. Motor técnico: [forms-engine.md]
 | `boolean` | Checklist |
 | `photo` | Evidencia (ref storage tras captura) |
 | `signature` | Firma |
-| `duration` | Tiempo de rutina |
+| `duration` | Tiempo de servicio |
 | `section` | Agrupación visual |
 
 ## Validaciones
@@ -35,7 +35,7 @@ Vista de dominio del **Dynamic Forms Engine**. Motor técnico: [forms-engine.md]
 
 ## Consumo
 
-- Web: renderer en ejecución de rutina.
+- Web: renderer en ejecución de servicio.
 - Móvil: mismo esquema publicado; cache local en sync.
 
 ## Eventos

@@ -21,7 +21,7 @@ class MobileSyncApiTest extends TestCase
     public function test_sync_push_is_idempotent(): void
     {
         $this->seed();
-        $technician = $this->meinUser('misael.palos@mein-company.com');
+        $technician = $this->meinUser('technician@sandbox-demo.com');
         $company = $this->meinCompany();
         $routine = $this->demoRoutine($technician);
 
@@ -60,7 +60,7 @@ class MobileSyncApiTest extends TestCase
     public function test_sync_pull_returns_assigned_routines(): void
     {
         $this->seed();
-        $technician = $this->meinUser('misael.palos@mein-company.com');
+        $technician = $this->meinUser('technician@sandbox-demo.com');
         $company = $this->meinCompany();
 
         Sanctum::actingAs($technician);

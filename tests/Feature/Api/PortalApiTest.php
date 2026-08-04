@@ -55,7 +55,7 @@ class PortalApiTest extends TestCase
     public function test_non_admin_cannot_update_portal_settings(): void
     {
         $this->seed();
-        $tech = User::query()->where('email', 'misael.palos@mein-company.com')->first();
+        $tech = User::query()->where('email', 'technician@sandbox-demo.com')->first();
         $company = Company::query()->first();
 
         Sanctum::actingAs($tech);

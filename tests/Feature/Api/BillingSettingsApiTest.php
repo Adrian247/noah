@@ -15,7 +15,7 @@ class BillingSettingsApiTest extends TestCase
     public function test_billing_user_can_update_settings(): void
     {
         $this->seed();
-        $billing = User::query()->where('email', 'elena.sanchez@mein-company.com')->first();
+        $billing = User::query()->where('email', 'billing@sandbox-demo.com')->first();
         $company = Company::query()->first();
 
         Sanctum::actingAs($billing);

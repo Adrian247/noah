@@ -70,7 +70,7 @@ onMounted(load);
     <div class="portal-page" data-tour="page-billing">
         <PageHeader
             title="Facturación"
-            subtitle="Borradores generados al validar rutinas. Revisa el desglose antes de emitir."
+            subtitle="Borradores generados al validar servicios. Revisa el desglose antes de emitir."
         />
         <div class="mb-4 flex flex-wrap gap-2">
             <RouterLink v-if="canManage" to="/app/settings#facturacion">
@@ -125,7 +125,7 @@ onMounted(load);
                         </h2>
                         <StatusBadge :status="inv.status" />
                     </div>
-                    <p class="text-portal-muted text-sm">Rutina #{{ inv.routine_id ?? '—' }}</p>
+                    <p class="text-portal-muted text-sm">Servicio #{{ inv.routine_id ?? '—' }}</p>
                     <p class="text-portal-muted mt-1 text-sm">
                         Subtotal ${{ inv.subtotal }} · IVA ${{ inv.tax_total }} ·
                         <strong class="text-portal-heading">Total ${{ inv.total }}</strong>

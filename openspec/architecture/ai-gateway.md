@@ -14,7 +14,7 @@ La IA es un servicio transversal. Nunca se invoca un proveedor desde dominio de 
 
 | Tool | Uso |
 |------|-----|
-| `list_recent_routines` | Rutinas recientes |
+| `list_recent_routines` | Servicios recientes |
 | `get_routine` | Detalle por ID |
 | `list_audit_entries` | Auditoría |
 | `search_assets` | Activos por tag |
@@ -37,7 +37,7 @@ Cuando la pregunta pide KPIs/dashboard, el gateway adjunta `presentation` determ
 ## UX
 
 - Chat operativo: FAB global (no hay página Insights de chat).
-- Narrativa / costo: panel en ficha de rutina.
+- Narrativa / costo: panel en ficha de servicio.
 - OCR placa + sugerencias de insumos: formularios de activos.
 - APIs `/insights/*` se mantienen; el permiso sigue siendo `insights.use`.
 
@@ -50,7 +50,7 @@ Cuando la pregunta pide KPIs/dashboard, el gateway adjunta `presentation` determ
 
 ```mermaid
 sequenceDiagram
-  participant UI as FAB / ficha rutina-activo
+  participant UI as FAB / ficha servicio-activo
   participant G as AiGateway
   participant L as laravel/ai OperationalAssistant
   participant T as PhoenixDomainTool

@@ -23,7 +23,7 @@ Capa de dominio delimitada. Implementación: [ai-gateway.md](../architecture/ai-
 | Grammar correction | Texto técnico | Texto corregido |
 | Insights assistant | Pregunta (+ conversation_id / history) | Respuesta + sources + tool_calls + conversation_id + presentation? |
 | Vision OCR | Imagen | Texto de placa/etiqueta |
-| Report narrative | Rutina | Borrador factual desde campos |
+| Report narrative | Servicio | Borrador factual desde campos |
 
 ## Políticas
 

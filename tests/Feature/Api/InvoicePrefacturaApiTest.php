@@ -35,8 +35,8 @@ class InvoicePrefacturaApiTest extends TestCase
     public function test_billing_can_edit_draft_lines(): void
     {
         $company = $this->meinCompany();
-        $billing = $this->meinUser('elena.sanchez@mein-company.com');
-        $technician = $this->meinUser('misael.palos@mein-company.com');
+        $billing = $this->meinUser('billing@sandbox-demo.com');
+        $technician = $this->meinUser('technician@sandbox-demo.com');
         $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
         $execution = $routine->latestExecution ?? $routine->executions()->create([
             'performed_by' => $technician->id,
@@ -77,8 +77,8 @@ class InvoicePrefacturaApiTest extends TestCase
     public function test_billing_saves_custom_reference_on_draft(): void
     {
         $company = $this->meinCompany();
-        $billing = $this->meinUser('elena.sanchez@mein-company.com');
-        $technician = $this->meinUser('misael.palos@mein-company.com');
+        $billing = $this->meinUser('billing@sandbox-demo.com');
+        $technician = $this->meinUser('technician@sandbox-demo.com');
         $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
         $execution = $routine->latestExecution ?? $routine->executions()->create([
             'performed_by' => $technician->id,
@@ -113,8 +113,8 @@ class InvoicePrefacturaApiTest extends TestCase
     public function test_billing_downloads_zip_package_for_issued_invoice(): void
     {
         $company = $this->meinCompany();
-        $billing = $this->meinUser('elena.sanchez@mein-company.com');
-        $technician = $this->meinUser('misael.palos@mein-company.com');
+        $billing = $this->meinUser('billing@sandbox-demo.com');
+        $technician = $this->meinUser('technician@sandbox-demo.com');
         $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
         $client = Client::query()->where('company_id', $company->id)->first();
 
@@ -170,8 +170,8 @@ class InvoicePrefacturaApiTest extends TestCase
     public function test_portal_client_downloads_zip_package(): void
     {
         $company = $this->meinCompany();
-        $portalUser = $this->meinUser('cliente.portal@mein-company.com');
-        $technician = $this->meinUser('misael.palos@mein-company.com');
+        $portalUser = $this->meinUser('cliente.portal@sandbox-demo.com');
+        $technician = $this->meinUser('technician@sandbox-demo.com');
         $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
         $client = Client::query()->where('company_id', $company->id)->first();
 
@@ -205,8 +205,8 @@ class InvoicePrefacturaApiTest extends TestCase
         config(['phoenix.reports.disk' => 'local']);
 
         $company = $this->meinCompany();
-        $billing = $this->meinUser('elena.sanchez@mein-company.com');
-        $technician = $this->meinUser('misael.palos@mein-company.com');
+        $billing = $this->meinUser('billing@sandbox-demo.com');
+        $technician = $this->meinUser('technician@sandbox-demo.com');
         $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
         $execution = $routine->latestExecution ?? $routine->executions()->create([
             'performed_by' => $technician->id,
@@ -249,8 +249,8 @@ class InvoicePrefacturaApiTest extends TestCase
         config(['phoenix.evidence.disk' => 'evidence']);
 
         $company = $this->meinCompany();
-        $billing = $this->meinUser('elena.sanchez@mein-company.com');
-        $technician = $this->meinUser('misael.palos@mein-company.com');
+        $billing = $this->meinUser('billing@sandbox-demo.com');
+        $technician = $this->meinUser('technician@sandbox-demo.com');
         $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
         $execution = $routine->latestExecution ?? $routine->executions()->create([
             'performed_by' => $technician->id,
@@ -302,8 +302,8 @@ class InvoicePrefacturaApiTest extends TestCase
     public function test_issue_requires_client(): void
     {
         $company = $this->meinCompany();
-        $billing = $this->meinUser('elena.sanchez@mein-company.com');
-        $technician = $this->meinUser('misael.palos@mein-company.com');
+        $billing = $this->meinUser('billing@sandbox-demo.com');
+        $technician = $this->meinUser('technician@sandbox-demo.com');
         $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
         app(\App\Services\Workflow\WorkflowRuntime::class)->ensureInstance($routine->load('routineType.workflowDefinition'));
         $routine->update(['status' => \App\Enums\RoutineStatus::PendingBilling]);
@@ -339,8 +339,8 @@ class InvoicePrefacturaApiTest extends TestCase
         Mail::fake();
 
         $company = $this->meinCompany();
-        $billing = $this->meinUser('elena.sanchez@mein-company.com');
-        $technician = $this->meinUser('misael.palos@mein-company.com');
+        $billing = $this->meinUser('billing@sandbox-demo.com');
+        $technician = $this->meinUser('technician@sandbox-demo.com');
         $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
         $correlationId = $routine->workflowInstance?->correlation_id;
         $this->assertNotNull($correlationId);

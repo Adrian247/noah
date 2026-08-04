@@ -4,21 +4,21 @@ Borrador de dominio para implementación futura. Términos: [glosario](../glossa
 
 ## Agregados
 
-### RoutineType (tipo de rutina)
+### RoutineType (tipo de servicio)
 
 - Referencias: `form_version_id`, `report_template_version_id`, `workflow_definition_id`.
 - Opcional: reglas de costo, prompt IA.
-- Publicación inmutable: rutinas nuevas usan versión vigente al crearse.
+- Publicación inmutable: servicios nuevos usan versión vigente al crearse.
 
 ### Routine
 
-- Pertenece a: empresa, sitio, activo, tipo de rutina.
+- Pertenece a: empresa, sitio, activo, tipo de servicio.
 - Asignación: usuario técnico.
 - Estado: ver máquina abajo.
 
 ### Execution
 
-- Una rutina puede tener una ejecución activa (o historial de intentos si se rechaza).
+- Un servicio puede tener una ejecución activa (o historial de intentos si se rechaza).
 - Contiene: respuestas de formulario (JSON), referencias a evidencias, tiempos, texto original y texto post-IA.
 
 ## Máquina de estados (borrador)
@@ -40,7 +40,7 @@ stateDiagram-v2
 
 Ajustes finales al implementar Workflow Engine.
 
-## Relación Rutina vs Orden de trabajo
+## Relación Servicio vs Orden de trabajo
 
 **Decisión MVP:** un solo agregado `Routine`. “Orden de trabajo” es alias de negocio en interfaz, no una segunda entidad.
 
@@ -50,4 +50,4 @@ Ajustes finales al implementar Workflow Engine.
 
 - No validar sin ejecución completa (campos obligatorios).
 - No facturar sin estado `Validated`.
-- Evidencias obligatorias si el tipo de rutina lo define en metadatos.
+- Evidencias obligatorias si el tipo de servicio lo define en metadatos.

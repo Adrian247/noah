@@ -9,9 +9,15 @@ use Illuminate\Http\Request;
 
 class SiteController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        return response()->json(['data' => Site::query()->orderBy('name')->get()]);
+        $query = Site::query()->orderBy('name');
+
+        if ($request->filled('client_id')) {
+            $query->where('client_id', (int) $request->query('client_id'));
+        }
+
+        return response()->json(['data' => $query->get()]);
     }
 
     public function store(Request $request): JsonResponse
@@ -19,6 +25,7 @@ class SiteController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:500'],
+            'client_id' => ['nullable', 'exists:clients,id'],
         ]);
 
         $site = Site::query()->create($data);
@@ -31,6 +38,7 @@ class SiteController extends Controller
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:500'],
+            'client_id' => ['nullable', 'exists:clients,id'],
         ]);
 
         $site->update($data);
@@ -41,7 +49,7 @@ class SiteController extends Controller
     public function destroy(Site $site): JsonResponse
     {
         if ($site->assets()->exists()) {
-            return response()->json(['message' => 'No se puede eliminar un sitio con activos.'], 422);
+            return response()->json(['message' => 'No se puede eliminar un sitio con artículos en inventario.'], 422);
         }
 
         $site->delete();

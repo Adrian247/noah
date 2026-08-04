@@ -91,7 +91,7 @@ class SupplyItemController extends Controller
     public function destroy(SupplyItem $supplyItem): JsonResponse
     {
         if ($supplyItem->consumptions()->exists()) {
-            return response()->json(['message' => 'No se puede eliminar: el artículo está en consumos de rutinas.'], 422);
+            return response()->json(['message' => 'No se puede eliminar: el artículo está en consumos de servicios.'], 422);
         }
 
         if ($supplyItem->movements()->exists()) {

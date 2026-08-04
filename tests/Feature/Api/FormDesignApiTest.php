@@ -110,7 +110,7 @@ class FormDesignApiTest extends TestCase
     public function test_execution_rejects_invalid_select_value(): void
     {
         $this->seed();
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->first();
         $company = $this->meinCompany();
         $routine = $this->demoRoutine();
         $token = $technician->createToken('test')->plainTextToken;
@@ -148,7 +148,7 @@ class FormDesignApiTest extends TestCase
         config(['phoenix.evidence.disk' => 'evidence']);
 
         $this->seed();
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->first();
         $company = $this->meinCompany();
         $company->update(['form_max_image_size_kb' => 1]);
         $routine = $this->demoRoutine();

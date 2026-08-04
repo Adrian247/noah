@@ -2,12 +2,12 @@
 
 namespace App\Services\Routines;
 
-use App\Enums\ServiceLine;
+use App\Enums\ServiceCategory;
 use App\Models\RoutineType;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Reglas de sujeto de una rutina según la línea de servicio del tipo.
+ * Reglas de sujeto de un servicio según la categoría del tipo.
  */
 final class RoutineSubjectRules
 {
@@ -17,9 +17,9 @@ final class RoutineSubjectRules
      */
     public function normalizeForType(RoutineType $type, array $data): array
     {
-        $line = $type->service_line instanceof ServiceLine
-            ? $type->service_line
-            : ServiceLine::tryFrom((string) $type->service_line) ?? ServiceLine::Maintenance;
+        $category = $type->service_category instanceof ServiceCategory
+            ? $type->service_category
+            : ServiceCategory::tryFrom((string) $type->service_category) ?? ServiceCategory::Maintenance;
 
         $assetId = isset($data['asset_id']) && $data['asset_id'] !== '' && $data['asset_id'] !== null
             ? (int) $data['asset_id']
@@ -28,24 +28,18 @@ final class RoutineSubjectRules
             ? (int) $data['client_id']
             : null;
 
-        if ($line->requiresAsset() && $assetId === null) {
+        if ($category->requiresClientArticle() && $assetId === null) {
             throw ValidationException::withMessages([
-                'asset_id' => ['Las rutinas de mantenimiento requieren un activo.'],
+                'asset_id' => ['Los servicios de mantenimiento requieren un artículo del inventario del cliente.'],
             ]);
         }
 
-        if ($line->requiresClient() && $clientId === null) {
+        if ($category->requiresClient() && $clientId === null) {
             throw ValidationException::withMessages([
-                'client_id' => ['Las rutinas de '.$line->label().' requieren un cliente.'],
+                'client_id' => ['Los servicios de '.$category->label().' requieren un cliente.'],
             ]);
         }
 
-        if ($line === ServiceLine::Maintenance) {
-            // Cliente opcional en mantenimiento (puede resolverse por assignment).
-            return ['asset_id' => $assetId, 'client_id' => $clientId];
-        }
-
-        // Manufactura / suministro: activo opcional.
         return ['asset_id' => $assetId, 'client_id' => $clientId];
     }
 }

@@ -19,7 +19,7 @@ class ReportHtmlBuilderProductionTest extends TestCase
 
     private function routineWithExecution(): Routine
     {
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->firstOrFail();
         $routine = $this->demoRoutine($technician)->load(['routineType.formVersion', 'company', 'asset']);
         $execution = $routine->latestExecution ?? $routine->executions()->create([
             'performed_by' => $technician->id,
@@ -283,7 +283,7 @@ class ReportHtmlBuilderProductionTest extends TestCase
                 'cover_page' => [
                     'enabled' => true,
                     'title' => 'Informe',
-                    'body' => '<p>Activo: **{{asset_tag}}**\\n\\nRutina de mantenimiento documentada.</p>',
+                    'body' => '<p>Activo: **{{asset_tag}}**\\n\\nServicio de mantenimiento documentado.</p>',
                     'omit_header_footer' => true,
                 ],
                 'theme' => [

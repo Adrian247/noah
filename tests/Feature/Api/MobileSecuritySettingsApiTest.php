@@ -15,7 +15,7 @@ class MobileSecuritySettingsApiTest extends TestCase
     public function test_administrator_can_update_mobile_security_settings(): void
     {
         $this->seed();
-        $admin = User::query()->where('email', 'emilio.sanchez@mein-company.com')->first();
+        $admin = User::query()->where('email', 'admin@sandbox-demo.com')->first();
         $company = Company::query()->first();
 
         Sanctum::actingAs($admin);
@@ -37,7 +37,7 @@ class MobileSecuritySettingsApiTest extends TestCase
     public function test_technician_cannot_update_mobile_security_settings(): void
     {
         $this->seed();
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->first();
         $company = Company::query()->first();
 
         Sanctum::actingAs($technician);

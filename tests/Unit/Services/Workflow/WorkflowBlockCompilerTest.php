@@ -66,7 +66,7 @@ class WorkflowBlockCompilerTest extends TestCase
         $compiler = app(WorkflowBlockCompiler::class);
         $graph = [
             'nodes' => [
-                ['id' => 'field_execution', 'kind' => 'routine', 'label' => 'Rutina', 'position' => ['x' => 0, 'y' => 0]],
+                ['id' => 'field_execution', 'kind' => 'routine', 'label' => 'Servicio', 'position' => ['x' => 0, 'y' => 0]],
                 ['id' => 'supervisor_review', 'kind' => 'role', 'label' => 'S', 'assigned_role' => 'supervisor', 'position' => ['x' => 1, 'y' => 0]],
                 ['id' => 'complete', 'kind' => 'end', 'label' => 'Fin', 'position' => ['x' => 2, 'y' => 0]],
             ],

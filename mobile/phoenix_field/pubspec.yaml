@@ -1,5 +1,5 @@
 name: phoenix_field
-description: Phoenix — app de campo offline-first (rutinas, sync, formularios dinámicos).
+description: Phoenix — app de campo offline-first (servicios, sync, formularios dinámicos).
 publish_to: 'none'
 version: 0.8.0+1
 

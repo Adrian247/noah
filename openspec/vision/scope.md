@@ -12,7 +12,7 @@
 
 - Multi-empresa preparada en modelo (SaaS puede activarse después).
 - Catálogos: equipos, insumos, costos asociados.
-- Mantenimiento / rutinas definidas por **esquema de formulario**.
+- Mantenimiento / servicios definidas por **esquema de formulario**.
 - Editor de **plantillas de reporte** y generación PDF.
 - Módulo de **facturación** separado del dominio de mantenimiento (adaptadores fiscales por país).
 - Usuarios, roles y permisos granulares.
@@ -20,7 +20,7 @@
 
 ### Fase 2 — Móvil y sincronización
 
-- App Flutter: rutinas, fotos, tiempos, comentarios, firma.
+- App Flutter: servicios, fotos, tiempos, comentarios, firma.
 - Almacenamiento local + cola de envío.
 - API de sincronización por **eventos** (no réplica de tablas completas).
 - Evidencias en object storage; BD solo metadatos.

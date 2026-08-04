@@ -55,7 +55,7 @@ class FormDefinitionGuard
         }
 
         if ($versionIds->isNotEmpty() && RoutineType::query()->whereIn('form_version_id', $versionIds)->exists()) {
-            $reasons[] = 'Hay tipos de rutina enlazados a una versión de este formulario.';
+            $reasons[] = 'Hay tipos de servicio enlazados a una versión de este formulario.';
         }
 
         if ($versionIds->isNotEmpty()) {
@@ -64,7 +64,7 @@ class FormDefinitionGuard
                 ->exists();
 
             if ($hasExecutions) {
-                $reasons[] = 'Existen ejecuciones de rutina con respuestas asociadas a este formulario.';
+                $reasons[] = 'Existen ejecuciones de servicio con respuestas asociadas a este formulario.';
             }
         }
 

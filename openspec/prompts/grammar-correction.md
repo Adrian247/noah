@@ -1,6 +1,6 @@
 # Prompt — Corrección gramatical (Phoenix)
 
-Caso de uso: comentarios del técnico en rutina de mantenimiento. Dominio: [ai.md](../domain/ai.md).
+Caso de uso: comentarios del técnico en servicio de mantenimiento. Dominio: [ai.md](../domain/ai.md).
 
 ## Identificador
 

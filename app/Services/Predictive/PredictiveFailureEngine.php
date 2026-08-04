@@ -37,7 +37,37 @@ class PredictiveFailureEngine
 {
     public const MODEL_KIND = 'heuristic';
 
-    public const MODEL_VERSION = 'hazard-v1';
+    public const MODEL_VERSION = 'hazard-v2';
+
+    /** @var array<string, float> pesos aprendidos por código de driver (default 1.0) */
+    private array $driverWeights = [];
+
+    /** Multiplicador global de tasa base aprendido en entrenamiento. */
+    private float $globalHazardMultiplier = 1.0;
+
+    /**
+     * Aplica calibración publicada en PredictiveAlgorithmVersion.calibration.
+     *
+     * @param  array<string, mixed>|null  $calibration
+     */
+    public function withCalibration(?array $calibration): self
+    {
+        $clone = clone $this;
+        $clone->driverWeights = [];
+        $clone->globalHazardMultiplier = 1.0;
+        if (! is_array($calibration)) {
+            return $clone;
+        }
+        $clone->globalHazardMultiplier = max(0.5, min(2.5, (float) ($calibration['global_hazard_multiplier'] ?? 1.0)));
+        $weights = $calibration['driver_weights'] ?? [];
+        if (is_array($weights)) {
+            foreach ($weights as $code => $weight) {
+                $clone->driverWeights[(string) $code] = max(0.5, min(2.0, (float) $weight));
+            }
+        }
+
+        return $clone;
+    }
 
     /** Horas de pseudo-observación para contraer la tasa del activo hacia la de su clase. */
     private const ASSET_PRIOR_HOURS = 300.0;
@@ -71,12 +101,16 @@ class PredictiveFailureEngine
         $equipmentClass = $context['equipment_class'] ?? null;
         $baseline = $this->baseline($companyId);
 
-        $hazard = $this->assetHazard($features, $equipmentClass, $baseline);
+        $hazard = $this->assetHazard($features, $equipmentClass, $baseline) * $this->globalHazardMultiplier;
         $drivers = $this->drivers($features);
 
         $multiplier = 1.0;
-        foreach ($drivers as $driver) {
-            $multiplier *= $driver['factor'];
+        foreach ($drivers as $i => $driver) {
+            $baseCode = explode(':', (string) $driver['code'])[0];
+            $weight = $this->driverWeights[$driver['code']] ?? $this->driverWeights[$baseCode] ?? 1.0;
+            $factor = 1 + max(0, ($driver['factor'] - 1) * $weight);
+            $drivers[$i]['factor'] = $factor;
+            $multiplier *= $factor;
         }
 
         $dailyHours = max(0.5, (float) ($features['daily_operating_hours'] ?? 0));
@@ -167,7 +201,7 @@ class PredictiveFailureEngine
             ->selectRaw('asset_id, COALESCE(SUM(worked_hours), 0) as hours')
             ->pluck('hours', 'asset_id');
 
-        // Exposición desde rutinas aplicadas (fuente de producto) cuando no hay bitácora.
+        // Exposición desde servicios aplicados (fuente de producto) cuando no hay bitácora.
         $routineHours = DB::table('routines as r')
             ->leftJoin('routine_executions as e', function ($join) {
                 $join->on('e.routine_id', '=', 'r.id')
@@ -324,26 +358,51 @@ class PredictiveFailureEngine
                 'label' => 'Preventivo no ejecutado',
                 'factor' => 1 + min(1.2, (0.8 - $compliance) * 1.5),
                 'evidence' => sprintf(
-                    'Cumplimiento de rutinas al %.0f %% en 90 días, con %d pendientes.',
+                    'Cumplimiento de servicios preventivos al %.0f %% en 90 días, con %d pendientes.',
                     $compliance * 100,
                     (int) ($features['pm_backlog_90d'] ?? 0),
                 ),
-                'signals' => ['cumplimiento_pm', 'rutinas'],
+                'signals' => ['cumplimiento_pm', 'servicios'],
             ];
         }
 
         $daysSinceRoutine = $features['days_since_last_routine'] ?? null;
         if ($daysSinceRoutine !== null && $daysSinceRoutine >= 21) {
             $drivers[] = [
-                'code' => 'rutina_atrasada',
-                'label' => 'Sin rutina aplicada reciente',
+                'code' => 'servicio_atrasado',
+                'label' => 'Sin servicio de mantenimiento reciente',
                 'factor' => 1 + min(0.8, ($daysSinceRoutine - 21) / 60),
                 'evidence' => sprintf(
-                    'Última rutina aplicada hace %d días%s.',
+                    'Último servicio aplicado hace %d días%s.',
                     (int) $daysSinceRoutine,
                     isset($features['last_routine_at']) ? ' ('.$features['last_routine_at'].')' : '',
                 ),
-                'signals' => ['rutinas'],
+                'signals' => ['servicios'],
+            ];
+        }
+
+        // Intensidad de servicios de mantenimiento recientes (hazard-v2).
+        $routines7 = (int) ($features['routines_7d'] ?? 0);
+        $routines30ForIntensity = (int) ($features['routines_30d'] ?? 0);
+        if ($routines7 >= 2 || $routines30ForIntensity >= 4) {
+            $intensity = $routines7 * 1.5 + max(0, $routines30ForIntensity - $routines7) * 0.35;
+            $drivers[] = [
+                'code' => 'intensidad_servicios',
+                'label' => 'Alta intensidad de servicios de mantenimiento',
+                'factor' => 1 + min(0.9, $intensity / 12),
+                'evidence' => sprintf('%d servicios en 7 días · %d en 30 días.', $routines7, $routines30ForIntensity),
+                'signals' => ['servicios_mantenimiento'],
+            ];
+        }
+
+        $backlog = (int) ($features['pm_backlog_90d'] ?? $features['routines_pending'] ?? 0);
+        if ($backlog >= 2) {
+            $drivers[] = [
+                'code' => 'backlog_servicios',
+                'label' => 'Backlog de servicios abiertos',
+                'factor' => 1 + min(0.7, $backlog / 8),
+                'evidence' => sprintf('%d servicios / preventivos pendientes.', $backlog),
+                'signals' => ['backlog'],
             ];
         }
 
@@ -351,15 +410,15 @@ class PredictiveFailureEngine
         $routines30 = (int) ($features['routines_30d'] ?? 0);
         if ($routines30 > 0 && $consumptionSpike / max(1, $routines30) >= 8) {
             $drivers[] = [
-                'code' => 'consumo_rutinas',
-                'label' => 'Consumos elevados en rutinas recientes',
+                'code' => 'consumo_servicios',
+                'label' => 'Consumos elevados en servicios recientes',
                 'factor' => 1 + min(0.7, ($consumptionSpike / max(1, $routines30) - 8) / 20),
                 'evidence' => sprintf(
-                    '%.1f unidades de consumo en %d rutinas de 30 días.',
+                    '%.1f unidades de consumo en %d servicios de 30 días.',
                     $consumptionSpike,
                     $routines30,
                 ),
-                'signals' => ['consumos', 'rutinas'],
+                'signals' => ['consumos', 'servicios'],
             ];
         }
 

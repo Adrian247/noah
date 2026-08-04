@@ -176,7 +176,7 @@ onUnmounted(() => {
                 <PageHeader
                     class="flex-1"
                     title="Plantillas de reporte"
-                    subtitle="Publicar deja una versión en producción y abre un borrador nuevo. El enlace al tipo de rutina se hace en Tipos de rutina."
+                    subtitle="Publicar deja una versión en producción y abre un borrador nuevo. El enlace al tipo de servicio se hace en Tipos de servicio."
                 />
                 <div class="flex shrink-0 flex-wrap items-center gap-3">
                     <AppButton v-if="canWrite" type="button" @click="openCreate">

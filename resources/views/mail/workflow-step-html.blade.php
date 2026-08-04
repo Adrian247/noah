@@ -14,7 +14,7 @@
                     <td style="padding:20px 24px;border-bottom:1px solid #e2e8f0;background:#0f172a;color:#f8fafc;">
                         <div style="font-size:13px;letter-spacing:0.04em;text-transform:uppercase;opacity:0.8;">Phoenix</div>
                         <div style="margin-top:4px;font-size:16px;font-weight:600;">
-                            Rutina #{{ $routineId }} — {{ $typeName }}
+                            Servicio #{{ $routineId }} — {{ $typeName }}
                         </div>
                         <div style="margin-top:4px;font-size:13px;opacity:0.85;">Activo: {{ $assetTag }}</div>
                     </td>

@@ -28,7 +28,7 @@ const emit = defineEmits<{
 
 const FIELD_OPTIONS = [
     { value: 'status', label: 'Estado (contexto)' },
-    { value: 'routine_id', label: 'ID rutina' },
+    { value: 'routine_id', label: 'ID servicio' },
     { value: 'invoice_id', label: 'ID factura' },
     { value: 'total', label: 'Total factura' },
 ];

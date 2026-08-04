@@ -4,15 +4,15 @@
 
 ### Ana — Administradora de operaciones
 
-- Configura catálogos, tipos de rutina, plantillas PDF y permisos.
+- Configura catálogos, tipos de servicio, plantillas PDF y permisos.
 - Frustración actual: cada cliente pide un formato distinto y requiere desarrollo.
 - Éxito en Phoenix: publica un nuevo tipo de servicio en horas, no semanas.
 
 ### Luis — Técnico de campo
 
-- Ejecuta rutinas preventivas y correctivas; poca paciencia con formularios largos.
+- Ejecuta servicios preventivas y correctivas; poca paciencia con formularios largos.
 - Trabaja en sitios con mala señal.
-- Éxito: termina rutina, ve “guardado local / sincronizado”, sigue al siguiente sitio.
+- Éxito: termina servicio, ve “guardado local / sincronizado”, sigue al siguiente sitio.
 
 ### Patricia — Supervisora
 
@@ -23,7 +23,7 @@
 ### Roberto — Facturación
 
 - Convierte trabajos validados en facturas; no debe re-capturar datos de campo.
-- Éxito: borrador prellenado desde rutina validada; emite y adjunta reporte PDF.
+- Éxito: borrador prellenado desde servicio validado; emite y adjunta reporte PDF.
 
 ---
 
@@ -31,37 +31,37 @@
 
 ```mermaid
 journey
-  title Publicar tipo de rutina
+  title Publicar tipo de servicio
   section Diseño
     Crear formulario: 5: Ana
     Crear plantilla reporte: 4: Ana
     Definir workflow: 4: Ana
   section Publicación
-    Asociar en tipo de rutina: 5: Ana
+    Asociar en tipo de servicio: 5: Ana
     Publicar versión: 5: Ana
   section Verificación
-    Rutina de prueba en web: 4: Ana
+    Servicio de prueba en web: 4: Ana
     Generar PDF muestra: 5: Ana
 ```
 
-## Journey 2 — Rutina en campo (Luis) — Fase móvil
+## Journey 2 — Servicio en campo (Luis) — Fase móvil
 
-1. Descarga rutinas asignadas y definiciones de formulario (Wi‑Fi en base).
-2. En sitio: inicia rutina → captura fotos, tiempos, comentarios → firma.
+1. Descarga servicios asignados y definiciones de formulario (Wi‑Fi en base).
+2. En sitio: inicia servicio → captura fotos, tiempos, comentarios → firma.
 3. Guarda (siempre éxito local).
 4. Sync automático al recuperar red; estado visible en lista.
 5. Si error servidor: reintento en cola sin perder datos.
 
 ## Journey 3 — Validar y entregar (Patricia + Roberto)
 
-1. Patricia abre rutina `Pendiente validación`.
+1. Patricia abre servicio `Pendiente validación`.
 2. Revisa galería, tiempos, costos de insumos; compara texto original vs. corregido por IA.
 3. Aprueba → workflow dispara generación de PDF y borrador de factura.
 4. Roberto revisa borrador, ajusta si aplica, emite factura y envía paquete al cliente (email futuro).
 
 ---
 
-## Estados de rutina (UX)
+## Estados de servicio (UX)
 
 | Estado | Color sugerido | Quién actúa |
 |--------|----------------|-------------|

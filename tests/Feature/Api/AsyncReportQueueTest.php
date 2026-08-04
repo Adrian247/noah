@@ -29,8 +29,8 @@ class AsyncReportQueueTest extends TestCase
         config(['phoenix.reports.async' => true]);
         Queue::fake();
         $this->seed();
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
-        $supervisor = User::query()->where('email', 'claudio.rodriguez@mein-company.com')->first();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->first();
+        $supervisor = User::query()->where('email', 'supervisor@sandbox-demo.com')->first();
         $company = Company::query()->first();
         $routine = $this->demoRoutine($technician);
 

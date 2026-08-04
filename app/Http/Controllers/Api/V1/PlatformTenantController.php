@@ -52,9 +52,18 @@ class PlatformTenantController extends Controller
 
         $tenant = $this->tenants->updateTenant($company, $data);
 
-        $this->audit->fromRequest($request, 'platform.tenant_updated', Company::class, $company->id, [
-            'name' => $tenant['name'] ?? $company->name,
-        ]);
+        $this->audit->record(
+            $company->id,
+            $request->user()?->id,
+            'platform.tenant_updated',
+            Company::class,
+            $company->id,
+            [
+                'name' => $tenant['name'] ?? $company->name,
+                'access_channel' => \App\Support\AccessChannel::WEB,
+            ],
+            $request->ip(),
+        );
 
         return response()->json(['data' => $tenant]);
     }
@@ -68,7 +77,15 @@ class PlatformTenantController extends Controller
         $path = $request->file('logo')->store('companies/'.$company->id, 'public');
         $tenant = $this->tenants->updateLogo($company, $path);
 
-        $this->audit->fromRequest($request, 'platform.tenant_logo_updated', Company::class, $company->id);
+        $this->audit->record(
+            $company->id,
+            $request->user()?->id,
+            'platform.tenant_logo_updated',
+            Company::class,
+            $company->id,
+            ['access_channel' => \App\Support\AccessChannel::WEB],
+            $request->ip(),
+        );
 
         return response()->json(['data' => $tenant]);
     }
@@ -118,11 +135,20 @@ class PlatformTenantController extends Controller
             abort(403);
         }
 
-        $this->audit->fromRequest($request, 'platform.tenant_assumed', Company::class, $company->id, [
-            'company_id' => $company->id,
-            'company_name' => $company->name,
-            'assumed_by' => $user->id,
-        ]);
+        $this->audit->record(
+            $company->id,
+            $user->id,
+            'platform.tenant_assumed',
+            Company::class,
+            $company->id,
+            [
+                'company_id' => $company->id,
+                'company_name' => $company->name,
+                'assumed_by' => $user->id,
+                'access_channel' => \App\Support\AccessChannel::WEB,
+            ],
+            $request->ip(),
+        );
 
         return response()->json([
             'data' => [

@@ -28,11 +28,11 @@ class OperationalContextRetriever
                 $sources[] = [
                     'type' => 'routine',
                     'id' => $routine->id,
-                    'label' => '#'.$routine->id.' · '.($routine->routineType?->name ?? 'Rutina'),
+                    'label' => '#'.$routine->id.' · '.($routine->routineType?->name ?? 'Servicio'),
                 ];
 
                 return sprintf(
-                    'Rutina #%d | tipo=%s | activo=%s | estado=%s | actualizada=%s',
+                    'Servicio #%d | tipo=%s | activo=%s | estado=%s | actualizada=%s',
                     $routine->id,
                     $routine->routineType?->name ?? '—',
                     $routine->asset?->tag ?? '—',
@@ -40,7 +40,7 @@ class OperationalContextRetriever
                     $routine->updated_at?->toDateTimeString() ?? '—',
                 );
             });
-            $blocks[] = "Rutinas recientes:\n".$lines->implode("\n");
+            $blocks[] = "Servicios recientes:\n".$lines->implode("\n");
         }
 
         $audits = AuditEntry::query()

@@ -29,7 +29,7 @@ class WorkflowRuntimeTest extends TestCase
     {
         Mail::fake();
         $this->seed();
-        $user = User::query()->where('email', 'misael.palos@mein-company.com')->first();
+        $user = User::query()->where('email', 'technician@sandbox-demo.com')->first();
         $company = Company::query()->first();
         $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $user);
         $routine->load('workflowInstance');
@@ -57,8 +57,8 @@ class WorkflowRuntimeTest extends TestCase
     {
         Mail::fake();
         $this->seed();
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
-        $supervisor = User::query()->where('email', 'claudio.rodriguez@mein-company.com')->first();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->first();
+        $supervisor = User::query()->where('email', 'supervisor@sandbox-demo.com')->first();
         $company = Company::query()->first();
         $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
         $tokenT = $technician->createToken('t')->plainTextToken;

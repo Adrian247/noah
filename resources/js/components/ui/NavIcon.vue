@@ -25,6 +25,8 @@ export type NavIconName =
     | 'buildings'
     | 'briefcase'
     | 'factory'
+    | 'boxes'
+    | 'library'
     | 'archive'
     | 'pencil'
     | 'trash'
@@ -167,6 +169,18 @@ const sizeClass = computed(() => (props.size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'));
             <path d="M14 20V5l6-2.5V20" />
             <path d="M2 20h20" />
             <path d="M17 8v2M17 12v2" />
+        </template>
+        <template v-else-if="name === 'boxes'">
+            <path d="M4 10.5 8 8l4 2.5v6.5L8 19.5 4 17z" />
+            <path d="M8 8 12 5.5 16 8" />
+            <path d="M12 10.5 16 8l4 2.5v6.5L16 19.5 12 17z" />
+            <path d="M8 14.2v5.3M16 14.2v5.3" />
+        </template>
+        <template v-else-if="name === 'library'">
+            <path d="M4 19V6a1 1 0 0 1 1-1h2v15H5a1 1 0 0 1-1-1z" />
+            <path d="M9 20V4h3.5v16z" />
+            <path d="M14.5 20V8H18a1 1 0 0 1 1 1v11" />
+            <path d="M3 20h18" />
         </template>
         <template v-else-if="name === 'archive'">
             <path d="M4 7h16v3H4zM6 10v9h12v-9" />

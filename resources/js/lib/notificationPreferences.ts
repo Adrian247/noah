@@ -33,10 +33,11 @@ export const NOTIFICATION_POSITIONS: {
 ];
 
 export const NOTIFICATION_SOUND_URLS: Record<ToastVariant, string> = {
-    success: '/audio/notifications/success.mp3',
-    danger: '/audio/notifications/danger.mp3',
-    warning: '/audio/notifications/warning.mp3',
-    info: '/audio/notifications/info.mp3',
+    // ?v=2 fuerza recarga tras regenerar clips más suaves.
+    success: '/audio/notifications/success.mp3?v=2',
+    danger: '/audio/notifications/danger.mp3?v=2',
+    warning: '/audio/notifications/warning.mp3?v=2',
+    info: '/audio/notifications/info.mp3?v=2',
 };
 
 const STORAGE_KEY = 'phoenix_notification_prefs';

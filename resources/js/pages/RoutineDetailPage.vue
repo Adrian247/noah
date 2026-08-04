@@ -391,7 +391,7 @@ async function rejectRoutine() {
         });
         showRejectPanel.value = false;
         rejectReason.value = '';
-        toast.success(`Rutina devuelta al técnico (${rejectActionLabel.value}).`);
+        toast.success(`Servicio devuelto al técnico (${rejectActionLabel.value}).`);
         await load();
     } catch (e) {
         toast.error((e as Error).message);
@@ -499,8 +499,8 @@ async function deleteRoutine() {
         return;
     }
     const accepted = await confirm(
-        `¿Eliminar la rutina #${routine.value.id}? Esta acción no se puede deshacer.`,
-        { title: 'Eliminar rutina', confirmLabel: 'Eliminar', danger: true },
+        `¿Eliminar el servicio #${routine.value.id}? Esta acción no se puede deshacer.`,
+        { title: 'Eliminar servicio', confirmLabel: 'Eliminar', danger: true },
     );
     if (!accepted) {
         return;
@@ -508,7 +508,7 @@ async function deleteRoutine() {
     deletingRoutine.value = true;
     try {
         await api(`/routines/${routine.value.id}`, { method: 'DELETE' });
-        toast.success('Rutina eliminada.');
+        toast.success('Servicio eliminado.');
         await router.push('/app/routines');
     } catch (e) {
         toast.error((e as Error).message);
@@ -523,7 +523,7 @@ async function deleteRoutine() {
     <div v-else-if="routine" class="portal-page w-full max-w-[1600px] space-y-4">
         <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="min-w-0">
-                <h2 class="text-portal-heading text-xl font-semibold">Rutina #{{ routine.id }}</h2>
+                <h2 class="text-portal-heading text-xl font-semibold">Servicio #{{ routine.id }}</h2>
                 <p class="text-portal-muted text-sm">
                     {{ routine.routine_type?.name }} · {{ routine.asset?.tag }} ·
                     <span class="text-portal-heading font-medium">{{ routine.status }}</span>
@@ -535,7 +535,7 @@ async function deleteRoutine() {
             <IconActionButton
                 v-if="isAdmin"
                 icon="trash"
-                label="Eliminar rutina"
+                label="Eliminar servicio"
                 variant="danger"
                 :disabled="deletingRoutine"
                 @click="deleteRoutine"
@@ -804,7 +804,7 @@ async function deleteRoutine() {
             v-if="isPendingValidation && canValidateReject"
             class="portal-callout portal-callout--warning"
         >
-            Esta rutina espera tu validación como supervisor o administrador.
+            Este servicio espera tu validación como supervisor o administrador.
         </div>
         <div
             v-else-if="isPendingValidation"

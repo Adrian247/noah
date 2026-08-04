@@ -40,7 +40,7 @@ onMounted(load);
     <div class="client-portal-page">
         <PageHeader
             title="Servicios en tus equipos"
-            subtitle="Historial de rutinas de mantenimiento e inspección en activos vinculados a tu cuenta. Abre cada servicio para ver trazabilidad, informes y facturación."
+            subtitle="Historial de servicios de mantenimiento e inspección en activos vinculados a tu cuenta. Abre cada servicio para ver trazabilidad, informes y facturación."
         />
 
         <GlassCard v-if="loading" padding="lg">
@@ -57,7 +57,7 @@ onMounted(load);
                 <GlassCard padding="lg" hover class="h-full">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                            <span class="client-portal-id-badge">Rutina #{{ r.id }}</span>
+                            <span class="client-portal-id-badge">Servicio #{{ r.id }}</span>
                             <p class="text-portal-heading mt-2 text-lg font-semibold tracking-tight">
                                 {{ r.routine_type?.name ?? 'Servicio técnico' }}
                             </p>
@@ -84,7 +84,7 @@ onMounted(load);
         <GlassCard v-else padding="lg">
             <ClientPortalEmptyState
                 title="Sin servicios visibles"
-                description="No hay rutinas asociadas a equipos de tu organización. Si esperabas ver historial, confirma con tu proveedor la asignación por número de serie."
+                description="No hay servicios asociados a equipos de tu organización. Si esperabas ver historial, confirma con tu proveedor la asignación por número de serie."
             />
         </GlassCard>
     </div>

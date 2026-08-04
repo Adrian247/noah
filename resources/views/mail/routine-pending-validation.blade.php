@@ -1,4 +1,4 @@
-Rutina #{{ $routineId }} pendiente de validación
+Servicio #{{ $routineId }} pendiente de validación
 
 Tipo: {{ $typeName }}
 Activo: {{ $assetTag }}

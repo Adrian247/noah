@@ -6,8 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Asset;
 use App\Models\OemEquipmentModel;
 use App\Models\OemMaintenancePlan;
+use App\Enums\PredictiveAlgorithmKind;
 use App\Services\Predictive\ClientDemandPredictionService;
+use App\Services\Predictive\PredictiveAlgorithmVersionService;
 use App\Services\Predictive\PredictiveMaintenanceService;
+use App\Services\Predictive\ServiceDemandEngine;
 use App\Support\CurrentCompany;
 use App\Support\Predictive\EquipmentClass;
 use Illuminate\Http\JsonResponse;
@@ -24,6 +27,8 @@ class PredictiveMaintenanceController extends Controller
     public function __construct(
         private readonly PredictiveMaintenanceService $service,
         private readonly ClientDemandPredictionService $demand,
+        private readonly ServiceDemandEngine $demandEngine,
+        private readonly PredictiveAlgorithmVersionService $algorithms,
     ) {}
 
     public function predictions(Request $request): JsonResponse
@@ -55,15 +60,66 @@ class PredictiveMaintenanceController extends Controller
     public function clientDemand(Request $request): JsonResponse
     {
         $filters = $request->validate([
-            'service_line' => ['nullable', 'string', 'in:fabrication,supply,demand'],
+            'service_category' => ['nullable', 'string', 'in:manufacturing,installation,fabrication,supply,demand'],
+            'service_line' => ['nullable', 'string', 'in:fabrication,supply,demand,manufacturing,installation'],
             'client_id' => ['nullable', 'integer'],
             'horizon_days' => ['nullable', 'integer', 'between:7,90'],
             'limit' => ['nullable', 'integer', 'between:1,100'],
             'as_of' => ['nullable', 'date'],
         ]);
 
+        $category = $filters['service_category'] ?? $filters['service_line'] ?? null;
+        $filters['calibration'] = $this->algorithms->publishedCalibration(PredictiveAlgorithmKind::Manufacturing);
+
+        if (in_array($category, ['manufacturing', 'fabrication'], true)) {
+            return response()->json([
+                'data' => $this->demandEngine->predictManufacturing($this->companyId(), $filters),
+            ]);
+        }
+
+        if ($category === null || $category === '' || $category === 'demand') {
+            $manufacturing = $this->demandEngine->predictManufacturing($this->companyId(), $filters);
+            $installation = $this->demand->predict($this->companyId(), array_merge($filters, [
+                'service_category' => 'installation',
+            ]));
+            $merged = array_merge($manufacturing['predictions'] ?? [], $installation['predictions'] ?? []);
+            usort($merged, fn (array $a, array $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
+            $limit = max(1, min(100, (int) ($filters['limit'] ?? 20)));
+
+            return response()->json([
+                'data' => [
+                    'as_of' => $manufacturing['as_of'] ?? $installation['as_of'] ?? null,
+                    'horizon_days' => $filters['horizon_days'] ?? 30,
+                    'kind' => 'client_demand_merged_v1',
+                    'evaluated' => (int) ($manufacturing['evaluated'] ?? 0) + (int) ($installation['evaluated'] ?? 0),
+                    'returned' => min($limit, count($merged)),
+                    'predictions' => array_slice($merged, 0, $limit),
+                    'notes' => array_values(array_filter(array_merge(
+                        $manufacturing['notes'] ?? [],
+                        $installation['notes'] ?? [],
+                    ))),
+                ],
+            ]);
+        }
+
         return response()->json([
             'data' => $this->demand->predict($this->companyId(), $filters),
+        ]);
+    }
+
+    public function inventoryDemand(Request $request): JsonResponse
+    {
+        $filters = $request->validate([
+            'client_id' => ['nullable', 'integer'],
+            'horizon_days' => ['nullable', 'integer', 'between:7,90'],
+            'limit' => ['nullable', 'integer', 'between:1,100'],
+            'as_of' => ['nullable', 'date'],
+        ]);
+
+        $filters['calibration'] = $this->algorithms->publishedCalibration(PredictiveAlgorithmKind::Inventory);
+
+        return response()->json([
+            'data' => $this->demandEngine->predictInventory($this->companyId(), $filters),
         ]);
     }
 

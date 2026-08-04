@@ -1,0 +1,4 @@
+client_code,service_type,occurred_at,quantity
+SANDBOX-CLI-001,Orden de manufactura,2026-02-01,1
+SANDBOX-CLI-001,Orden de manufactura,2026-02-20,2
+SANDBOX-CLI-002,Fabricación estructural,2026-03-05,1

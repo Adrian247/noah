@@ -21,7 +21,7 @@ Tres columnas (desktop); en tablet, paleta colapsable.
 | Imagen | Logo empresa o campo imagen |
 | Galería | Campo multi-foto evidencia |
 | Firma | Campo firma |
-| Código QR | URL o id de rutina |
+| Código QR | URL o id de servicio |
 | Fecha | Formato configurable |
 | Separador | Línea / espacio |
 | Cabecera / Pie | Repetible; numeración `page X of Y`, inicio en página N |
@@ -31,13 +31,13 @@ Tres columnas (desktop); en tablet, paleta colapsable.
 
 - Arrastrar desde paleta al lienzo.
 - Seleccionar bloque → panel derecho: fuente, tamaño, negrita, color, márgenes, alineación.
-- Enlace a **campo de formulario** mediante selector (árbol de campos del tipo de rutina).
-- Vista previa con **datos de ejemplo** y con **datos de rutina real** (modo supervisor).
+- Enlace a **campo de formulario** mediante selector (árbol de campos del tipo de servicio).
+- Vista previa con **datos de ejemplo** y con **datos de servicio real** (modo supervisor).
 
 ## Persistencia
 
 - Mismo modelo JSON que [report-engine.md](../architecture/report-engine.md).
-- Versiones: borrador → publicada; rutinas en curso usan versión publicada al crearse.
+- Versiones: borrador → publicada; servicios en curso usan versión publicada al crearse.
 
 ## Export
 

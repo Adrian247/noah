@@ -24,7 +24,7 @@ class RoutineAssignmentEmailTest extends TestCase
         Mail::fake();
 
         $admin = User::query()->where('email', 'admin@pyro-systems.com')->firstOrFail();
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->firstOrFail();
         $company = $this->meinCompany();
 
         $token = $admin->createToken('test')->plainTextToken;
@@ -58,7 +58,7 @@ class RoutineAssignmentEmailTest extends TestCase
         $this->seed();
         Mail::fake();
 
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->firstOrFail();
         $company = $this->meinCompany();
 
         app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);

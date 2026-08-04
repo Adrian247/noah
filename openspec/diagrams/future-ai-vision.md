@@ -22,7 +22,7 @@ mindmap
 flowchart TB
   subgraph inputs [Entradas]
     IMG[Fotos evidencia]
-    HIST[Historial rutinas]
+    HIST[Historial servicios]
     CAT[Catálogo insumos]
     FORM[Campos formulario]
   end

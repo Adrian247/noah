@@ -41,7 +41,7 @@ class AssistantDashboardBuilder
             $statusMetrics[] = [
                 'title' => (string) $status,
                 'value' => (int) $count,
-                'unit' => 'rutinas',
+                'unit' => 'servicios',
             ];
         }
 
@@ -57,7 +57,7 @@ class AssistantDashboardBuilder
         $charts = [
             [
                 'type' => 'kpi',
-                'title' => 'Rutinas',
+                'title' => 'Servicios',
                 'value' => $totalRoutines,
                 'unit' => 'total',
                 'hero' => true,
@@ -82,7 +82,7 @@ class AssistantDashboardBuilder
         if ($statusMetrics !== []) {
             $charts[] = [
                 'type' => 'kpi-grid',
-                'title' => 'Rutinas por estado',
+                'title' => 'Servicios por estado',
                 'metrics' => $statusMetrics,
                 'layout' => ['colSpan' => 12],
             ];
@@ -111,7 +111,7 @@ class AssistantDashboardBuilder
         if ($tableRows !== []) {
             $charts[] = [
                 'type' => 'table',
-                'title' => 'Detalle rutinas',
+                'title' => 'Detalle servicios',
                 'data' => [
                     'headers' => ['Estado', 'Cantidad'],
                     'rows' => $tableRows,

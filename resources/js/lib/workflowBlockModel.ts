@@ -12,7 +12,7 @@ export const BILLING_ID = 'billing_review';
 
 export const STAGE_REVIEW_ID = 'stage_review';
 
-/** Disposición acordada en el lienzo (Rutina abajo, flujo principal arriba, rechazo en arco). */
+/** Disposición acordada en el lienzo (Servicio abajo, flujo principal arriba, rechazo en arco). */
 export const STANDARD_WORKFLOW_LAYOUT: Record<string, { x: number; y: number }> = {
     [ROUTINE_ID]: { x: 48, y: 260 },
     [SUPERVISOR_STEP_ID]: { x: 380, y: 72 },
@@ -76,23 +76,23 @@ export function roleCatalogLabel(role: string): string {
 }
 
 export const EMAIL_TOKENS = [
-    { key: '{routine.id}', label: 'Identificador de rutina' },
-    { key: '{routine.code}', label: 'Código de rutina' },
-    { key: '{routine_type.name}', label: 'Tipo de rutina' },
+    { key: '{routine.id}', label: 'Identificador de servicio' },
+    { key: '{routine.code}', label: 'Código de servicio' },
+    { key: '{routine_type.name}', label: 'Tipo de servicio' },
     { key: '{asset.tag}', label: 'Activo (etiqueta)' },
     { key: '{asset.name}', label: 'Activo (nombre)' },
     { key: '{client.name}', label: 'Cliente' },
     { key: '{user.name}', label: 'Nombre del destinatario' },
-    { key: '{routine.tasks_detail}', label: 'Detalle / tareas de la rutina' },
+    { key: '{routine.tasks_detail}', label: 'Detalle / tareas del servicio' },
 ];
 
-const DEFAULT_CLOSE_SUBJECT = 'Cierre de rutina {routine.id}';
+const DEFAULT_CLOSE_SUBJECT = 'Cierre de servicio {routine.id}';
 const DEFAULT_CLOSE_BODY =
-    '<p>Hola {user.name}, le informamos que la rutina {routine.id} del cliente {client.name} ha sido finalizada, a continuación el detalle de la rutina realizada:</p><p>{routine.tasks_detail}</p>';
+    '<p>Hola {user.name}, le informamos que el servicio {routine.id} del cliente {client.name} ha sido finalizado, a continuación el detalle del servicio realizado:</p><p>{routine.tasks_detail}</p>';
 
-const DEFAULT_ASSIGNMENT_SUBJECT = 'Nueva rutina asignada #{routine.id}';
+const DEFAULT_ASSIGNMENT_SUBJECT = 'Nuevo servicio asignado #{routine.id}';
 const DEFAULT_ASSIGNMENT_BODY =
-    '<p>Hola {user.name}, se te asignó la rutina {routine.id} ({routine_type.name}) en el activo {asset.tag}.</p><p>Entra a Phoenix para revisarla y ejecutarla.</p>';
+    '<p>Hola {user.name}, se te asignó el servicio {routine.id} ({routine_type.name}) en el activo {asset.tag}.</p><p>Entra a Phoenix para revisarlo y ejecutarlo.</p>';
 
 export function defaultAssignmentNotify(): ActionEmailConfig {
     return {
@@ -118,7 +118,7 @@ export function defaultBlockGraph(): BlockGraph {
             {
                 id: ROUTINE_ID,
                 kind: 'routine',
-                label: 'Rutina',
+                label: 'Servicio',
                 position: STANDARD_WORKFLOW_LAYOUT[ROUTINE_ID],
                 locked: true,
                 assignment_notify: defaultAssignmentNotify(),
@@ -153,9 +153,9 @@ export function defaultBlockGraph(): BlockGraph {
                 label: 'Revisión',
                 notify: {
                     enabled: true,
-                    subject: 'Ejecuta rutina {routine.id}',
+                    subject: 'Ejecuta servicio {routine.id}',
                     body_html:
-                        '<p>Hola {user.name}, registramos tu ejecución de la rutina {routine.id} ({routine_type.name}) en el activo {asset.tag}.</p>',
+                        '<p>Hola {user.name}, registramos tu ejecución del servicio {routine.id} ({routine_type.name}) en el activo {asset.tag}.</p>',
                     recipients: ['executing_technician'],
                 },
             },
@@ -167,9 +167,9 @@ export function defaultBlockGraph(): BlockGraph {
                 label: 'Rechazo',
                 notify: {
                     enabled: true,
-                    subject: 'Rutina {routine.id} rechazada',
+                    subject: 'Servicio {routine.id} rechazado',
                     body_html:
-                        '<p>Hola {user.name}, la rutina {routine.id} fue rechazada y debe volver a ejecutarse en campo.</p>',
+                        '<p>Hola {user.name}, el servicio {routine.id} fue rechazado y debe volver a ejecutarse en campo.</p>',
                     recipients: ['executing_technician'],
                 },
             },
@@ -178,7 +178,7 @@ export function defaultBlockGraph(): BlockGraph {
                 source: SUPERVISOR_STEP_ID,
                 target: BILLING_ID,
                 action: 'approve',
-                label: 'Rutina a Facturar',
+                label: 'Servicio a facturar',
                 routine_validated: true,
             },
             {
@@ -304,7 +304,7 @@ export function normalizeBlockGraph(graph: BlockGraph, definition?: WorkflowDefi
         routine = {
             id: ROUTINE_ID,
             kind: 'routine',
-            label: typeof step?.label === 'string' ? step.label : 'Rutina',
+            label: typeof step?.label === 'string' ? step.label : 'Servicio',
             position: layout[ROUTINE_ID] ?? { x: 48, y: 160 },
             locked: true,
         };
@@ -312,7 +312,7 @@ export function normalizeBlockGraph(graph: BlockGraph, definition?: WorkflowDefi
     } else {
         routine.kind = 'routine';
         routine.locked = true;
-        routine.label = routine.label || 'Rutina';
+        routine.label = routine.label || 'Servicio';
         if (!routine.position || (routine.position.x === 0 && routine.position.y === 0)) {
             routine.position = layout[ROUTINE_ID] ?? { x: 48, y: 160 };
         }
@@ -382,7 +382,7 @@ function inferGraphFromDefinition(definition: WorkflowDefinition): BlockGraph {
         const node: BlockNode = {
             id,
             kind,
-            label: id === ROUTINE_ID ? 'Rutina' : meta.label,
+            label: id === ROUTINE_ID ? 'Servicio' : meta.label,
             position: definition.layout?.nodes?.[id] ?? { x: 280, y: 160 },
             locked: id === ROUTINE_ID,
         };
@@ -511,7 +511,7 @@ function stepFromNode(node: BlockNode): WorkflowDefinition['steps'][string] {
 export function validateGraph(graph: BlockGraph): void {
     const byId = Object.fromEntries(graph.nodes.map((n) => [n.id, n]));
     if (!byId[ROUTINE_ID]) {
-        throw new Error('Falta el bloque Rutina.');
+        throw new Error('Falta el bloque Servicio.');
     }
 
     for (const edge of graph.edges) {
@@ -520,18 +520,18 @@ export function validateGraph(graph: BlockGraph): void {
         }
         const sk = byId[edge.source].kind;
         if (edge.action === 'reject' && (sk !== 'role' || edge.target !== ROUTINE_ID)) {
-            throw new Error('Rechazo solo desde Rol hacia Rutina.');
+            throw new Error('Rechazo solo desde Rol hacia Servicio.');
         }
         if (edge.action === 'approve') {
             if (sk !== 'role') {
                 throw new Error('Aprobar solo desde Rol.');
             }
             if (edge.target === ROUTINE_ID) {
-                throw new Error('Aprobar no puede apuntar a Rutina.');
+                throw new Error('Aprobar no puede apuntar a Servicio.');
             }
         }
         if (edge.action === 'submit' && edge.source !== ROUTINE_ID) {
-            throw new Error('Enviar solo desde Rutina.');
+            throw new Error('Enviar solo desde Servicio.');
         }
         if (edge.action === 'invoice') {
             if (sk !== 'role' || byId[edge.target].kind !== 'end') {
@@ -542,7 +542,7 @@ export function validateGraph(graph: BlockGraph): void {
 
     const submits = graph.edges.filter((e) => e.source === ROUTINE_ID && e.action === 'submit');
     if (submits.length > 1) {
-        throw new Error('Rutina solo puede tener una salida de envío.');
+        throw new Error('Servicio solo puede tener una salida de envío.');
     }
 }
 
@@ -568,8 +568,8 @@ export function defaultEdgeForAction(action: BlockAction): Pick<BlockEdge, 'acti
             label: 'Revisión',
             notify: {
                 enabled: true,
-                subject: 'Ejecución de rutina {routine.id}',
-                body_html: '<p>Hola {user.name}, registramos la ejecución de la rutina {routine.id}.</p>',
+                subject: 'Ejecución de servicio {routine.id}',
+                body_html: '<p>Hola {user.name}, registramos la ejecución del servicio {routine.id}.</p>',
                 recipients: ['executing_technician'],
             },
         };
@@ -580,8 +580,8 @@ export function defaultEdgeForAction(action: BlockAction): Pick<BlockEdge, 'acti
             label: 'Rechazo',
             notify: {
                 enabled: true,
-                subject: 'Rutina {routine.id} rechazada',
-                body_html: '<p>Hola {user.name}, la rutina debe volver a ejecutarse en campo.</p>',
+                subject: 'Servicio {routine.id} rechazado',
+                body_html: '<p>Hola {user.name}, el servicio debe volver a ejecutarse en campo.</p>',
                 recipients: ['executing_technician'],
             },
         };

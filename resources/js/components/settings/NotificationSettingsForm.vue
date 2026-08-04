@@ -106,7 +106,7 @@ function sendTest(variant: ToastVariant) {
             <span>
                 <span class="text-portal-heading block text-sm font-medium">Sonido al mostrar notificación</span>
                 <span class="text-portal-muted mt-0.5 block text-xs leading-relaxed">
-                    Reproduce un efecto breve según el tipo (éxito, error, aviso o información).
+                    Aviso sutil (tono breve y bajo) según el tipo: éxito, error, aviso o información.
                 </span>
             </span>
         </label>

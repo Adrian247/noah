@@ -150,7 +150,7 @@ watch(
 
         <section v-if="isAdmin" id="predictivo">
             <GlassCard padding="lg" class="space-y-4">
-                <h2 class="text-portal-heading text-base font-semibold">Mantenimiento predictivo</h2>
+                <h2 class="text-portal-heading text-base font-semibold">Predictivo</h2>
                 <CompanyPredictiveSettingsForm />
             </GlassCard>
         </section>

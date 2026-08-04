@@ -51,8 +51,8 @@ class PushNotificationService {
 
     const channel = AndroidNotificationChannel(
       'phoenix_routines',
-      'Rutinas Phoenix',
-      description: 'Avisos de asignación y flujo de rutinas',
+      'Servicios Phoenix',
+      description: 'Avisos de asignación y flujo de servicios',
       importance: Importance.high,
     );
     await _local
@@ -154,8 +154,8 @@ class PushNotificationService {
       const NotificationDetails(
         android: AndroidNotificationDetails(
           'phoenix_routines',
-          'Rutinas Phoenix',
-          channelDescription: 'Avisos de asignación y flujo de rutinas',
+          'Servicios Phoenix',
+          channelDescription: 'Avisos de asignación y flujo de servicios',
           importance: Importance.high,
           priority: Priority.high,
         ),

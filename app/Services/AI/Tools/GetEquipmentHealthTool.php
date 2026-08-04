@@ -25,7 +25,7 @@ class GetEquipmentHealthTool implements AiTool
     public function description(): string
     {
         return 'Ficha de salud de un equipo por tag o id. La predicción se basa en el historial de '
-            .'rutinas aplicadas al activo (frecuencia, atrasos, consumos, validaciones), más señales '
+            .'servicios aplicados al activo (frecuencia, atrasos, consumos, validaciones), más señales '
             .'de referencia si existen. Incluye MTBF/MTTR, alarmas, fallas recientes y predicción vigente. '
             .'Requiere tag o asset_id. Solo lectura.';
     }

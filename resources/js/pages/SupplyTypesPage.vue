@@ -129,7 +129,7 @@ async function save() {
         const wasEdit = Boolean(editingId.value);
         showForm.value = false;
         resetForm();
-        toast.success(wasEdit ? 'Tipo de insumo actualizado.' : 'Tipo de insumo creado.');
+        toast.success(wasEdit ? 'Tipo de artículo actualizado.' : 'Tipo de artículo creado.');
         await load();
     } catch (e) {
         toast.error((e as Error).message);
@@ -160,14 +160,14 @@ onMounted(load);
         <div class="flex flex-wrap items-start justify-between gap-3">
             <PageHeader
                 class="flex-1"
-                title="Tipos de insumo"
+                title="Tipos de artículo"
                 subtitle="Taxonomía de refacciones y consumibles."
             />
             <AppButton v-if="canWrite" type="button" class="shrink-0" @click="openCreate">
                 Nuevo tipo
             </AppButton>
         </div>
-        <ReadOnlyNotice v-if="!canWrite" module-label="Tipos de insumo" />
+        <ReadOnlyNotice v-if="!canWrite" module-label="Tipos de artículo" />
 
         <p v-if="loading" class="text-portal-muted">Cargando…</p>
         <ConfigurableDataTable

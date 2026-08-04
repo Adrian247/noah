@@ -2,13 +2,13 @@
 
 ## Estado
 
-Aceptada (actualizada: predicción sobre rutinas aplicadas).
+Aceptada (actualizada: predicción sobre servicios aplicados).
 
 ## Contexto
 
 La operación necesita saber a qué equipo entrar antes de que falle. En Phoenix, la fuente
-operativa de mantenimiento son las **rutinas aplicadas a activos** (asignadas, ejecutadas y
-validadas). Dos bitácoras Excel reales (planta 4400 y mina San Martín) sirvieron solo como
+operativa de mantenimiento son los **servicios aplicados a activos** (asignados, ejecutados y
+validados). Dos bitácoras Excel reales (planta 4400 y mina San Martín) sirvieron solo como
 **corpus de referencia** para diseñar features, taxonomía de fallas y pruebas de regresión —
 no como carga recurrente del producto.
 
@@ -19,14 +19,14 @@ Restricciones de diseño:
 2. **El número tiene que ser auditable.** Cada predicción trae `drivers` con evidencia.
 3. **El historial por empresa puede ser corto.** Contracción bayesiana (activo → clase →
    empresa) estabiliza tasas con pocos datos.
-4. **Gobernanza multi-tenant.** El entrenamiento multi-empresa solo usa rutinas de clientes
+4. **Gobernanza multi-tenant.** El entrenamiento multi-empresa solo usa servicios de clientes
    con opt-in explícito; las versiones del algoritmo se publican con semver.
 
 ## Decisión
 
 ### Fuente de predicción
 
-`FeatureBuilder` toma como **fuente primaria** el historial de rutinas validadas del activo
+`FeatureBuilder` toma como **fuente primaria** el historial de servicios validados del activo
 (frecuencia, duración, consumos, backlog, cumplimiento). Las tablas de bitácora
 (`equipment_shift_logs`, etc.) enriquecen si existen (corpus/import), pero **no son
 requisito** para predecir.

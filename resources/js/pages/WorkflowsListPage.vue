@@ -114,7 +114,7 @@ async function duplicateWorkflow(w: Workflow) {
 async function deleteWorkflow(w: Workflow) {
     const blocked =
         w.routine_types_count > 0
-            ? 'Este workflow está asignado a tipos de rutina. Quita la asignación antes de eliminarlo.'
+            ? 'Este workflow está asignado a tipos de servicio. Quita la asignación antes de eliminarlo.'
             : null;
     if (blocked) {
         toast.warning(blocked);
@@ -146,7 +146,7 @@ onMounted(async () => {
             <PageHeader
                 class="flex-1"
                 title="Workflows"
-                subtitle="Elige una plantilla al crear, configura pasos y publica antes de asignar a tipos de rutina."
+                subtitle="Elige una plantilla al crear, configura pasos y publica antes de asignar a tipos de servicio."
             />
             <AppButton v-if="canWrite" type="button" @click="openCreate">Nuevo workflow</AppButton>
         </div>
@@ -169,7 +169,7 @@ onMounted(async () => {
                 <div class="flex flex-wrap items-center gap-2">
                     <StatusBadge :status="statusBadgeKey(w.status)" />
                     <span class="text-portal-muted text-xs">
-                        {{ w.routine_types_count === 1 ? '1 tipo de rutina' : `${w.routine_types_count} tipos de rutina` }}
+                        {{ w.routine_types_count === 1 ? '1 tipo de servicio' : `${w.routine_types_count} tipos de servicio` }}
                     </span>
                     <div v-if="canWrite" class="table-row-actions">
                         <IconActionButton

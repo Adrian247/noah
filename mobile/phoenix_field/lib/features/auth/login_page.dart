@@ -212,7 +212,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Rutinas offline-first para técnicos en campo',
+                      'Servicios offline-first para técnicos en campo',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                           ),

@@ -7,7 +7,7 @@ use App\Models\FormVersion;
 use App\Models\ReportTemplateVersion;
 
 /**
- * Detecta campos del informe que no existen en el formulario de rutina enlazado.
+ * Detecta campos del informe que no existen en el formulario de servicio enlazado.
  */
 final class FormReportFieldAlignment
 {
@@ -132,16 +132,16 @@ final class FormReportFieldAlignment
             ? ' Incluye imágenes sin campo en el formulario: '.implode(', ', $result['missing_images']).'.'
             : '';
 
-        $formLabel = $formVersion->definition?->name ?? 'formulario de rutina';
+        $formLabel = $formVersion->definition?->name ?? 'formulario de servicio';
         $formSlug = $formVersion->definition?->slug;
         $slugHint = is_string($formSlug) && $formSlug !== ''
             ? " (slug «{$formSlug}»)"
             : '';
 
-        $message = 'El informe referencia campos que no existen en el formulario de rutina enlazado «'
+        $message = 'El informe referencia campos que no existen en el formulario de servicio enlazado «'
             .$formLabel.'»'.$slugHint.': '.$list.'.'
             .$images
-            .' Ajusta el diseñador de reportes para usar las mismas keys del formulario, o enlaza en el tipo de rutina la versión de formulario que corresponda al informe.';
+            .' Ajusta el diseñador de reportes para usar las mismas keys del formulario, o enlaza en el tipo de servicio la versión de formulario que corresponda al informe.';
 
         throw \Illuminate\Validation\ValidationException::withMessages([
             'report_template_version_id' => [$message],
@@ -150,7 +150,7 @@ final class FormReportFieldAlignment
     }
 
     /**
-     * Campos huérfanos del informe respecto a formularios de uso Rutina publicados.
+     * Campos huérfanos del informe respecto a formularios de uso Servicio publicados.
      *
      * @param  list<array<string, mixed>>  $components
      * @return list<string>
@@ -161,7 +161,7 @@ final class FormReportFieldAlignment
 
         $forms = \App\Models\FormDefinition::query()
             ->where('company_id', $companyId)
-            ->where('usage', FormUsage::Routine)
+            ->where('usage', FormUsage::Service)
             ->with(['versions' => fn ($q) => $q->where('status', 'published')->orderByDesc('version')])
             ->get();
 

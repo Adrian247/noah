@@ -13,7 +13,7 @@ use App\Models\OemMaintenancePlanItem;
  *
  * Se asocia al catálogo de equipos de cada tenant (`catalog_items.oem_equipment_model_id`)
  * para intervalos de servicio y clasificación. No es una pestaña del módulo de predicción:
- * la predicción usa rutinas aplicadas; el OEM aporta contexto de plan/clase.
+ * la predicción usa servicios aplicados; el OEM aporta contexto de plan/clase.
  *
  * Exactitud del dato (`verified`):
  * - Modelos y capacidades tomados de fichas oficiales del OEM → `verified = true`.

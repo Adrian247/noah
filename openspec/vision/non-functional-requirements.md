@@ -12,7 +12,7 @@
 
 | Operación | Objetivo |
 |-----------|----------|
-| Listado rutinas (paginado) | < 500 ms p95 API |
+| Listado servicios (paginado) | < 500 ms p95 API |
 | Guardar ejecución web | < 300 ms p95 |
 | Vista previa reporte (HTML) | < 2 s p95 |
 | PDF async | Usuario notificado; < 60 s p95 job |

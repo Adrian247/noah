@@ -2,7 +2,7 @@
 
 ## Responsabilidad
 
-Documentos de cobro desacoplados del agregado Rutina. Reacciona a eventos de negocio, no consulta tablas de Maintenance directamente.
+Documentos de cobro desacoplados del agregado Routine. Reacciona a eventos de negocio, no consulta tablas de Maintenance directamente.
 
 ## Agregados
 
@@ -11,7 +11,7 @@ Documentos de cobro desacoplados del agregado Rutina. Reacciona a eventos de neg
 - `company_id`, cliente (referencia futura o datos embebidos en v1).
 - Estado: borrador, emitida, cancelada, error_fiscal.
 - Totales, moneda, líneas.
-- Referencia externa a rutina/ejecución en metadatos (`source_type`, `source_id`).
+- Referencia externa a servicio/ejecución en metadatos (`source_type`, `source_id`).
 
 ### InvoiceLine
 
@@ -41,7 +41,7 @@ sequenceDiagram
 
 ## Invariantes
 
-- No emitir factura sin rutina en estado validado (regla de workflow o dominio Billing).
+- No emitir factura sin servicio en estado validado (regla de workflow o dominio Billing).
 - Cancelación auditada; no borrado físico.
 
 ## Eventos

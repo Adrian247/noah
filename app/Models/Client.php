@@ -35,4 +35,14 @@ class Client extends Model
     {
         return $this->hasMany(Invoice::class);
     }
+
+    public function sites(): HasMany
+    {
+        return $this->hasMany(Site::class);
+    }
+
+    public function inventoryAssets(): HasMany
+    {
+        return $this->hasMany(Asset::class);
+    }
 }

@@ -50,7 +50,7 @@ class LaravelAiAssistantRunnerTest extends TestCase
 
         $company = $this->meinCompany();
         /** @var User $admin */
-        $admin = $this->meinUser('emilio.sanchez@mein-company.com');
+        $admin = $this->meinUser('admin@sandbox-demo.com');
 
         $result = app(LaravelAiAssistantRunner::class)->run(
             '¿Qué rutinas hay?',
@@ -67,7 +67,7 @@ class LaravelAiAssistantRunnerTest extends TestCase
     public function test_phoenix_domain_tool_adapter_is_permission_aware(): void
     {
         $company = $this->meinCompany();
-        $admin = $this->meinUser('emilio.sanchez@mein-company.com');
+        $admin = $this->meinUser('admin@sandbox-demo.com');
         $authorizer = app(AiToolAuthorizer::class);
         $registry = app(AiToolRegistry::class);
 

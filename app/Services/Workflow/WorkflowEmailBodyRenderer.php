@@ -37,7 +37,7 @@ class WorkflowEmailBodyRenderer
     public function subject(Routine $routine, array $config, ?User $recipient = null): string
     {
         $routine->loadMissing(['routineType', 'asset.catalogItem', 'assignee', 'creator']);
-        $subject = (string) ($config['subject'] ?? 'Phoenix — Rutina #'.$routine->id);
+        $subject = (string) ($config['subject'] ?? 'Phoenix — Servicio #'.$routine->id);
 
         return str_replace(
             array_keys($this->tokenMap($routine, $recipient, false)),

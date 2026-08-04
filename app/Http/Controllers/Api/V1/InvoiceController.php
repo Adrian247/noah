@@ -152,7 +152,7 @@ class InvoiceController extends Controller
         if ($routine !== null && $hasBillingStep) {
             if ($routine->status !== RoutineStatus::PendingBilling) {
                 throw ValidationException::withMessages([
-                    'routine' => ['La rutina debe estar en facturación pendiente antes de emitir.'],
+                    'routine' => ['El servicio debe estar en facturación pendiente antes de emitir.'],
                 ]);
             }
             if ($instance !== null && $instance->current_step_key !== WorkflowRuntime::STEP_BILLING) {
@@ -165,7 +165,7 @@ class InvoiceController extends Controller
             RoutineStatus::PendingBilling,
         ], true)) {
             throw ValidationException::withMessages([
-                'routine' => ['La rutina debe estar validada antes de emitir la factura.'],
+                'routine' => ['El servicio debe estar validada antes de emitir la factura.'],
             ]);
         }
 

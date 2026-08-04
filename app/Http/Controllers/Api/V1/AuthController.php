@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use App\Services\Identity\UserCompanyDirectory;
+use App\Support\AccessChannel;
 use App\Support\PlatformAdmin;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -36,17 +37,11 @@ class AuthController extends Controller
         PlatformAdmin::syncFlagFromConfig($user);
         $user->refresh();
 
-        $token = $user->createToken($credentials['device_name'] ?? 'phoenix-web')->plainTextToken;
+        $deviceName = $credentials['device_name'] ?? 'phoenix-web';
+        $token = $user->createToken($deviceName)->plainTextToken;
+        $access = AccessChannel::fromRequest($request, $deviceName);
 
-        $audit->record(
-            null,
-            $user->id,
-            'auth.login',
-            User::class,
-            $user->id,
-            [],
-            $request->ip(),
-        );
+        $this->recordAccessAudit($audit, $user, 'auth.login', $access, $request->ip());
 
         return response()->json([
             'token' => $token,
@@ -58,15 +53,9 @@ class AuthController extends Controller
     public function logout(Request $request, AuditLogger $audit): JsonResponse
     {
         $user = $request->user();
-        $audit->record(
-            null,
-            $user->id,
-            'auth.logout',
-            User::class,
-            $user->id,
-            [],
-            $request->ip(),
-        );
+        $access = AccessChannel::fromRequest($request);
+
+        $this->recordAccessAudit($audit, $user, 'auth.logout', $access, $request->ip());
 
         $request->user()->currentAccessToken()?->delete();
 
@@ -83,5 +72,35 @@ class AuthController extends Controller
             'user' => ProfileController::formatUser($user),
             'companies' => $directory->companiesForUser($user)->values(),
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $access
+     */
+    private function recordAccessAudit(
+        AuditLogger $audit,
+        User $user,
+        string $action,
+        array $access,
+        ?string $ip,
+    ): void {
+        $companyIds = \App\Models\CompanyMembership::query()
+            ->where('user_id', $user->id)
+            ->where('is_active', true)
+            ->pluck('company_id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($companyIds === []) {
+            $audit->record(null, $user->id, $action, User::class, $user->id, $access, $ip);
+
+            return;
+        }
+
+        foreach ($companyIds as $companyId) {
+            $audit->record($companyId, $user->id, $action, User::class, $user->id, $access, $ip);
+        }
     }
 }

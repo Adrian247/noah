@@ -8,7 +8,7 @@ Complementa personas en [design/personas-and-journeys.md](../design/personas-and
 |-----|------------------|------------|
 | **Administrador** | Configurar empresa, catálogos, diseño, permisos | Diaria |
 | **Supervisor** | Validar ejecuciones, revisar costos y evidencias | Diaria |
-| **Técnico** | Ejecutar rutinas, capturar evidencias | Diaria (móvil fase 2) |
+| **Técnico** | Ejecutar servicios, capturar evidencias | Diaria (móvil fase 2) |
 | **Facturación** | Emitir facturas desde trabajos validados | Semanal |
 | **Cliente final** (futuro) | Consultar reportes y historial de activo | Ocasional |
 | **Auditor** | Revisar trazabilidad sin editar | Ocasional |

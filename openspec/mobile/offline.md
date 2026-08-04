@@ -18,7 +18,7 @@ ADR: [ADR-004](../decisions/ADR-004-offline-first.md).
 | `form_schemas` | Versiones publicadas cacheadas |
 | `media_pending` | Paths locales pendientes de upload |
 
-## Estados de sync por rutina
+## Estados de sync por servicio
 
 `local_only` → `pending_upload` → `synced` → `sync_error`
 

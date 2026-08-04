@@ -10,7 +10,7 @@ Lista de módulos lógicos del monolito modular.
 | **Assets** | Activos instalados |
 | **Catalogs** | Maestros de equipo, proveedores |
 | **Inventory** | Insumos, stock, costos |
-| **Maintenance** | Rutinas, ejecuciones, evidencias (refs) |
+| **Maintenance** | Servicios, ejecuciones, evidencias (refs) |
 | **Dynamic Forms** | Definiciones de formulario |
 | **Dynamic Reports** | Plantillas y generación PDF |
 | **Workflow Engine** | Flujos y estados |

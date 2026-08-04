@@ -24,6 +24,8 @@ class PredictiveAlgorithmVersion extends Model
         'kind',
         'notes',
         'metrics',
+        'calibration',
+        'regression_report',
         'training_summary',
         'artifact_path',
         'created_by',
@@ -35,6 +37,8 @@ class PredictiveAlgorithmVersion extends Model
     {
         return [
             'metrics' => 'array',
+            'calibration' => 'array',
+            'regression_report' => 'array',
             'training_summary' => 'array',
             'published_at' => 'datetime',
         ];

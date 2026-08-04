@@ -19,7 +19,7 @@ Motor: [notification-engine.md](../architecture/notification-engine.md).
 
 ## Disparadores (ejemplos)
 
-- Rutina asignada → técnico (email + push).
+- Servicio asignado → técnico (email + push).
 - Pendiente validación → supervisor (email + push).
 - Transiciones workflow con `notify` → mismos destinatarios.
 - Reporte listo → facturación o cliente.

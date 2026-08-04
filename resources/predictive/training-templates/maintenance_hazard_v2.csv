@@ -1,0 +1,4 @@
+asset_tag,as_of,horizon_days,label_failed
+SBX-L200-01,2026-01-15,14,true
+SBX-L200-01,2026-01-01,14,false
+SBX-L200-02,2026-02-01,30,true

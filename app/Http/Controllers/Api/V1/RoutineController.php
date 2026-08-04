@@ -135,7 +135,7 @@ class RoutineController extends Controller
 
         if ($routine->invoice !== null && $routine->invoice->status === InvoiceStatus::Issued) {
             return response()->json([
-                'message' => 'No se puede eliminar: la rutina tiene una factura emitida.',
+                'message' => 'No se puede eliminar: el servicio tiene una factura emitida.',
             ], 422);
         }
 

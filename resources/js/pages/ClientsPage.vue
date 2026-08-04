@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { api } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
 import { useToast } from '@/composables/useToast';
 import PageHeader from '@/components/ui/PageHeader.vue';
+import SectionSubnav from '@/components/ui/SectionSubnav.vue';
 import AppModal from '@/components/ui/AppModal.vue';
 import AppButton from '@/components/ui/AppButton.vue';
 import IconActionButton from '@/components/ui/IconActionButton.vue';
@@ -12,6 +14,7 @@ import UserAvatar from '@/components/ui/UserAvatar.vue';
 import ConfigurableDataTable from '@/components/ui/ConfigurableDataTable.vue';
 import { tableActionsColumn, type TableColumnDef } from '@/lib/tableColumns';
 import { getToken, getCompanyId } from '@/api/client';
+import { clientsSectionNav } from '@/lib/sectionNav';
 
 type Client = {
     id: number;
@@ -25,6 +28,7 @@ type Client = {
     is_active: boolean;
 };
 
+const router = useRouter();
 const { canWriteModule, isVisible } = useModuleAccess();
 const toast = useToast();
 const canEdit = computed(() => canWriteModule('clients'));
@@ -34,12 +38,11 @@ const clientTableColumns = computed((): TableColumnDef[] => {
         { id: 'avatar', label: '', locked: true, headerClass: 'portal-table-avatar-cell py-2', cellClass: 'portal-table-avatar-cell py-2' },
         { id: 'code', label: 'Código', cellClass: 'text-portal-muted py-2 pr-3 font-mono text-xs' },
         { id: 'legal', label: 'Razón social', cellClass: 'py-2 pr-3' },
+        { id: 'modules', label: 'Submódulos', cellClass: 'py-2 pr-3' },
         { id: 'tax', label: 'RFC', cellClass: 'text-portal-muted py-2 pr-3' },
         { id: 'status', label: 'Estado', cellClass: 'text-portal-muted py-2 pr-3' },
+        tableActionsColumn({ headerClass: 'py-2', cellClass: 'table-row-actions py-2' }),
     ];
-    if (canEdit.value) {
-        cols.push(tableActionsColumn({ headerClass: 'py-2', cellClass: 'table-row-actions py-2' }));
-    }
     return cols;
 });
 
@@ -68,6 +71,10 @@ const formLogoUrl = ref<string | null>(null);
 const logoInput = ref<HTMLInputElement | null>(null);
 
 const displayLogoUrl = computed(() => logoPreview.value ?? formLogoUrl.value);
+
+function openClient(client: Client, tab: 'sites' | 'inventory' = 'sites') {
+    void router.push(`/app/catalog/clients/${client.id}/${tab}`);
+}
 
 function resetLogoState(url: string | null = null) {
     if (logoPreview.value?.startsWith('blob:')) {
@@ -245,11 +252,12 @@ onMounted(load);
         </div>
 
         <template v-else>
+            <SectionSubnav :items="clientsSectionNav" />
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <PageHeader
                     class="flex-1"
                     title="Clientes"
-                    subtitle="Clientes de facturación: datos fiscales y contacto para prefacturas y emisión."
+                    subtitle="Cada cliente tiene submódulos Sitios e Inventario (artículos vinculados al catálogo)."
                 />
                 <AppButton v-if="canEdit" type="button" class="shrink-0" @click="openCreate">
                     Nuevo cliente
@@ -269,7 +277,9 @@ onMounted(load);
             :rows="clients"
             row-key="id"
             :row-class="clientRowClass"
+            clickable
             empty-text="No hay clientes registrados."
+            @row-click="(row) => openClient(row as Client, 'sites')"
         >
             <template #avatar="{ row }">
                 <UserAvatar
@@ -281,17 +291,56 @@ onMounted(load);
             </template>
             <template #code="{ row }">{{ (row as Client).code ?? '—' }}</template>
             <template #legal="{ row }">
-                <p class="text-portal-heading font-medium">{{ (row as Client).legal_name }}</p>
+                <button
+                    type="button"
+                    class="text-portal-heading text-left font-medium hover:text-amber-500"
+                    @click.stop="openClient(row as Client, 'sites')"
+                >
+                    {{ (row as Client).legal_name }}
+                </button>
                 <p v-if="(row as Client).trade_name" class="text-portal-muted text-xs">
                     {{ (row as Client).trade_name }}
                 </p>
             </template>
+            <template #modules="{ row }">
+                <div class="flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        class="rounded-lg border border-[color:var(--portal-border)] px-2 py-1 text-xs text-portal-heading hover:border-amber-500/50 hover:text-amber-500"
+                        @click.stop="openClient(row as Client, 'sites')"
+                    >
+                        Sitios
+                    </button>
+                    <button
+                        type="button"
+                        class="rounded-lg border border-[color:var(--portal-border)] px-2 py-1 text-xs text-portal-heading hover:border-amber-500/50 hover:text-amber-500"
+                        @click.stop="openClient(row as Client, 'inventory')"
+                    >
+                        Inventario
+                    </button>
+                </div>
+            </template>
             <template #tax="{ row }">{{ (row as Client).tax_id ?? '—' }}</template>
             <template #status="{ row }">{{ (row as Client).is_active ? 'Activo' : 'Inactivo' }}</template>
             <template #actions="{ row }">
-                <IconActionButton icon="pencil" label="Editar cliente" @click="openEdit(row as Client)" />
                 <IconActionButton
-                    v-if="(row as Client).is_active"
+                    icon="map-pin"
+                    label="Sitios del cliente"
+                    @click="openClient(row as Client, 'sites')"
+                />
+                <IconActionButton
+                    icon="cube"
+                    label="Inventario del cliente"
+                    @click="openClient(row as Client, 'inventory')"
+                />
+                <IconActionButton
+                    v-if="canEdit"
+                    icon="pencil"
+                    label="Editar cliente"
+                    @click="openEdit(row as Client)"
+                />
+                <IconActionButton
+                    v-if="canEdit && (row as Client).is_active"
                     icon="trash"
                     label="Desactivar cliente"
                     variant="danger"

@@ -133,7 +133,7 @@ class ClientPortalController extends Controller
 
         return Storage::disk($report->disk)->download(
             $report->path,
-            'informe-rutina-'.$routine->id.'-'.$report->id.'.pdf',
+            'informe-servicio-'.$routine->id.'-'.$report->id.'.pdf',
             ['Cache-Control' => 'no-store, no-cache, must-revalidate'],
         );
     }

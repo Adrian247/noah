@@ -67,7 +67,7 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>Phoenix Campo necesita la cámara para capturar evidencias de rutinas.</string>
+	<string>Phoenix Campo necesita la cámara para capturar evidencias de servicios.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Phoenix Campo necesita acceso a fotos para adjuntar evidencias.</string>
 	<key>NSFaceIDUsageDescription</key>

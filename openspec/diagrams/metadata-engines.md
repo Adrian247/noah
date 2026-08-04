@@ -4,7 +4,7 @@ Núcleo configurable de Phoenix.
 
 ```mermaid
 flowchart TB
-  RT[Tipo de rutina]
+  RT[Tipo de servicio]
 
   RT --> F[Dynamic Forms Engine]
   RT --> R[Dynamic Report Engine]

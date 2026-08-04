@@ -127,8 +127,8 @@ class WorkflowDesignerApiTest extends TestCase
     public function test_non_admin_cannot_create_workflow(): void
     {
         $this->seed();
-        $company = Company::query()->where('name', 'Mein Company')->firstOrFail();
-        $user = User::query()->where('email', 'emilio.sanchez@mein-company.com')->firstOrFail();
+        $company = Company::query()->where('name', 'Sandbox')->firstOrFail();
+        $user = User::query()->where('email', 'admin@sandbox-demo.com')->firstOrFail();
         $token = $user->createToken('test')->plainTextToken;
 
         $this->withToken($token)

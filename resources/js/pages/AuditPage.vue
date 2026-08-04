@@ -8,11 +8,13 @@ import PageHeader from '@/components/ui/PageHeader.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
 import AppButton from '@/components/ui/AppButton.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
+import MaterialSelect from '@/components/ui/MaterialSelect.vue';
 import IconActionButton from '@/components/ui/IconActionButton.vue';
 import ConfigurableDataTable from '@/components/ui/ConfigurableDataTable.vue';
 import { tableActionsColumn, type TableColumnDef } from '@/lib/tableColumns';
 
 type Actor = { id: number; name: string; email: string };
+type UserOption = { id: number; name: string; email: string };
 
 type RoutineContext = {
     id: number;
@@ -33,6 +35,9 @@ type Entry = {
     subject_type_label?: string | null;
     subject_id?: number | null;
     metadata?: Record<string, unknown> | null;
+    access_channel?: string | null;
+    access_channel_label?: string | null;
+    device_name?: string | null;
     ip?: string | null;
     occurred_at: string;
     actor?: Actor | null;
@@ -57,17 +62,21 @@ const router = useRouter();
 
 const viewMode = ref<ViewMode>((route.query.view as ViewMode) === 'feed' ? 'feed' : 'threads');
 const search = ref((route.query.q as string) ?? '');
+const actorUserId = ref((route.query.actor_user_id as string) ?? '');
+const accessChannel = ref((route.query.access_channel as string) ?? '');
 const loading = ref(true);
 const detailLoading = ref(false);
+const users = ref<UserOption[]>([]);
 
 const threads = ref<Thread[]>([]);
 const feed = ref<Entry[]>([]);
 
 const auditFeedTableColumns: TableColumnDef[] = [
     { id: 'when', label: 'Cuándo', cellClass: 'text-portal-muted py-2 text-xs whitespace-nowrap' },
-    { id: 'routine', label: 'Rutina', cellClass: 'py-2' },
+    { id: 'routine', label: 'Contexto', cellClass: 'py-2' },
     { id: 'action', label: 'Acción', cellClass: 'py-2' },
-    { id: 'actor', label: 'Actor', cellClass: 'text-portal-heading py-2 text-sm' },
+    { id: 'channel', label: 'Origen', cellClass: 'py-2 text-xs' },
+    { id: 'actor', label: 'Usuario', cellClass: 'text-portal-heading py-2 text-sm' },
     tableActionsColumn({ cellClass: 'py-2 text-right' }),
 ];
 const selectedCorrelationId = ref<string | null>((route.query.correlation as string) ?? null);
@@ -82,33 +91,86 @@ const selectedRoutine = computed(
     () => selectedThread.value?.routine ?? selectedEntries.value.find((e) => e.routine)?.routine ?? null,
 );
 
+const userOptions = computed(() => [
+    { value: '', label: 'Todos los usuarios' },
+    ...users.value.map((u) => ({ value: String(u.id), label: `${u.name} · ${u.email}` })),
+]);
+
+const channelOptions = [
+    { value: '', label: 'Todos los orígenes' },
+    { value: 'web', label: 'Web' },
+    { value: 'mobile', label: 'App móvil' },
+    { value: 'api', label: 'API' },
+];
+
 function formatWhen(value: string): string {
     return new Date(value).toLocaleString();
 }
 
 function routineTitle(routine?: RoutineContext | null): string {
     if (!routine) {
-        return 'Ciclo sin rutina vinculada';
+        return 'Ciclo sin servicio vinculado';
     }
-    const type = routine.routine_type_name ?? 'Rutina';
+    const type = routine.routine_type_name ?? 'Servicio';
     return `${type} · #${routine.id}`;
 }
 
 function routineSubtitle(routine?: RoutineContext | null): string {
     if (!routine) {
-        return 'Eventos correlacionados sin vínculo a workflow de rutina';
+        return 'Eventos correlacionados sin vínculo a workflow de servicio';
     }
     const parts = [routine.asset_tag, routine.site_name, routine.assignee_name].filter(Boolean);
     return parts.length ? parts.join(' · ') : 'Sin activo / sitio';
 }
 
+function entryContextTitle(entry: Entry): string {
+    if (entry.routine) {
+        return routineTitle(entry.routine);
+    }
+    if (entry.action.startsWith('auth.')) {
+        return 'Acceso';
+    }
+    if (entry.action.startsWith('platform.')) {
+        return 'Plataforma';
+    }
+    return '—';
+}
+
+function buildFilterQuery(extra: Record<string, string | undefined> = {}): URLSearchParams {
+    const qs = new URLSearchParams(extra);
+    if (search.value.trim()) qs.set('q', search.value.trim());
+    if (actorUserId.value) qs.set('actor_user_id', actorUserId.value);
+    if (accessChannel.value) qs.set('access_channel', accessChannel.value);
+    return qs;
+}
+
+function syncRouteQuery() {
+    void router.replace({
+        query: {
+            ...route.query,
+            view: viewMode.value === 'feed' ? 'feed' : undefined,
+            correlation:
+                viewMode.value === 'threads' ? selectedCorrelationId.value ?? undefined : undefined,
+            q: search.value.trim() || undefined,
+            actor_user_id: actorUserId.value || undefined,
+            access_channel: accessChannel.value || undefined,
+        },
+    });
+}
+
+async function loadUsers() {
+    try {
+        const res = await api<{ data: UserOption[] }>('/company/users');
+        users.value = res.data ?? [];
+    } catch {
+        users.value = [];
+    }
+}
+
 async function loadThreads() {
     loading.value = true;
     try {
-        const qs = new URLSearchParams({ per_page: '30' });
-        if (search.value.trim()) {
-            qs.set('q', search.value.trim());
-        }
+        const qs = buildFilterQuery({ per_page: '30' });
         const res = await api<{ data: Thread[] }>(`/audit/threads?${qs}`);
         threads.value = res.data ?? [];
         if (
@@ -134,10 +196,7 @@ async function loadThreads() {
 async function loadFeed() {
     loading.value = true;
     try {
-        const qs = new URLSearchParams({ per_page: '50' });
-        if (search.value.trim()) {
-            qs.set('q', search.value.trim());
-        }
+        const qs = buildFilterQuery({ per_page: '50' });
         const res = await api<{ data: Entry[] }>(`/audit/entries?${qs}`);
         feed.value = res.data ?? [];
     } catch (e) {
@@ -151,9 +210,11 @@ async function loadThreadDetail(correlationId: string) {
     detailLoading.value = true;
     expandedEntryIds.value = new Set();
     try {
-        const res = await api<{ data: Entry[] }>(
-            `/audit/entries?correlation_id=${encodeURIComponent(correlationId)}&per_page=100`,
-        );
+        const qs = buildFilterQuery({
+            correlation_id: correlationId,
+            per_page: '100',
+        });
+        const res = await api<{ data: Entry[] }>(`/audit/entries?${qs}`);
         selectedEntries.value = res.data ?? [];
     } catch (e) {
         selectedEntries.value = [];
@@ -173,38 +234,18 @@ async function refresh() {
 
 function selectThread(correlationId: string) {
     selectedCorrelationId.value = correlationId;
-    void router.replace({
-        query: {
-            ...route.query,
-            view: 'threads',
-            correlation: correlationId,
-            q: search.value.trim() || undefined,
-        },
-    });
+    syncRouteQuery();
     void loadThreadDetail(correlationId);
 }
 
 function setView(mode: ViewMode) {
     viewMode.value = mode;
-    void router.replace({
-        query: {
-            ...route.query,
-            view: mode === 'feed' ? 'feed' : undefined,
-            correlation: mode === 'threads' ? selectedCorrelationId.value ?? undefined : undefined,
-            q: search.value.trim() || undefined,
-        },
-    });
+    syncRouteQuery();
     void refresh();
 }
 
 function applySearch() {
-    void router.replace({
-        query: {
-            ...route.query,
-            q: search.value.trim() || undefined,
-            correlation: viewMode.value === 'threads' ? selectedCorrelationId.value ?? undefined : undefined,
-        },
-    });
+    syncRouteQuery();
     void refresh();
 }
 
@@ -240,8 +281,9 @@ watch(
     },
 );
 
-onMounted(() => {
-    void refresh();
+onMounted(async () => {
+    await loadUsers();
+    await refresh();
 });
 </script>
 
@@ -249,18 +291,24 @@ onMounted(() => {
     <div class="portal-page space-y-5" data-tour="page-audit">
         <PageHeader
             title="Auditoría"
-            subtitle="Trazabilidad por rutina: identifica el ciclo, abre el detalle y revisa cada evento con su contexto."
+            subtitle="Trazabilidad por usuario y ciclo: accesos web/móvil, acciones de plataforma y eventos operativos."
         />
 
         <form class="flex flex-wrap items-end gap-3" @submit.prevent="applySearch">
-            <div class="min-w-[16rem] flex-1">
+            <div class="min-w-[14rem] flex-1">
                 <MaterialField
                     v-model="search"
-                    label="Buscar rutina, activo, acción o actor"
-                    placeholder="Ej. 12, L200, workflow, Ana…"
+                    label="Buscar servicio, activo, acción o usuario"
+                    placeholder="Ej. 12, L200, login, Ana…"
                 />
             </div>
-            <AppButton type="submit" variant="secondary">Buscar</AppButton>
+            <div class="min-w-[14rem] flex-1">
+                <MaterialSelect v-model="actorUserId" label="Usuario" :options="userOptions" />
+            </div>
+            <div class="min-w-[11rem]">
+                <MaterialSelect v-model="accessChannel" label="Origen de acceso" :options="channelOptions" />
+            </div>
+            <AppButton type="submit" variant="secondary">Filtrar</AppButton>
             <div class="flex rounded-xl border border-white/10 p-1">
                 <button
                     type="button"
@@ -272,7 +320,7 @@ onMounted(() => {
                     "
                     @click="setView('threads')"
                 >
-                    Por rutina
+                    Por servicio
                 </button>
                 <button
                     type="button"
@@ -346,7 +394,7 @@ onMounted(() => {
                             <IconActionButton
                                 v-if="selectedRoutine?.id"
                                 icon="chevron-right"
-                                label="Abrir rutina"
+                                label="Abrir servicio"
                                 :to="`/app/routines/${selectedRoutine.id}`"
                             />
                         </div>
@@ -380,6 +428,10 @@ onMounted(() => {
                                 </div>
                                 <div class="text-portal-muted mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs">
                                     <span>{{ entry.actor?.name ?? 'Sistema / sin actor' }}</span>
+                                    <span v-if="entry.access_channel_label">
+                                        {{ entry.access_channel_label }}
+                                        <template v-if="entry.device_name"> · {{ entry.device_name }}</template>
+                                    </span>
                                     <span v-if="entry.subject_type_label">
                                         {{ entry.subject_type_label }}
                                         <template v-if="entry.subject_id">#{{ entry.subject_id }}</template>
@@ -404,6 +456,15 @@ onMounted(() => {
                                         <dt class="text-portal-muted">Actor</dt>
                                         <dd class="text-portal-heading">
                                             {{ entry.actor ? `${entry.actor.name} (${entry.actor.email})` : '—' }}
+                                        </dd>
+                                    </div>
+                                    <div>
+                                        <dt class="text-portal-muted">Origen</dt>
+                                        <dd class="text-portal-heading">
+                                            {{ entry.access_channel_label ?? '—' }}
+                                            <template v-if="entry.device_name">
+                                                · <span class="font-mono">{{ entry.device_name }}</span>
+                                            </template>
                                         </dd>
                                     </div>
                                     <div>
@@ -465,13 +526,27 @@ onMounted(() => {
                         </RouterLink>
                         <p class="text-portal-muted text-xs">{{ routineSubtitle((row as Entry).routine!) }}</p>
                     </div>
-                    <span v-else class="text-portal-muted text-xs">—</span>
+                    <span v-else class="text-portal-muted text-xs">{{ entryContextTitle(row as Entry) }}</span>
                 </template>
                 <template #action="{ row }">
                     <p class="text-portal-heading text-sm">{{ auditActionLabel((row as Entry).action) }}</p>
                     <p class="text-portal-muted font-mono text-[11px]">{{ (row as Entry).action }}</p>
                 </template>
-                <template #actor="{ row }">{{ (row as Entry).actor?.name ?? '—' }}</template>
+                <template #channel="{ row }">
+                    <span v-if="(row as Entry).access_channel_label" class="text-portal-heading">
+                        {{ (row as Entry).access_channel_label }}
+                    </span>
+                    <span v-else class="text-portal-muted">—</span>
+                    <p v-if="(row as Entry).device_name" class="text-portal-muted font-mono text-[11px]">
+                        {{ (row as Entry).device_name }}
+                    </p>
+                </template>
+                <template #actor="{ row }">
+                    <span>{{ (row as Entry).actor?.name ?? '—' }}</span>
+                    <p v-if="(row as Entry).actor?.email" class="text-portal-muted text-[11px]">
+                        {{ (row as Entry).actor?.email }}
+                    </p>
+                </template>
                 <template #actions="{ row }">
                     <IconActionButton
                         v-if="(row as Entry).correlation_id"

@@ -105,7 +105,7 @@ async function deleteWorkflow() {
     }
     const count = workflow.value.routine_types_count ?? 0;
     if (count > 0) {
-        toast.warning('Este workflow está asignado a tipos de rutina. Quita la asignación antes de eliminarlo.');
+        toast.warning('Este workflow está asignado a tipos de servicio. Quita la asignación antes de eliminarlo.');
         return;
     }
     if (!window.confirm(`¿Eliminar el workflow «${workflow.value.name}»? Esta acción no se puede deshacer.`)) {
@@ -167,7 +167,7 @@ onMounted(load);
         <ReadOnlyNotice v-if="!canWrite" module-label="Workflows" />
 
         <p v-if="isDraft" class="text-sm text-portal-muted">
-            Rutina fija al inicio; las flechas son acciones con nombre y correo opcional.
+            Servicio fijo al inicio; las flechas son acciones con nombre y correo opcional.
         </p>
 
         <div class="workflow-designer-surface portal-form-panel w-full max-w-none p-3 sm:p-4">

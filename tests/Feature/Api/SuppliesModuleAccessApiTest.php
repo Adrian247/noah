@@ -24,7 +24,7 @@ class SuppliesModuleAccessApiTest extends TestCase
     {
         $company = Company::query()->first();
         $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->first();
         Sanctum::actingAs($admin);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
@@ -51,7 +51,7 @@ class SuppliesModuleAccessApiTest extends TestCase
     {
         $company = Company::query()->first();
         $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->first();
         Sanctum::actingAs($admin);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
@@ -78,7 +78,7 @@ class SuppliesModuleAccessApiTest extends TestCase
     {
         $company = Company::query()->first();
         $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->first();
         Sanctum::actingAs($admin);
 
         $this->withHeader('X-Company-Id', (string) $company->id)

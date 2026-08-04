@@ -4,9 +4,9 @@
 
 | Email | Empresa | Contraseña |
 |-------|---------|------------|
-| **`admin@sandbox-demo.com`** | **Sandbox** (tenant virgen) | **`pyro.2026$`** |
+| **`admin@sandbox-demo.com`** | **Sandbox** (playground operativo) | **`pyro.2026$`** |
 
-Sin catálogos, rutinas ni activos precargados — ideal para onboarding y pruebas desde cero.
+Incluye catálogos, sitio, artículo L200, inventario demo y **servicio demo**. Ideal para recorrer el flujo completo.
 
 ## Contraseña unificada (fase de pruebas)
 
@@ -20,11 +20,11 @@ Variables: `PHOENIX_DEMO_PASSWORD`, `PHOENIX_DEMO_ROOT_PASSWORD` (ambas default 
 |-------|------------|
 | `admin@pyro-systems.com` | `pyro.2026$` |
 
-Administrador de sistema: tenants, algoritmo predictivo, roles globales. Elige empresa en el selector (asunción de tenant).
+Administrador de sistema: tenants, algoritmo predictivo, roles globales, **Artículos de sistema** (Mitsubishi L200 + catálogo OEM Epiroc/Sandvik para importar a tenants). Elige empresa en el selector (asunción de tenant).
 
-## Mein Company
+## Mein Company (tenant virgen)
 
-Clientes demo: **Mina Velardeña**, **Presidencia Municipal Sombrerete**, **Interno**.
+Solo usuarios/contraseñas y cliente **Interno** (`MEIN-INTERNO`). Sin catálogos, sitios, artículos ni servicios demo.
 
 | Email | Rol |
 |-------|-----|
@@ -32,11 +32,11 @@ Clientes demo: **Mina Velardeña**, **Presidencia Municipal Sombrerete**, **Inte
 | `misael.palos@mein-company.com` | Técnico |
 | `claudio.rodriguez@mein-company.com` | Supervisión |
 | `elena.sanchez@mein-company.com` | Facturación |
-| `cliente.portal@mein-company.com` | Portal (Mina Velardeña) |
+| `cliente.portal@mein-company.com` | Portal (Interno) |
 
-## Dom-G
+## Dom-G (tenant virgen)
 
-Clientes demo: **Grupo México**, **Interno**.
+Solo usuarios/contraseñas y cliente **Interno** (`DOMG-INTERNO`). Sin catálogos, sitios, artículos ni servicios demo.
 
 | Email | Rol |
 |-------|-----|
@@ -44,15 +44,17 @@ Clientes demo: **Grupo México**, **Interno**.
 | `technician@dom-g.com` | Técnico |
 | `gilberto-sanchez@dom-g.com` | Supervisión |
 | `luis-olvera@dom-g.com` | Facturación |
-| `cliente.portal@dom-g.com` | Portal (Grupo México) |
+| `cliente.portal@dom-g.com` | Portal (Interno) |
 
-## Sandbox (tenant virgen)
-
-Misma fila que **cuenta por defecto** arriba. Empresa demo sin datos operativos — equivalente a un alta desde **Clientes de plataforma**.
+## Sandbox (playground + servicio demo)
 
 | Email | Rol |
 |-------|-----|
 | `admin@sandbox-demo.com` | Administrador |
+| `technician@sandbox-demo.com` | Técnico |
+| `supervisor@sandbox-demo.com` | Supervisión |
+| `billing@sandbox-demo.com` | Facturación |
+| `cliente.portal@sandbox-demo.com` | Portal (Cliente demo) |
 
 Ritual: `docker compose exec app php artisan phoenix:refresh-demo`
 

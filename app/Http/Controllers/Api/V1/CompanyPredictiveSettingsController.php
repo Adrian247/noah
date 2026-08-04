@@ -57,6 +57,10 @@ class CompanyPredictiveSettingsController extends Controller
             if (! $version->isPublished()) {
                 abort(422, 'Solo se pueden seleccionar versiones publicadas del algoritmo.');
             }
+            $kind = \App\Enums\PredictiveAlgorithmKind::tryFromFlexible($version->kind);
+            if ($kind !== \App\Enums\PredictiveAlgorithmKind::Maintenance) {
+                abort(422, 'La empresa solo puede fijar una versión de mantenimiento (hazard).');
+            }
         }
 
         $company->update([
@@ -80,8 +84,8 @@ class CompanyPredictiveSettingsController extends Controller
 
     private function legalNotice(): string
     {
-        return 'Permitir a Phoenix recopilar información de rutinas para entrenamiento. '
-            .'Al activar esta opción, Phoenix podrá usar el historial de rutinas aplicadas '
+        return 'Permitir a Phoenix recopilar información de servicios para entrenamiento. '
+            .'Al activar esta opción, Phoenix podrá usar el historial de servicios aplicados '
             .'(fechas, tipos, resultados de validación, consumos y comentarios técnicos) '
             .'únicamente para entrenar y mejorar el algoritmo predictivo dentro de la plataforma. '
             .'Esta información no se vende, no se comparte con terceros ni se expone fuera de '

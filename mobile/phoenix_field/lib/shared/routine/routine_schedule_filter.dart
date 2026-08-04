@@ -1,4 +1,4 @@
-/// Filtra rutinas por fecha programada (`scheduled_at` en payload del servidor).
+/// Filtra servicios por fecha programada (`scheduled_at` en payload del servidor).
 class RoutineScheduleFilter {
   const RoutineScheduleFilter._();
 

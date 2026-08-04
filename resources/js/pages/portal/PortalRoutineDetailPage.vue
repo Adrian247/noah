@@ -89,7 +89,7 @@ const pageSubtitle = computed(() => {
     if (!routine.value) {
         return '';
     }
-    const parts = [`Rutina #${routine.value.id}`];
+    const parts = [`Servicio #${routine.value.id}`];
     if (routine.value.asset?.tag) {
         parts.push(`Activo ${routine.value.asset.tag}`);
     }
@@ -139,7 +139,7 @@ async function downloadReport(reportId: number) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `informe-rutina-${routine.value.id}-${reportId}.pdf`;
+        a.download = `informe-servicio-${routine.value.id}-${reportId}.pdf`;
         a.click();
         URL.revokeObjectURL(url);
         toast.success('Informe descargado.');
@@ -165,7 +165,7 @@ onMounted(load);
             <PageHeader :title="pageTitle" :subtitle="pageSubtitle" />
 
             <div class="mb-6 flex flex-wrap items-center gap-3">
-                <span class="client-portal-id-badge">ID rutina #{{ routine.id }}</span>
+                <span class="client-portal-id-badge">ID servicio #{{ routine.id }}</span>
                 <StatusBadge :status="routine.status" />
             </div>
 

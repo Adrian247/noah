@@ -4,9 +4,9 @@
 
 | Métrica | Meta orientativa |
 |---------|------------------|
-| Tiempo para publicar nuevo tipo de rutina (form + reporte) | < 4 h sin desarrollador |
-| % rutinas completadas sin error de sync | > 98% |
-| Tiempo validación supervisor (mediana) | < 5 min por rutina |
+| Tiempo para publicar nuevo tipo de servicio (form + reporte) | < 4 h sin desarrollador |
+| % servicios completados sin error de sync | > 98% |
+| Tiempo validación supervisor (mediana) | < 5 min por servicio |
 | PDF generado correcto al primer intento | > 95% |
 
 ## Técnicas (post-MVP)
@@ -15,13 +15,13 @@
 |---------|------|
 | p95 API listados | Cumple NFR |
 | Jobs PDF fallidos | < 1% con reintento |
-| Costo IA por rutina | Monitoreado y acotado por tenant |
+| Costo IA por servicio | Monitoreado y acotado por tenant |
 
 ## Negocio (SaaS futuro)
 
 | Métrica | Uso |
 |---------|-----|
-| Activación (primera rutina validada) | Onboarding |
+| Activación (primer servicio validado) | Onboarding |
 | Retención 90 días | Product-market fit |
 | NPS supervisores y técnicos | Calidad UX |
 

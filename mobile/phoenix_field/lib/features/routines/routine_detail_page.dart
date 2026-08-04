@@ -337,8 +337,8 @@ class _RoutineDetailPageState extends ConsumerState<RoutineDetailPage> {
 
     if (_routine == null) {
       return Scaffold(
-        appBar: AppBar(title: Text('Rutina #${widget.routineId}')),
-        body: Center(child: Text(_error ?? 'Rutina no encontrada')),
+        appBar: AppBar(title: Text('Servicio #${widget.routineId}')),
+        body: Center(child: Text(_error ?? 'Servicio no encontrado')),
       );
     }
 
@@ -346,11 +346,11 @@ class _RoutineDetailPageState extends ConsumerState<RoutineDetailPage> {
     final client = _routine!['client']?['trade_name']?.toString() ??
         _routine!['client']?['legal_name']?.toString();
     final site = _routine!['site']?['name']?.toString() ?? '—';
-    final type = _routine!['routine_type']?['name']?.toString() ?? 'Rutina';
-    final serviceLine = _routine!['routine_type']?['service_line']?.toString();
-    final serviceLineLabel = switch (serviceLine) {
-      'fabrication' => 'Manufactura',
-      'supply' => 'Suministro',
+    final type = _routine!['routine_type']?['name']?.toString() ?? 'Servicio';
+    final serviceCategory = _routine!['routine_type']?['service_category']?.toString() ?? _routine!['routine_type']?['service_line']?.toString();
+    final serviceLineLabel = switch (serviceCategory) {
+      'manufacturing' || 'fabrication' => 'Fabricación',
+      'installation' || 'supply' => 'Instalación',
       'maintenance' => 'Mantenimiento',
       _ => null,
     };
@@ -371,7 +371,7 @@ class _RoutineDetailPageState extends ConsumerState<RoutineDetailPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Rutina #${widget.routineId}'),
+        title: Text('Servicio #${widget.routineId}'),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -403,7 +403,7 @@ class _RoutineDetailPageState extends ConsumerState<RoutineDetailPage> {
                     ),
                   ],
                   const SizedBox(height: 8),
-                  Text(asset != null && asset.isNotEmpty ? 'Activo: $asset' : 'Sujeto: $subject'),
+                  Text(asset != null && asset.isNotEmpty ? 'Artículo: $asset' : 'Sujeto: $subject'),
                   if (client != null &&
                       client.isNotEmpty &&
                       asset != null &&
@@ -481,7 +481,7 @@ class _RoutineDetailPageState extends ConsumerState<RoutineDetailPage> {
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Text(
-                  'Esta rutina está en «${routineStatusLabel(status)}» y ya no se puede enviar desde campo.',
+                  'Este servicio está en «${routineStatusLabel(status)}» y ya no se puede enviar desde campo.',
                   style: TextStyle(color: routineStatusColor(status)),
                 ),
               ),

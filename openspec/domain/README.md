@@ -9,7 +9,7 @@ Documentos por bounded context. Mapa: [bounded-contexts.md](../architecture/boun
 | [assets.md](assets.md) | Activos instalados |
 | [catalogs.md](catalogs.md) | Maestros de equipo y proveedores |
 | [inventory.md](inventory.md) | Insumos y consumos |
-| [maintenance.md](maintenance.md) | Rutinas y ejecuciones |
+| [maintenance.md](maintenance.md) | Servicios y ejecuciones |
 | [predictive.md](predictive.md) | Bitácoras, modos de falla y predicción |
 | [forms.md](forms.md) | Definiciones de formulario |
 | [reports.md](reports.md) | Plantillas y PDF generados |

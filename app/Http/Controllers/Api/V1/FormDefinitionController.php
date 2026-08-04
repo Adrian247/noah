@@ -23,14 +23,15 @@ class FormDefinitionController extends Controller
     public function index(Request $request): JsonResponse
     {
         $usage = $request->query('usage');
-        if ($usage !== null && ! in_array($usage, array_column(FormUsage::cases(), 'value'), true)) {
+        $usageEnum = FormUsage::tryFromLoose(is_string($usage) ? $usage : null);
+        if ($usage !== null && $usage !== '' && $usageEnum === null) {
             throw ValidationException::withMessages([
                 'usage' => ['Uso de formulario no válido.'],
             ]);
         }
 
         $forms = FormDefinition::query()
-            ->when($usage !== null, fn ($q) => $q->where('usage', $usage))
+            ->when($usageEnum !== null, fn ($q) => $q->where('usage', $usageEnum->value))
             ->with(['versions' => fn ($q) => $q->orderByDesc('version')])
             ->orderBy('name')
             ->get()
@@ -50,11 +51,12 @@ class FormDefinitionController extends Controller
         ]);
 
         $slug = $data['slug'] ?? Str::slug($data['name']);
+        $usage = FormUsage::from($data['usage'])->canonical();
 
         $form = FormDefinition::query()->create([
             'name' => $data['name'],
             'slug' => $slug,
-            'usage' => $data['usage'],
+            'usage' => $usage,
         ]);
 
         FormVersion::query()->create([
@@ -139,6 +141,11 @@ class FormDefinitionController extends Controller
         if ($draft === null) {
             return response()->json(['message' => 'No draft version to publish.'], 422);
         }
+
+        // Una sola versión publicada a la vez (dominio: publicada | archivada).
+        $form->versions()
+            ->where('status', 'published')
+            ->update(['status' => 'archived']);
 
         $draft->update([
             'status' => 'published',

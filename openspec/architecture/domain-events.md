@@ -6,7 +6,7 @@ Eventos nombrados en pasado; payload mínimo e inmutable. Los consumidores deben
 
 | Evento | Cuándo | Consumidores típicos |
 |--------|--------|----------------------|
-| `RoutineCreated` | Se crea una rutina | Notifications, Audit |
+| `RoutineCreated` | Se crea un servicio | Notifications, Audit |
 | `RoutineAssigned` | Se asigna técnico | Notifications |
 | `RoutineStarted` | Inicio de ejecución | Audit |
 | `RoutineFinished` | Técnico marca fin en campo/web | Workflow, Sync |
@@ -27,7 +27,7 @@ Eventos nombrados en pasado; payload mínimo e inmutable. Los consumidores deben
 
 | Evento | Cuándo | Consumidores |
 |--------|--------|--------------|
-| `InvoiceDraftCreated` | Borrador desde rutina validada | UI Facturación |
+| `InvoiceDraftCreated` | Borrador desde servicio validado | UI Facturación |
 | `InvoiceIssued` | Emisión fiscal o comercial | Audit, Notifications |
 | `InvoiceCancelled` | Cancelación | Audit |
 

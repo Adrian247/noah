@@ -6,7 +6,7 @@ Aceptada
 
 ## Contexto
 
-Phoenix Campo necesita notificaciones del sistema (asignación de rutina, etc.). El correo no sustituye el aviso en el teléfono.
+Phoenix Campo necesita notificaciones del sistema (asignación de servicio, etc.). El correo no sustituye el aviso en el teléfono.
 
 ## Decisión
 

@@ -7,7 +7,7 @@ Documento breve que fija **por qué existe Phoenix** y **qué problema resuelve*
 Construir **Phoenix**: plataforma para empresas que prestan o gestionan **mantenimiento industrial**, con:
 
 1. **Catálogos** de equipo, insumos y costos.
-2. **Operación** de rutinas/mantenimientos con evidencias.
+2. **Operación** de servicios/mantenimientos con evidencias.
 3. **Reportes dinámicos** (marca, tipografía, cabecera, pie, numeración de páginas configurable).
 4. **Facturación** alineada a trabajos validados, sin mezclar lógica fiscal con operación.
 5. **Segunda etapa:** app móvil **offline-first** (fotos, tiempos, comentarios, sync) y en web **validación**, **PDF** y **corrección gramatical de comentarios con IA** (sin inventar hechos).

@@ -24,8 +24,8 @@ flowchart TB
   end
 
   ADM -->|Configura catálogos formularios reportes flujos| NP
-  SUP -->|Valida rutinas y evidencias| NP
-  TEC -->|Ejecuta rutinas móvil fase 3| NP
+  SUP -->|Valida servicios y evidencias| NP
+  TEC -->|Ejecuta servicios móvil fase 3| NP
   FAC -->|Emite facturas| NP
   CLI -.->|Consulta reportes| NP
 

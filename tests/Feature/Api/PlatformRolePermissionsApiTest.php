@@ -42,7 +42,7 @@ class PlatformRolePermissionsApiTest extends TestCase
 
     public function test_non_platform_user_cannot_access(): void
     {
-        $supervisor = User::query()->where('email', 'claudio.rodriguez@mein-company.com')->firstOrFail();
+        $supervisor = User::query()->where('email', 'supervisor@sandbox-demo.com')->firstOrFail();
         Sanctum::actingAs($supervisor);
 
         $this->getJson('/api/v1/platform/role-permissions')->assertForbidden();

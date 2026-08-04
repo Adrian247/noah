@@ -168,27 +168,46 @@ function removeField(sectionIndex: number, fieldIndex: number) {
     sections.value[sectionIndex].fields.splice(fieldIndex, 1);
 }
 
-async function saveDraft() {
-    saving.value = true;
+async function saveDraft(options: { manageSaving?: boolean; silent?: boolean } = {}) {
+    const manageSaving = options.manageSaving !== false;
+    if (manageSaving) {
+        saving.value = true;
+    }
     try {
         await api(`/design/forms/${route.params.id}/schema`, {
             method: 'PUT',
             body: JSON.stringify({ schema: { sections: sections.value } }),
         });
-        toast.success('Borrador guardado.');
+        if (!options.silent) {
+            toast.success('Borrador guardado.');
+        }
         initialSnapshot.value = schemaSnapshot();
-        await load();
+        if (manageSaving) {
+            await load();
+        }
     } catch (e) {
-        toast.error((e as Error).message);
+        if (manageSaving) {
+            toast.error((e as Error).message);
+            return;
+        }
+        throw e;
     } finally {
-        saving.value = false;
+        if (manageSaving) {
+            saving.value = false;
+        }
     }
 }
 
 async function publish() {
+    if (saving.value) {
+        return;
+    }
     saving.value = true;
     try {
-        await saveDraft();
+        // Evita PUT innecesario y no re-habilita el botón a mitad del publish.
+        if (isDirty()) {
+            await saveDraft({ manageSaving: false, silent: true });
+        }
         await api(`/design/forms/${route.params.id}/publish`, { method: 'POST' });
         await load();
         const pub = published.value;

@@ -1,6 +1,6 @@
 # Flujo estudio de configuración — Phoenix
 
-Cómo el **administrador** arma un tipo de rutina (diseño UX).
+Cómo el **administrador** arma un tipo de servicio (diseño UX).
 
 ```mermaid
 flowchart LR
@@ -11,7 +11,7 @@ flowchart LR
   end
 
   subgraph link [Ensamble]
-    RT[Tipo de rutina]
+    RT[Tipo de servicio]
     PUB[Publicar versión]
   end
 
@@ -20,7 +20,7 @@ flowchart LR
   W --> RT
   RT --> PUB
   PUB --> MOB[Sync definiciones a móvil]
-  PUB --> WEB[Disponible nuevas rutinas web]
+  PUB --> WEB[Disponible nuevos servicios web]
 ```
 
 ## Orden recomendado en UI (onboarding)
@@ -29,6 +29,6 @@ flowchart LR
 2. Formulario (qué se captura).
 3. Plantilla de reporte (cómo se imprime).
 4. Workflow (qué pasa al terminar y al validar).
-5. Tipo de rutina + prueba con rutina de ejemplo.
+5. Tipo de servicio + prueba con servicio de ejemplo.
 
 Wireframes: [form-designer.md](../design/form-designer.md), [report-designer.md](../design/report-designer.md).

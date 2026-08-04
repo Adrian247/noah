@@ -3,7 +3,7 @@
 namespace App\Services\Predictive;
 
 use App\Enums\RoutineStatus;
-use App\Enums\ServiceLine;
+use App\Enums\ServiceCategory;
 use App\Models\Asset;
 use App\Models\EquipmentEvent;
 use App\Support\Predictive\EquipmentClass;
@@ -13,13 +13,13 @@ use Illuminate\Support\Facades\DB;
 /**
  * Vector de características por activo a una fecha de corte.
  *
- * Fuente primaria: historial de rutinas aplicadas (validadas) sobre el activo.
+ * Fuente primaria: historial de servicios aplicados (validadas) sobre el activo.
  * Las bitácoras Excel / shift logs son corpus de referencia para entrenamiento, no la
  * operación diaria del producto.
  */
 class FeatureBuilder
 {
-    /** Ventanas en días sobre las que se agregan rutinas (y bitácoras de referencia si existen). */
+    /** Ventanas en días sobre las que se agregan servicios (y bitácoras de referencia si existen). */
     public const WINDOWS = [7, 30, 90];
 
     /** Piso para considerar una tarea del plan OEM un servicio y no una ronda de operación. */
@@ -62,7 +62,7 @@ class FeatureBuilder
     }
 
     /**
-     * Señales desde rutinas validadas: frecuencia, rechazo, duración, consumos y comentarios.
+     * Señales desde servicios validados: frecuencia, rechazo, duración, consumos y comentarios.
      *
      * @param  list<int>  $assetIds
      * @param  array<int, array<string, mixed>>  $features
@@ -88,7 +88,7 @@ class FeatureBuilder
                 ->where('r.company_id', $companyId)
                 ->whereIn('r.asset_id', $assetIds)
                 ->whereNotNull('r.asset_id')
-                ->where('t.service_line', ServiceLine::Maintenance->value)
+                ->where('t.service_category', ServiceCategory::Maintenance->value)
                 ->whereIn('r.status', $validated)
                 ->where(function ($q) use ($from, $to) {
                     $q->whereBetween('e.validated_at', [$from, $to])
@@ -125,7 +125,7 @@ class FeatureBuilder
                 ->where('r.company_id', $companyId)
                 ->whereIn('r.asset_id', $assetIds)
                 ->whereNotNull('r.asset_id')
-                ->where('t.service_line', ServiceLine::Maintenance->value)
+                ->where('t.service_category', ServiceCategory::Maintenance->value)
                 ->whereIn('r.status', $validated)
                 ->whereBetween('e.validated_at', [$from, $to])
                 ->groupBy('r.asset_id')
@@ -148,7 +148,7 @@ class FeatureBuilder
             ->where('r.company_id', $companyId)
             ->whereIn('r.asset_id', $assetIds)
             ->whereNotNull('r.asset_id')
-            ->where('t.service_line', ServiceLine::Maintenance->value)
+            ->where('t.service_category', ServiceCategory::Maintenance->value)
             ->whereIn('r.status', $validated)
             ->where(function ($q) use ($asOf) {
                 $q->where('e.validated_at', '<=', $asOf->endOfDay())
@@ -195,7 +195,7 @@ class FeatureBuilder
             ->where('r.company_id', $companyId)
             ->whereIn('r.asset_id', $assetIds)
             ->whereNotNull('r.asset_id')
-            ->where('t.service_line', ServiceLine::Maintenance->value)
+            ->where('t.service_category', ServiceCategory::Maintenance->value)
             ->whereIn('r.status', [
                 RoutineStatus::Assigned->value,
                 RoutineStatus::InProgress->value,
@@ -216,7 +216,7 @@ class FeatureBuilder
             $features[(int) $assetId]['pm_backlog_90d'] = (int) $count;
         }
 
-        // Cumplimiento aproximado: rutinas validadas / (validadas + pendientes) en 90 d.
+        // Cumplimiento aproximado: servicios validados / (validadas + pendientes) en 90 d.
         foreach ($assetIds as $assetId) {
             $done = (int) ($features[$assetId]['routines_90d'] ?? 0);
             $open = (int) ($features[$assetId]['routines_pending'] ?? 0);
@@ -656,7 +656,7 @@ class FeatureBuilder
     private function applyDerived(array &$features): void
     {
         foreach ($features as $assetId => $row) {
-            // Si no hubo bitácora, la exposición sale de horas/conteo de rutinas aplicadas.
+            // Si no hubo bitácora, la exposición sale de horas/conteo de servicios aplicados.
             foreach (self::WINDOWS as $window) {
                 if (! isset($features[$assetId]["worked_hours_{$window}d"])
                     && isset($row["routine_hours_{$window}d"])) {

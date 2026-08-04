@@ -214,7 +214,7 @@ class ReportHtmlBuilder
         $pageNumber = $pageSettings['page_number'] ?? ['enabled' => false, 'start_at' => 1];
         $skipCoverPageForChrome = $coverEnabled && $omitHeaderOnCover;
         $isolatePdfCoverPage = $coverEnabled && $this->coverRenderer->hasThemedCoverBackground($this->documentTheme);
-        $metaLine = 'Phoenix · '.$this->e($company?->name ?? 'Phoenix').' · Rutina #'.$routineId;
+        $metaLine = 'Phoenix · '.$this->e($company?->name ?? 'Phoenix').' · Servicio #'.$routineId;
 
         $chrome = [
             'header' => $headerPlain,
@@ -431,7 +431,7 @@ class ReportHtmlBuilder
             ? '<div class="report-preview-banner">Vista previa — datos de ejemplo</div>'
             : '';
 
-        $metaLine = 'Phoenix · '.$this->e($company?->name ?? 'Phoenix').' · Rutina #'.$routineId;
+        $metaLine = 'Phoenix · '.$this->e($company?->name ?? 'Phoenix').' · Servicio #'.$routineId;
         $isolatePdfCoverPage = ! $isPreview && $coverEnabled && $this->coverRenderer->hasThemedCoverBackground($this->documentTheme);
 
         if ($isPreview) {

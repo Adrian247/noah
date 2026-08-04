@@ -60,7 +60,7 @@ type PageSettings = {
         subtitle?: string;
         body?: string;
         show_date?: boolean;
-        /** YYYY-MM-DD; vacío = fecha de la rutina al generar el informe */
+        /** YYYY-MM-DD; vacío = fecha del servicio al generar el informe */
         date_fixed?: string;
         omit_header_footer?: boolean;
         image_path?: string;
@@ -128,7 +128,7 @@ const components = ref<Component[]>([]);
 const pageSettings = ref<PageSettings>({
     size: 'A4',
     font_family: 'roboto',
-    header: { enabled: false, text: '{{company}} · Rutina #{{routine_id}}' },
+    header: { enabled: false, text: '{{company}} · Servicio #{{routine_id}}' },
     footer: { enabled: false, text: 'Documento generado por Phoenix' },
     page_number: { enabled: false, start_at: 1 },
     cover_page: {
@@ -421,7 +421,7 @@ async function applyDesignPreset() {
         return;
     }
     if (presetMode.value === 'full' && !routineForms.value.length) {
-        toast.error('Publica al menos un formulario con uso Rutina para aplicar una plantilla completa.');
+        toast.error('Publica al menos un formulario con uso Servicio para aplicar una plantilla completa.');
         return;
     }
     const message =
@@ -692,9 +692,9 @@ async function publish() {
     const pending = res.meta?.routine_types_pending_relink ?? [];
     if (pending.length > 0) {
         toast.warning(
-            `Publicado v${res.data.version}. Tipos de rutina aún en versión anterior: ${pending
+            `Publicado v${res.data.version}. Tipos de servicio aún en versión anterior: ${pending
                 .map((t) => t.name)
-                .join(', ')}. Re-enlázalos en Tipos de rutina.`,
+                .join(', ')}. Re-enlázalos en Tipos de servicio.`,
         );
     } else {
         toast.success(`Publicado v${res.data.version}.`);
@@ -918,7 +918,7 @@ onUnmounted(() => {
             <p class="text-portal-muted text-sm">
                 <span v-if="published">En producción: v{{ published.version }}.</span>
                 Borrador: v{{ draft?.version }}.
-                Los campos de párrafo/imagen deben coincidir con un formulario de uso Rutina publicado.
+                Los campos de párrafo/imagen deben coincidir con un formulario de uso Servicio publicado.
             </p>
         </div>
         <div
@@ -926,14 +926,14 @@ onUnmounted(() => {
             class="portal-callout portal-callout--warning report-enter-item mb-4"
             role="alert"
         >
-            <p class="font-medium">Desalineado con tipos de rutina que usan este informe</p>
+            <p class="font-medium">Desalineado con tipos de servicio que usan este informe</p>
             <ul class="mt-2 space-y-2 text-xs opacity-90">
                 <li v-for="link in misalignedRoutineTypes" :key="link.routine_type_id">
                     <strong>{{ link.routine_type_name }}</strong>
                     usa el formulario «{{ link.form_name ?? link.form_slug }}».
                     Campos del borrador que no existen ahí:
                     {{ link.missing.join(', ') }}.
-                    Aplica una plantilla con ese formulario o cambia el formulario enlazado en Tipos de rutina.
+                    Aplica una plantilla con ese formulario o cambia el formulario enlazado en Tipos de servicio.
                 </li>
             </ul>
         </div>
@@ -942,7 +942,7 @@ onUnmounted(() => {
             class="portal-callout portal-callout--warning report-enter-item mb-4"
             role="alert"
         >
-            <p class="font-medium">Campos del informe sin coincidencia en formularios de rutina</p>
+            <p class="font-medium">Campos del informe sin coincidencia en formularios de servicio</p>
             <p class="mt-1 text-xs opacity-90">
                 {{ liveOrphanFields.join(', ') }}. No podrás publicar hasta corregirlos o publicar el formulario con esas keys.
             </p>
@@ -984,7 +984,7 @@ onUnmounted(() => {
             </div>
 
             <div v-if="!routineForms.length && presetMode === 'full'" class="portal-callout portal-callout--info text-sm" role="status">
-                No hay formularios de rutina publicados. Crea y publica un formulario en Diseño → Formularios antes de
+                No hay formularios de servicio publicados. Crea y publica un formulario en Diseño → Formularios antes de
                 usar las plantillas completas, o elige «Solo tema».
             </div>
 
@@ -992,7 +992,7 @@ onUnmounted(() => {
                 v-if="routineForms.length && presetMode === 'full'"
                 v-model="selectedFormSlug"
                 class="max-w-md"
-                label="Formulario de rutina (mapeo de campos)"
+                label="Formulario de servicio (mapeo de campos)"
                 :options="routineFormOptions"
                 :disabled="!canWrite"
             />
@@ -1207,7 +1207,7 @@ onUnmounted(() => {
                             />
                             <p class="text-portal-muted -mt-1 text-xs leading-snug">
                                 Deja la fecha vacía para usar la del informe al generar el PDF (fecha de envío de la
-                                rutina en informes reales; hoy en vista previa).
+                                servicio en informes reales; hoy en vista previa).
                             </p>
                         </template>
                         <p class="text-portal-muted text-xs leading-snug">
@@ -1361,7 +1361,7 @@ onUnmounted(() => {
                             v-if="(c.type === 'paragraph' || c.type === 'image') && c.field && liveOrphanFields.includes(c.field)"
                             class="portal-msg-warning text-xs"
                         >
-                            Esta key no existe (o no es foto) en un formulario de rutina publicado.
+                            Esta key no existe (o no es foto) en un formulario de servicio publicado.
                         </p>
                         <RouterLink
                             v-if="c.type === 'section_template'"

@@ -4,6 +4,7 @@ namespace App\Services\Billing;
 
 use App\Enums\InvoiceLineType;
 use App\Enums\InvoiceStatus;
+use App\Enums\ServiceCategory;
 use App\Models\Invoice;
 use App\Models\InvoiceLine;
 use App\Models\Routine;
@@ -18,6 +19,7 @@ class InvoiceDraftService
 
     public function createFromRoutine(Routine $routine, RoutineExecution $execution): Invoice
     {
+        $routine->loadMissing(['company', 'routineType']);
         $company = app(CurrentCompany::class)->company ?? $routine->company;
         $currency = $company?->currency ?? 'MXN';
 
@@ -61,6 +63,9 @@ class InvoiceDraftService
         }
 
         $execution->loadMissing(['consumptions.supplyItem']);
+        $category = $routine->routineType?->service_category;
+        $isManufacturing = $category instanceof ServiceCategory && $category === ServiceCategory::Manufacturing;
+
         foreach ($execution->consumptions as $consumption) {
             $qty = (float) $consumption->quantity;
             $unit = (float) $consumption->unit_cost;
@@ -69,7 +74,9 @@ class InvoiceDraftService
                 'line_type' => InvoiceLineType::Supply,
                 'sort_order' => $sort++,
                 'source_routine_consumption_id' => $consumption->id,
-                'description' => $consumption->supplyItem?->name ?? 'Insumo',
+                'description' => $isManufacturing
+                    ? 'Material fabricación: '.($consumption->supplyItem?->name ?? 'Insumo')
+                    : ($consumption->supplyItem?->name ?? 'Insumo'),
                 'quantity' => $qty,
                 'unit_price' => $unit,
                 'line_total' => $this->totals->lineTotal($qty, $unit),
@@ -77,11 +84,16 @@ class InvoiceDraftService
         }
 
         if ($invoice->lines()->count() === 0) {
+            $fallback = match (true) {
+                $isManufacturing => 'Servicio de fabricación #'.$routine->id,
+                $category instanceof ServiceCategory && $category === ServiceCategory::Installation => 'Servicio de instalación #'.$routine->id,
+                default => 'Servicio #'.$routine->id,
+            };
             InvoiceLine::query()->create([
                 'invoice_id' => $invoice->id,
                 'line_type' => InvoiceLineType::Other,
                 'sort_order' => 0,
-                'description' => 'Servicio de mantenimiento rutina #'.$routine->id,
+                'description' => $fallback,
                 'quantity' => 1,
                 'unit_price' => 0,
                 'line_total' => 0,

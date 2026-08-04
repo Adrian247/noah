@@ -1,11 +1,17 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { api } from '@/api/client';
 import { useToast } from '@/composables/useToast';
 import AppButton from '@/components/ui/AppButton.vue';
 import MaterialSelect from '@/components/ui/MaterialSelect.vue';
 
-type VersionOption = { id: number; semver: string; kind: string; notes?: string | null };
+type VersionOption = {
+    id: number;
+    semver: string;
+    kind: string;
+    kind_label?: string;
+    notes?: string | null;
+};
 
 const toast = useToast();
 const loading = ref(true);
@@ -15,13 +21,13 @@ const versionId = ref('');
 const versions = ref<VersionOption[]>([]);
 const legalNotice = ref('');
 
-const versionOptions = () => [
+const versionOptions = computed(() => [
     { value: '', label: 'Versión publicada más reciente (automática)' },
     ...versions.value.map((v) => ({
         value: String(v.id),
-        label: `v${v.semver} · ${v.kind}`,
+        label: `v${v.semver} · ${v.kind_label || v.kind}`,
     })),
-];
+]);
 
 async function load() {
     loading.value = true;
@@ -72,8 +78,9 @@ onMounted(load);
 <template>
     <div class="space-y-4">
         <p class="text-portal-muted text-sm leading-relaxed">
-            El algoritmo predictivo analiza el historial de <strong class="text-portal-heading">rutinas aplicadas</strong>
-            a tus activos y clientes según la línea de servicio.
+            El algoritmo predictivo analiza el historial de
+            <strong class="text-portal-heading">servicios aplicados</strong>
+            a tus activos y clientes (mantenimiento, manufactura e inventario).
         </p>
 
         <label class="flex items-start gap-2 text-sm text-portal-heading">
@@ -84,7 +91,7 @@ onMounted(load);
                 :disabled="loading || saving"
             />
             <span>
-                Permitir a Phoenix recopilar información de rutinas para entrenamiento
+                Permitir a Phoenix recopilar información de servicios para entrenamiento
             </span>
         </label>
 
@@ -94,8 +101,8 @@ onMounted(load);
 
         <MaterialSelect
             v-model="versionId"
-            label="Versión del algoritmo predictivo"
-            :options="versionOptions()"
+            label="Versión del algoritmo de mantenimiento"
+            :options="versionOptions"
             :disabled="loading || saving"
         />
 

@@ -24,7 +24,7 @@ Roadmap orientativo; las fechas se fijan al iniciar implementación.
 | Assets & Catalogs | Equipos, insumos, proveedores |
 | Forms Engine v1 | Definir campos y versiones; captura web |
 | Report Engine v1 | Componentes básicos + PDF |
-| Maintenance v1 | Rutina / orden ligada a formulario y activo |
+| Maintenance v1 | Servicio / orden ligada a formulario y activo |
 | Inventory & costs | Consumo de insumos y registro de costos |
 | Audit básico | Quién cambió qué en entidades críticas |
 
@@ -48,7 +48,7 @@ Roadmap orientativo; las fechas se fijan al iniciar implementación.
 
 | Entrega | Descripción |
 |---------|-------------|
-| Flutter app | Rutinas asignadas, captura offline — ver `mobile/README.md` |
+| Flutter app | Servicios asignados, captura offline — ver `mobile/README.md` |
 | Mobile Sync | `POST /api/v1/sync` eventos idempotentes |
 | Storage | Evidencias en disco local; MinIO preparado en compose |
 

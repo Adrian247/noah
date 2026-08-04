@@ -1,6 +1,6 @@
 # Phoenix — App de campo (Flutter)
 
-Cliente móvil **offline-first** para técnicos: rutinas asignadas, formularios dinámicos, cola de sync y envío de ejecuciones.
+Cliente móvil **offline-first** para técnicos: servicios asignados, formularios dinámicos, cola de sync y envío de ejecuciones.
 
 Documentación: `openspec/mobile/`, `openspec/design/mobile-field-app.md`.
 
@@ -21,7 +21,7 @@ mobile/phoenix_field/
   lib/
     core/          # config, theme, router, red
     data/          # API, SQLite, repos, sesión
-    features/      # auth, rutinas, sync, perfil
+    features/      # auth, servicios (API: routines), sync, perfil
     shared/        # renderer de formulario dinámico
 ```
 
@@ -117,7 +117,7 @@ Ver `docs/DEMO_ENV.md` y `docs/PRUEBAS_MANUALES.md` (sección F) para probar el 
 
 ## Push notifications (FCM)
 
-Phoenix Campo registra el token del dispositivo en `POST /api/v1/mobile/device-tokens` tras el login. El backend envía push (además del correo) al asignar rutinas y en otros avisos de workflow.
+Phoenix Campo registra el token del dispositivo en `POST /api/v1/mobile/device-tokens` tras el login. El backend envía push (además del correo) al asignar servicios y en otros avisos de workflow.
 
 ### Backend
 
@@ -143,7 +143,7 @@ Sin proyecto Firebase real, la app compila pero no obtendrá token FCM; el backe
 ## Flujo v0.7
 
 1. Todo lo de v0.6, más:
-2. **Cronómetro auto-inicio** al abrir una rutina en estado `assigned` (tiempo en sitio)
+2. **Cronómetro auto-inicio** al abrir un servicio en estado `assigned` (tiempo en sitio)
 3. Branding Phoenix (logo, animación de entrada, icono de app)
 4. **PIN/biometría** persistente por usuario; bloqueo solo al volver del segundo plano
 5. **APK release** estable (ProGuard WorkManager)
@@ -167,7 +167,7 @@ Sin proyecto Firebase real, la app compila pero no obtendrá token FCM; el backe
 ## Flujo v0.4
 
 1. Login → token Sanctum + `X-Company-Id`
-2. Pull de rutinas asignadas y catálogos de opciones
+2. Pull de servicios asignados y catálogos de opciones
 3. Captura de formulario dinámico (texto, número, select, multiselect, duration, **boolean**, **date**, **datetime**, fotos)
 4. **Cronómetro** de tiempo en sitio
 5. **Firma** al finalizar

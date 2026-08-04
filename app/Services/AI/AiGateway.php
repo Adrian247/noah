@@ -264,7 +264,7 @@ class AiGateway
         }
 
         $draft = sprintf(
-            "Se completó la rutina #%d (%s) en el activo %s.\n\nHallazgos registrados:\n- %s\n\n%s",
+            "Se completó el servicio #%d (%s) en el activo %s.\n\nHallazgos registrados:\n- %s\n\n%s",
             $routine->id,
             $routine->routineType?->name ?? 'Servicio',
             $routine->asset?->tag ?? '—',
@@ -508,7 +508,7 @@ class AiGateway
         }
 
         if ($sections === []) {
-            $answer = 'Puedo ayudarte con rutinas (mantenimiento, manufactura o suministro), clientes, facturas, sitios, KPIs, predicción de equipos o demanda a clientes. Prueba: «Muéstrame el dashboard de KPIs» o «Demanda de manufactura».';
+            $answer = 'Puedo ayudarte con servicios (mantenimiento, manufactura o suministro), clientes, facturas, sitios, KPIs, predicción de equipos o demanda a clientes. Prueba: «Muéstrame el dashboard de KPIs» o «Demanda de manufactura».';
         } else {
             $answer = implode("\n\n", $sections);
         }
@@ -583,13 +583,13 @@ class AiGateway
      */
     private function buildLocalToolPlan(string $normalized, ?string $pageContext): array
     {
-        if (preg_match('/Rutina en contexto:\s*#(\d+)/i', (string) $pageContext, $m)) {
-            if (Str::contains($normalized, ['esta', 'actual', 'detalle', 'resumen', 'rutina'])) {
+        if (preg_match('/(?:Servicio|Rutina) en contexto:\s*#(\d+)/i', (string) $pageContext, $m)) {
+            if (Str::contains($normalized, ['esta', 'este', 'actual', 'detalle', 'resumen', 'rutina', 'servicio'])) {
                 return [['name' => 'get_routine', 'arguments' => ['routine_id' => (int) $m[1]]]];
             }
         }
 
-        if (preg_match('/rutina\s*#?(\d+)/', $normalized, $m)) {
+        if (preg_match('/(?:rutina|servicio)\s*#?(\d+)/', $normalized, $m)) {
             return [['name' => 'get_routine', 'arguments' => ['routine_id' => (int) $m[1]]]];
         }
 
@@ -635,21 +635,26 @@ class AiGateway
     /**
      * Ruteo de intención predictiva para el proveedor local (sin LLM).
      *
-     * Demanda de manufactura/suministro → predict_client_demand.
+     * Inventario/artículos → predict_inventory_demand.
+     * Demanda de manufactura/instalación → predict_client_demand.
      * Tag concreto → ficha de salud; flota/clase → ranking de riesgo de equipos.
      *
      * @return list<array{name: string, arguments: array<string, mixed>}>
      */
     private function buildPredictiveToolPlan(string $normalized): array
     {
+        if ($this->wantsInventoryDemandIntent($normalized)) {
+            return [['name' => 'predict_inventory_demand', 'arguments' => ['limit' => 10]]];
+        }
+
         if ($this->wantsClientDemandIntent($normalized)) {
             $arguments = ['limit' => 10];
-            if (Str::contains($normalized, ['suministro', 'insumo', 'compra a cliente', 'reventa'])) {
-                $arguments['service_line'] = 'supply';
+            if (Str::contains($normalized, ['instalacion', 'instalación'])) {
+                $arguments['service_line'] = 'installation';
             } elseif (Str::contains($normalized, [
                 'manufactura', 'fabricacion', 'produccion', 'obra', 'bordado', 'textil',
             ])) {
-                $arguments['service_line'] = 'fabrication';
+                $arguments['service_line'] = 'manufacturing';
             }
 
             return [['name' => 'predict_client_demand', 'arguments' => $arguments]];
@@ -691,12 +696,37 @@ class AiGateway
         return [['name' => 'predict_equipment_failures', 'arguments' => $arguments]];
     }
 
+    private function wantsInventoryDemandIntent(string $normalized): bool
+    {
+        return Str::contains($normalized, [
+            'demanda de inventario',
+            'demanda de articulos',
+            'demanda de artículos',
+            'solicitud de compra',
+            'comprar articulo',
+            'comprar artículo',
+            'pedido de articulo',
+            'pedido de artículo',
+            'inventario predictivo',
+            'predict_inventory',
+            'que articulo pedira',
+            'qué artículo pedirá',
+            'reabastecimiento cliente',
+        ]);
+    }
+
     private function wantsClientDemandIntent(string $normalized): bool
     {
+        if ($this->wantsInventoryDemandIntent($normalized)) {
+            return false;
+        }
+
         return Str::contains($normalized, [
             'demanda',
             'manufactura',
             'fabricacion',
+            'instalacion',
+            'instalación',
             'suministro',
             'que cliente',
             'cual cliente',
@@ -713,7 +743,7 @@ class AiGateway
 
     private function wantsEquipmentPredictiveIntent(string $normalized): bool
     {
-        if ($this->wantsClientDemandIntent($normalized)) {
+        if ($this->wantsInventoryDemandIntent($normalized) || $this->wantsClientDemandIntent($normalized)) {
             return false;
         }
 
@@ -756,7 +786,7 @@ class AiGateway
             .'1) Riesgo de falla en equipos (mantenimiento) — indica el tag (p. ej. SS-305), la clase '
             .'(scooptram, camión, jumbo…) o di «toda la flota». '
             .'2) Demanda de manufactura o suministro a clientes — di «demanda de clientes», «manufactura» o «suministro». '
-            .'El análisis de equipos usa rutinas de mantenimiento; el de demanda, rutinas ligadas a cliente.';
+            .'El análisis de equipos usa servicios de mantenimiento; el de demanda, servicios ligados a cliente.';
     }
 
     private function extractEquipmentClassFromQuestion(string $normalized): ?string
@@ -800,7 +830,7 @@ class AiGateway
             $line = isset($data['service_line_label']) ? ' · '.$data['service_line_label'] : '';
 
             return sprintf(
-                'Rutina #%s (%s%s) en %s, estado %s. Actualizada: %s.',
+                'Servicio #%s (%s%s) en %s, estado %s. Actualizado: %s.',
                 $data['id'] ?? '—',
                 $data['type'] ?? '—',
                 $line,
@@ -816,7 +846,7 @@ class AiGateway
             $assets = is_array($data['assets'] ?? null) ? $data['assets'] : [];
 
             return sprintf(
-                "KPIs operativos:\n- Rutinas: %s (completitud %s%%)\n- Activos: %s\n- Facturado emitido: %s MXN",
+                "KPIs operativos:\n- Servicios: %s (completitud %s%%)\n- Activos: %s\n- Facturado emitido: %s MXN",
                 $routines['total'] ?? 0,
                 $routines['completion_pct'] ?? 0,
                 $assets['total'] ?? 0,
@@ -830,6 +860,10 @@ class AiGateway
 
         if ($toolName === 'predict_client_demand') {
             return $this->formatClientDemand($data);
+        }
+
+        if ($toolName === 'predict_inventory_demand') {
+            return $this->formatInventoryDemand($data);
         }
 
         if ($toolName === 'get_equipment_health') {
@@ -851,7 +885,7 @@ class AiGateway
 
         if ($data === []) {
             return match ($toolName) {
-                'list_recent_routines' => 'No hay rutinas recientes registradas.',
+                'list_recent_routines' => 'No hay servicios recientes registrados.',
                 'list_audit_entries' => 'No hay eventos de auditoría recientes.',
                 'search_assets' => 'No encontré activos con ese criterio.',
                 'list_supply_items' => 'No hay insumos en el catálogo.',
@@ -870,7 +904,7 @@ class AiGateway
                 $line = isset($row['service_line_label']) ? ' · '.$row['service_line_label'] : '';
 
                 return sprintf(
-                    '- Rutina #%s (%s%s) en %s — estado %s',
+                    '- Servicio #%s (%s%s) en %s — estado %s',
                     $row['id'] ?? '—',
                     $row['type'] ?? '—',
                     $line,
@@ -917,7 +951,7 @@ class AiGateway
         };
 
         $heading = match ($toolName) {
-            'list_recent_routines' => 'Rutinas recientes:',
+            'list_recent_routines' => 'Servicios recientes:',
             'list_audit_entries' => 'Eventos de auditoría:',
             'search_assets' => 'Activos:',
             'list_supply_items' => 'Insumos del catálogo:',
@@ -991,23 +1025,58 @@ class AiGateway
         $lines = [];
         foreach (array_slice($predictions, 0, 10) as $prediction) {
             $lines[] = sprintf(
-                '- %s · %s (%s) · score %.2f · %d rutinas · última %s',
+                '- %s · %s (%s) · score %.2f · esperados %.2f · última %s',
                 $prediction['client_name'] ?? 'Cliente #'.($prediction['client_id'] ?? '—'),
-                $prediction['routine_type_name'] ?? 'tipo',
+                $prediction['routine_type_name'] ?? $prediction['service_type_name'] ?? 'tipo',
                 $prediction['service_line_label'] ?? ($prediction['service_line'] ?? '—'),
                 (float) ($prediction['score'] ?? 0),
-                (int) ($prediction['routines_in_lookback'] ?? 0),
-                $prediction['last_routine_at'] ?? '—',
+                (float) ($prediction['expected_requests'] ?? $prediction['routines_in_lookback'] ?? 0),
+                $prediction['last_at'] ?? $prediction['last_routine_at'] ?? '—',
             );
         }
 
         $linesFilter = is_array($data['service_lines'] ?? null)
             ? implode(', ', $data['service_lines'])
-            : 'manufactura/suministro';
+            : ($data['kind'] ?? 'manufactura/instalación');
 
         return sprintf(
             "Demanda estimada a clientes (%s, horizonte %d días):\n%s",
             $linesFilter,
+            (int) ($data['horizon_days'] ?? 30),
+            implode("\n", $lines),
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function formatInventoryDemand(array $data): string
+    {
+        $predictions = $data['predictions'] ?? [];
+        if ($predictions === []) {
+            $notes = $data['notes'] ?? null;
+            if (is_array($notes) && isset($notes[0]) && is_string($notes[0])) {
+                return $notes[0];
+            }
+
+            return 'No hay historial suficiente de consumos o solicitudes para estimar demanda de inventario.';
+        }
+
+        $lines = [];
+        foreach (array_slice($predictions, 0, 10) as $prediction) {
+            $lines[] = sprintf(
+                '- %s · %s (%s) · score %.2f · p=%.0f%% · última %s',
+                $prediction['client_name'] ?? 'Cliente #'.($prediction['client_id'] ?? '—'),
+                $prediction['item_name'] ?? 'artículo',
+                $prediction['catalog_item_code'] ?? '—',
+                (float) ($prediction['score'] ?? 0),
+                ((float) ($prediction['probability'] ?? 0)) * 100,
+                $prediction['last_at'] ?? '—',
+            );
+        }
+
+        return sprintf(
+            "Demanda de inventario estimada (horizonte %d días):\n%s",
             (int) ($data['horizon_days'] ?? 30),
             implode("\n", $lines),
         );

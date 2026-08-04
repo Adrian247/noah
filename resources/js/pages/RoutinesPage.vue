@@ -16,7 +16,7 @@ import StatusBadge from '@/components/ui/StatusBadge.vue';
 import IconActionButton from '@/components/ui/IconActionButton.vue';
 import ConfigurableDataTable from '@/components/ui/ConfigurableDataTable.vue';
 import { tableActionsColumn, type TableColumnDef } from '@/lib/tableColumns';
-import { routinesSectionNav } from '@/lib/sectionNav';
+import { routinesSectionNav, SERVICE_CATEGORY_LABELS } from '@/lib/sectionNav';
 
 type Routine = {
     id: number;
@@ -26,21 +26,17 @@ type Routine = {
     asset?: { tag: string } | null;
     client?: { id: number; trade_name?: string; legal_name?: string } | null;
     site?: { name: string };
-    routine_type?: { name: string; service_line?: string } | null;
+    routine_type?: { name: string; service_category?: string } | null;
     assignee?: { name: string } | null;
 };
 
 type Site = { id: number; name: string };
 type Asset = { id: number; tag: string; site_id: number };
 type Client = { id: number; trade_name?: string; legal_name?: string; code?: string };
-type RoutineType = { id: number; name: string; service_line?: string };
+type RoutineType = { id: number; name: string; service_category?: string };
 type UserRow = { id: number; name: string; email: string };
 
-const SERVICE_LINE_LABELS: Record<string, string> = {
-    maintenance: 'Mantenimiento',
-    fabrication: 'Manufactura',
-    supply: 'Suministro',
-};
+const SERVICE_LINE_LABELS = SERVICE_CATEGORY_LABELS;
 
 const route = useRoute();
 const router = useRouter();
@@ -77,14 +73,14 @@ const isAdmin = computed(() => company.current?.role === 'administrator');
 const selectedType = computed(() =>
     routineTypes.value.find((t) => String(t.id) === createForm.value.routine_type_id) ?? null,
 );
-const selectedServiceLine = computed(() => selectedType.value?.service_line ?? 'maintenance');
-const requiresAsset = computed(() => selectedServiceLine.value === 'maintenance');
+const selectedCategory = computed(() => selectedType.value?.service_category ?? 'maintenance');
+const requiresAsset = computed(() => selectedCategory.value === 'maintenance');
 const requiresClient = computed(
-    () => selectedServiceLine.value === 'fabrication' || selectedServiceLine.value === 'supply',
+    () => selectedCategory.value === 'manufacturing' || selectedCategory.value === 'installation',
 );
 
 const routineTableColumns = computed((): TableColumnDef[] => [
-    { id: 'routine', label: 'Rutina', cellClass: 'py-3' },
+    { id: 'routine', label: 'Servicio', cellClass: 'py-3' },
     { id: 'subject', label: 'Sujeto' },
     { id: 'site', label: 'Sitio' },
     { id: 'assignee', label: 'Asignado' },
@@ -104,7 +100,7 @@ const siteOptions = computed(() =>
     sites.value.map((s) => ({ value: String(s.id), label: s.name })),
 );
 const assetOptions = computed(() => [
-    { value: '', label: requiresAsset.value ? 'Selecciona…' : 'Sin activo (opcional)' },
+    { value: '', label: requiresAsset.value ? 'Selecciona…' : 'Sin artículo (opcional)' },
     ...filteredAssets.value.map((a) => ({ value: String(a.id), label: a.tag })),
 ]);
 const clientOptions = computed(() => [
@@ -117,7 +113,7 @@ const clientOptions = computed(() => [
 const routineTypeOptions = computed(() =>
     routineTypes.value.map((t) => ({
         value: String(t.id),
-        label: `${t.name} · ${SERVICE_LINE_LABELS[t.service_line ?? 'maintenance'] ?? 'Mantenimiento'}`,
+        label: `${t.name} · ${SERVICE_CATEGORY_LABELS[t.service_category ?? 'maintenance'] ?? 'Mantenimiento'}`,
     })),
 );
 const technicianOptions = computed(() => [
@@ -201,7 +197,7 @@ async function createRoutine() {
             }),
         });
         showCreate.value = false;
-        toast.success('Rutina creada.');
+        toast.success('Servicio creado.');
         await load();
     } catch (e) {
         toast.error((e as Error).message);
@@ -213,8 +209,8 @@ const deletingId = ref<number | null>(null);
 
 async function deleteRoutine(r: Routine) {
     const accepted = await confirm(
-        `¿Eliminar la rutina #${r.id} (${r.routine_type?.name ?? 'Rutina'})? Esta acción no se puede deshacer.`,
-        { title: 'Eliminar rutina', confirmLabel: 'Eliminar', danger: true },
+        `¿Eliminar el servicio #${r.id} (${r.routine_type?.name ?? 'Servicio'})? Esta acción no se puede deshacer.`,
+        { title: 'Eliminar servicio', confirmLabel: 'Eliminar', danger: true },
     );
     if (!accepted) {
         return;
@@ -222,7 +218,7 @@ async function deleteRoutine(r: Routine) {
     deletingId.value = r.id;
     try {
         await api(`/routines/${r.id}`, { method: 'DELETE' });
-        toast.success('Rutina eliminada.');
+        toast.success('Servicio eliminado.');
         await load();
     } catch (e) {
         toast.error((e as Error).message);
@@ -235,7 +231,7 @@ async function createDemoRoutine() {
     creatingDemo.value = true;
     try {
         const res = await api<{ data: { id: number } }>('/routines/demo', { method: 'POST' });
-        toast.success('Rutina demo creada con datos de prueba.');
+        toast.success('Servicio demo creado con datos de prueba.');
         await load();
         if (res.data?.id) {
             await router.push(`/app/routines/${res.data.id}`);
@@ -267,7 +263,7 @@ onMounted(async () => {
     <div class="portal-page" data-tour="page-routines">
         <SectionSubnav :items="routinesSectionNav" />
         <div class="flex flex-wrap items-start justify-between gap-3">
-            <PageHeader class="flex-1" title="Rutinas" subtitle="Filtra por estado y crea nuevas asignaciones." />
+            <PageHeader class="flex-1" title="Servicios" subtitle="Filtra por estado y crea nuevas asignaciones." />
             <div class="flex shrink-0 flex-wrap gap-2">
                 <AppButton
                     v-if="isAdmin"
@@ -276,9 +272,9 @@ onMounted(async () => {
                     :disabled="creatingDemo"
                     @click="createDemoRoutine"
                 >
-                    Generar rutina demo
+                    Generar servicio demo
                 </AppButton>
-                <AppButton v-if="canCreate" type="button" @click="openCreate">Nueva rutina</AppButton>
+                <AppButton v-if="canCreate" type="button" @click="openCreate">Nuevo servicio</AppButton>
             </div>
         </div>
         <div class="flex flex-wrap gap-2">
@@ -304,12 +300,12 @@ onMounted(async () => {
             :rows="routines"
             row-key="id"
             clickable
-            empty-text="Sin rutinas."
+            empty-text="Sin servicios."
             @row-click="(row) => openRoutine((row as Routine).id)"
         >
             <template #routine="{ row }">
                 <p class="text-portal-heading font-medium">
-                    {{ (row as Routine).routine_type?.name ?? 'Rutina' }}
+                    {{ (row as Routine).routine_type?.name ?? 'Servicio' }}
                     <span
                         v-if="(row as Routine).is_demo"
                         class="ml-1.5 inline-flex rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-200"
@@ -321,7 +317,7 @@ onMounted(async () => {
                     #{{ (row as Routine).id }}
                     ·
                     {{
-                        SERVICE_LINE_LABELS[(row as Routine).routine_type?.service_line ?? 'maintenance']
+                        SERVICE_CATEGORY_LABELS[(row as Routine).routine_type?.service_category ?? 'maintenance']
                             ?? 'Mantenimiento'
                     }}
                 </p>
@@ -356,14 +352,14 @@ onMounted(async () => {
                     <IconActionButton
                         v-if="isAdmin"
                         icon="trash"
-                        label="Eliminar rutina"
+                        label="Eliminar servicio"
                         variant="danger"
                         :disabled="deletingId === (row as Routine).id"
                         @click="deleteRoutine(row as Routine)"
                     />
                     <IconActionButton
                         icon="chevron-right"
-                        label="Abrir rutina"
+                        label="Abrir servicio"
                         @click="openRoutine((row as Routine).id)"
                     />
                 </div>
@@ -372,7 +368,7 @@ onMounted(async () => {
 
         <AppModal
             :open="showCreate && canCreate"
-            title="Nueva rutina"
+            title="Nuevo servicio"
             size="sm"
             @close="showCreate = false"
         >
@@ -385,19 +381,19 @@ onMounted(async () => {
                 />
                 <MaterialSelect
                     v-model="createForm.routine_type_id"
-                    label="Tipo de rutina"
+                    label="Tipo de servicio"
                     :options="routineTypeOptions"
                     required
                 />
                 <MaterialSelect
                     v-if="requiresAsset || !requiresClient"
                     v-model="createForm.asset_id"
-                    :label="requiresAsset ? 'Activo *' : 'Activo (opcional)'"
+                    :label="requiresAsset ? 'Artículo inventario *' : 'Artículo inventario (opcional)'"
                     :options="assetOptions"
                     :required="requiresAsset"
                 />
                 <MaterialSelect
-                    v-if="requiresClient || selectedServiceLine === 'maintenance'"
+                    v-if="requiresClient || selectedCategory === 'maintenance'"
                     v-model="createForm.client_id"
                     :label="requiresClient ? 'Cliente *' : 'Cliente (opcional)'"
                     :options="clientOptions"
@@ -423,7 +419,7 @@ onMounted(async () => {
                 >
                     Cancelar
                 </button>
-                <AppButton type="submit" form="routine-create-form">Crear rutina</AppButton>
+                <AppButton type="submit" form="routine-create-form">Crear servicio</AppButton>
             </template>
         </AppModal>
     </div>

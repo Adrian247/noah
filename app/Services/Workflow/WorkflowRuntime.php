@@ -402,7 +402,7 @@ class WorkflowRuntime
                 'version' => 1,
             ],
             [
-                'name' => 'Validación estándar de rutina',
+                'name' => 'Validación estándar de servicio',
                 'status' => 'published',
                 'definition' => $definition,
             ]

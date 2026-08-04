@@ -27,13 +27,13 @@ class WorkflowBlockCompiler
                 [
                     'id' => self::ROUTINE_STEP,
                     'kind' => 'routine',
-                    'label' => 'Rutina',
+                    'label' => 'Servicio',
                     'position' => ['x' => 72, 'y' => 240],
                     'locked' => true,
                     'assignment_notify' => [
                         'enabled' => true,
-                        'subject' => 'Nueva rutina asignada #{routine.id}',
-                        'body_html' => '<p>Hola {user.name}, se te asignó la rutina {routine.id} ({routine_type.name}) en el activo {asset.tag}.</p><p>Entra a Phoenix para revisarla y ejecutarla.</p>',
+                        'subject' => 'Nuevo servicio asignado #{routine.id}',
+                        'body_html' => '<p>Hola {user.name}, se te asignó el servicio {routine.id} ({routine_type.name}) en el activo {asset.tag}.</p><p>Entra a Phoenix para revisarlo y ejecutarlo.</p>',
                         'recipients' => ['executing_technician'],
                     ],
                 ],
@@ -67,8 +67,8 @@ class WorkflowBlockCompiler
                     'label' => 'Revisión',
                     'notify' => [
                         'enabled' => true,
-                        'subject' => 'Ejecuta rutina {routine.id}',
-                        'body_html' => '<p>Hola {user.name}, registramos tu ejecución de la rutina {routine.id} ({routine_type.name}) en el activo {asset.tag}.</p>',
+                        'subject' => 'Ejecuta servicio {routine.id}',
+                        'body_html' => '<p>Hola {user.name}, registramos tu ejecución del servicio {routine.id} ({routine_type.name}) en el activo {asset.tag}.</p>',
                         'recipients' => ['executing_technician'],
                     ],
                 ],
@@ -80,8 +80,8 @@ class WorkflowBlockCompiler
                     'label' => 'Rechazo',
                     'notify' => [
                         'enabled' => true,
-                        'subject' => 'Rutina {routine.id} rechazada',
-                        'body_html' => '<p>Hola {user.name}, la rutina {routine.id} fue rechazada y debe volver a ejecutarse en campo.</p>',
+                        'subject' => 'Servicio {routine.id} rechazado',
+                        'body_html' => '<p>Hola {user.name}, el servicio {routine.id} fue rechazado y debe volver a ejecutarse en campo.</p>',
                         'recipients' => ['executing_technician'],
                     ],
                 ],
@@ -90,7 +90,7 @@ class WorkflowBlockCompiler
                     'source' => self::SUPERVISOR_STEP,
                     'target' => self::BILLING_STEP,
                     'action' => 'approve',
-                    'label' => 'Rutina a Facturar',
+                    'label' => 'Servicio a facturar',
                     'routine_validated' => true,
                 ],
                 [
@@ -101,8 +101,8 @@ class WorkflowBlockCompiler
                     'label' => 'Emisión de factura',
                     'notify' => [
                         'enabled' => true,
-                        'subject' => 'Cierre de rutina {routine.id}',
-                        'body_html' => '<p>Hola {user.name}, le informamos que la rutina {routine.id} del cliente {client.name} ha sido finalizada, a continuación el detalle de la rutina realizada:</p><p>{routine.tasks_detail}</p>',
+                        'subject' => 'Cierre de servicio {routine.id}',
+                        'body_html' => '<p>Hola {user.name}, le informamos que el servicio {routine.id} del cliente {client.name} ha sido finalizado, a continuación el detalle del servicio realizado:</p><p>{routine.tasks_detail}</p>',
                         'recipients' => ['incident_creator', 'executing_technician', 'approval_supervisor'],
                     ],
                 ],
@@ -159,7 +159,7 @@ class WorkflowBlockCompiler
 
         if (! isset($steps[self::ROUTINE_STEP])) {
             throw ValidationException::withMessages([
-                'definition.meta.block_graph' => 'Debe existir el bloque Rutina.',
+                'definition.meta.block_graph' => 'Debe existir el bloque Servicio.',
             ]);
         }
 
@@ -335,7 +335,7 @@ class WorkflowBlockCompiler
 
         if (! isset($byId[self::ROUTINE_STEP])) {
             throw ValidationException::withMessages([
-                'definition.meta.block_graph' => 'Falta el bloque fijo Rutina.',
+                'definition.meta.block_graph' => 'Falta el bloque fijo Servicio.',
             ]);
         }
 
@@ -361,7 +361,7 @@ class WorkflowBlockCompiler
             if ($action === 'reject') {
                 if ($sourceKind !== 'role' || $target !== self::ROUTINE_STEP) {
                     throw ValidationException::withMessages([
-                        "definition.meta.block_graph.edges.{$index}" => 'Rechazo solo desde un Rol hacia Rutina.',
+                        "definition.meta.block_graph.edges.{$index}" => 'Rechazo solo desde un Rol hacia Servicio.',
                     ]);
                 }
             }
@@ -374,14 +374,14 @@ class WorkflowBlockCompiler
                 }
                 if ($target === self::ROUTINE_STEP) {
                     throw ValidationException::withMessages([
-                        "definition.meta.block_graph.edges.{$index}" => 'Aprobar no puede apuntar a Rutina.',
+                        "definition.meta.block_graph.edges.{$index}" => 'Aprobar no puede apuntar a Servicio.',
                     ]);
                 }
             }
 
             if ($action === 'submit' && $source !== self::ROUTINE_STEP) {
                 throw ValidationException::withMessages([
-                    "definition.meta.block_graph.edges.{$index}" => 'Enviar solo desde Rutina.',
+                    "definition.meta.block_graph.edges.{$index}" => 'Enviar solo desde Servicio.',
                 ]);
             }
 
@@ -406,7 +406,7 @@ class WorkflowBlockCompiler
         }
         if ($submitCount > 1) {
             throw ValidationException::withMessages([
-                'definition.meta.block_graph' => 'Rutina solo puede tener una salida de envío.',
+                'definition.meta.block_graph' => 'Servicio solo puede tener una salida de envío.',
             ]);
         }
     }

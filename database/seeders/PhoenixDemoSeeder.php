@@ -4,7 +4,7 @@ namespace Database\Seeders;
 
 use App\Enums\FormUsage;
 use App\Enums\MembershipRole;
-use App\Enums\ServiceLine;
+use App\Enums\ServiceCategory;
 use App\Models\Asset;
 use App\Models\AssetClientAssignment;
 use App\Models\CatalogItem;
@@ -33,13 +33,13 @@ use App\Services\Routines\DemoRoutineFactory;
 use App\Services\Workflow\WorkflowRuntime;
 use App\Support\DemoAccounts;
 use App\Support\PlatformAdmin;
+use App\Support\PlatformCatalogCompany;
 use App\Support\Predictive\FailureModeCatalog;
 use App\Support\Ai\OperationalAssistantPrompt;
 use App\Support\Predictive\OemCatalog;
 use App\Support\SupplyUnits;
 use Database\Seeders\Support\DemoClientLogoGenerator;
 use Database\Seeders\Support\DemoDesignDraftVersions;
-use Database\Seeders\Support\DomGInventorySpreadsheetSeeder;
 use Database\Seeders\Support\NormalizedSupplyFormSchemas;
 use Database\Seeders\Support\NormalizedVehicleFormSchema;
 use Database\Seeders\Support\TenantDemoProfile;
@@ -65,19 +65,30 @@ class PhoenixDemoSeeder extends Seeder
 
         $companies = [];
         foreach ([TenantDemoProfile::mein(), TenantDemoProfile::domG()] as $profile) {
-            $companies[] = $this->seedDemonstrationTenant($profile, $tenantPassword);
+            $companies[] = $this->seedVirginTenant($profile, $tenantPassword);
         }
-        $companies[] = $this->seedVirginSandboxTenant(TenantDemoProfile::sandbox(), $tenantPassword);
+        // Playground operativo + rutina demo solo en Sandbox.
+        $companies[] = $this->seedDemonstrationTenant(TenantDemoProfile::sandbox(), $tenantPassword);
 
-        // Catálogos predictivos: OEM global → catálogo de equipos de cada tenant; fallas por empresa.
+        // OEM global primero: Artículos de sistema reutiliza Epiroc/Sandvik verificados.
         OemCatalog::sync();
+        $this->seedPlatformCatalogCompany();
+
+        // Catálogos predictivos: OEM global → solo Sandbox (Mein/Dom-G quedan vírgenes).
         $algorithm = PredictiveAlgorithmVersion::query()->updateOrCreate(
             ['semver' => '1.0.0'],
             [
                 'status' => PredictiveAlgorithmVersion::STATUS_PUBLISHED,
-                'kind' => 'hazard_routines_v1',
-                'notes' => 'Versión inicial publicada: predicción sobre historial de rutinas aplicadas.',
-                'metrics' => ['baseline_kind' => 'hazard_routines_v1'],
+                'kind' => \App\Enums\PredictiveAlgorithmKind::Maintenance->value,
+                'notes' => 'Versión inicial publicada: predicción de servicios de mantenimiento (hazard-v2).',
+                'metrics' => ['baseline_kind' => \App\Enums\PredictiveAlgorithmKind::Maintenance->value],
+                'calibration' => [
+                    'global_hazard_multiplier' => 1.0,
+                    'driver_weights' => [
+                        'intensidad_servicios' => 1.15,
+                        'backlog_servicios' => 1.1,
+                    ],
+                ],
                 'training_summary' => [
                     'note' => 'Semilla demo. Reentrena desde Plataforma → Algoritmo predictivo.',
                 ],
@@ -86,8 +97,36 @@ class PhoenixDemoSeeder extends Seeder
                 'published_at' => now(),
             ],
         );
+        PredictiveAlgorithmVersion::query()->updateOrCreate(
+            ['semver' => '1.0.0-mfg'],
+            [
+                'status' => PredictiveAlgorithmVersion::STATUS_PUBLISHED,
+                'kind' => \App\Enums\PredictiveAlgorithmKind::Manufacturing->value,
+                'notes' => 'Baseline manufactura (demand-v1).',
+                'metrics' => ['baseline_kind' => \App\Enums\PredictiveAlgorithmKind::Manufacturing->value],
+                'calibration' => ['global_rate_multiplier' => 1.0, 'pair_boosts' => []],
+                'training_summary' => ['note' => 'Semilla demo manufactura.'],
+                'created_by' => $platformAdmin->id,
+                'published_by' => $platformAdmin->id,
+                'published_at' => now(),
+            ],
+        );
+        PredictiveAlgorithmVersion::query()->updateOrCreate(
+            ['semver' => '1.0.0-inv'],
+            [
+                'status' => PredictiveAlgorithmVersion::STATUS_PUBLISHED,
+                'kind' => \App\Enums\PredictiveAlgorithmKind::Inventory->value,
+                'notes' => 'Baseline inventario / demanda de artículos (demand-v1).',
+                'metrics' => ['baseline_kind' => \App\Enums\PredictiveAlgorithmKind::Inventory->value],
+                'calibration' => ['global_rate_multiplier' => 1.0, 'pair_boosts' => []],
+                'training_summary' => ['note' => 'Semilla demo inventario.'],
+                'created_by' => $platformAdmin->id,
+                'published_by' => $platformAdmin->id,
+                'published_at' => now(),
+            ],
+        );
         foreach ($companies as $company) {
-            if ($company->name === TenantDemoProfile::sandbox()->companyName) {
+            if ($company->name !== TenantDemoProfile::sandbox()->companyName) {
                 continue;
             }
 
@@ -140,14 +179,11 @@ class PhoenixDemoSeeder extends Seeder
     }
 
     /**
-     * Tenant demo con configuración virgen estándar (como alta desde plataforma): empresa, roles y admin.
+     * Tenant virgen: empresa, roles, usuarios/contraseñas y cliente interno.
+     * Sin catálogos, sitios, artículos, formularios ni rutinas demo.
      */
-    private function seedVirginSandboxTenant(TenantDemoProfile $profile, string $password): Company
+    private function seedVirginTenant(TenantDemoProfile $profile, string $password): Company
     {
-        if (! $profile->isSandbox()) {
-            throw new \InvalidArgumentException('seedVirginSandboxTenant requiere el perfil Sandbox.');
-        }
-
         $company = Company::query()->updateOrCreate(
             ['name' => $profile->companyName],
             [
@@ -162,6 +198,8 @@ class PhoenixDemoSeeder extends Seeder
                 'fiscal_provider' => config('phoenix.billing.fiscal.default_provider', 'sandbox'),
             ]
         );
+
+        $this->purgeTenantOperationalData($company, keepClientCodes: [$profile->clientCode]);
 
         app(CompanyAuthorizationService::class)->ensureCompanyRoles($company);
 
@@ -183,7 +221,112 @@ class PhoenixDemoSeeder extends Seeder
 
         app(WorkflowRuntime::class)->seedDefinitionForCompany($company->id);
 
+        $internalClient = $this->seedInternalClient($company, $profile);
+
+        foreach ($profile->staff as $staffRow) {
+            if (empty($staffRow['portal_client'])) {
+                continue;
+            }
+            $user = User::query()->where('email', $staffRow['email'])->first();
+            if ($user === null) {
+                continue;
+            }
+            CompanyMembership::query()
+                ->where('company_id', $company->id)
+                ->where('user_id', $user->id)
+                ->update(['client_id' => $internalClient->id]);
+        }
+
         return $company;
+    }
+
+    /**
+     * Elimina datos operativos de un tenant (rutinas demo, catálogos, sitios, etc.),
+     * conservando empresa, usuarios/membresías y clientes en $keepClientCodes.
+     *
+     * @param  list<string>  $keepClientCodes
+     */
+    private function purgeTenantOperationalData(Company $company, array $keepClientCodes): void
+    {
+        $companyId = (int) $company->id;
+        $db = \Illuminate\Support\Facades\DB::connection();
+
+        $invoiceIds = $db->table('invoices')->where('company_id', $companyId)->pluck('id');
+        if ($invoiceIds->isNotEmpty()) {
+            $db->table('invoice_lines')->whereIn('invoice_id', $invoiceIds)->delete();
+        }
+        $db->table('invoices')->where('company_id', $companyId)->delete();
+        $db->table('generated_reports')->where('company_id', $companyId)->delete();
+        $db->table('inventory_movements')->where('company_id', $companyId)->delete();
+
+        $routineIds = $db->table('routines')->where('company_id', $companyId)->pluck('id');
+        if ($routineIds->isNotEmpty()) {
+            $executionIds = $db->table('routine_executions')->whereIn('routine_id', $routineIds)->pluck('id');
+            if ($executionIds->isNotEmpty()) {
+                $db->table('routine_consumptions')->whereIn('routine_execution_id', $executionIds)->delete();
+            }
+            $db->table('routine_executions')->whereIn('routine_id', $routineIds)->delete();
+            $db->table('workflow_instances')->whereIn('routine_id', $routineIds)->delete();
+        }
+        $db->table('routines')->where('company_id', $companyId)->delete();
+        $db->table('asset_client_assignments')->where('company_id', $companyId)->delete();
+        $db->table('assets')->where('company_id', $companyId)->delete();
+        $db->table('sites')->where('company_id', $companyId)->delete();
+        $db->table('supply_items')->where('company_id', $companyId)->delete();
+        $db->table('supply_types')->where('company_id', $companyId)->delete();
+        $db->table('catalog_items')->where('company_id', $companyId)->delete();
+        $db->table('equipment_types')->where('company_id', $companyId)->delete();
+        $db->table('suppliers')->where('company_id', $companyId)->delete();
+        $db->table('routine_types')->where('company_id', $companyId)->delete();
+
+        $reportIds = $db->table('report_templates')->where('company_id', $companyId)->pluck('id');
+        if ($reportIds->isNotEmpty()) {
+            $db->table('report_template_versions')->whereIn('report_template_id', $reportIds)->delete();
+        }
+        $db->table('report_templates')->where('company_id', $companyId)->delete();
+        if ($db->getSchemaBuilder()->hasTable('report_section_templates')) {
+            $db->table('report_section_templates')->where('company_id', $companyId)->delete();
+        }
+
+        $formIds = $db->table('form_definitions')->where('company_id', $companyId)->pluck('id');
+        if ($formIds->isNotEmpty()) {
+            $db->table('form_versions')->whereIn('form_definition_id', $formIds)->delete();
+        }
+        $db->table('form_definitions')->where('company_id', $companyId)->delete();
+        $db->table('form_option_catalogs')->where('company_id', $companyId)->delete();
+
+        $clientsQuery = $db->table('clients')->where('company_id', $companyId);
+        if ($keepClientCodes !== []) {
+            $clientsQuery->whereNotIn('code', $keepClientCodes);
+        }
+        $removeClientIds = $clientsQuery->pluck('id');
+        if ($removeClientIds->isNotEmpty()) {
+            $db->table('company_memberships')
+                ->where('company_id', $companyId)
+                ->whereIn('client_id', $removeClientIds)
+                ->update(['client_id' => null]);
+            $db->table('clients')->whereIn('id', $removeClientIds)->delete();
+        }
+    }
+
+    private function seedInternalClient(Company $company, TenantDemoProfile $profile): Client
+    {
+        return Client::query()->updateOrCreate(
+            ['company_id' => $company->id, 'code' => $profile->clientCode],
+            [
+                'legal_name' => $profile->clientLegalName,
+                'trade_name' => $profile->clientTradeName,
+                'tax_id' => null,
+                'billing_email' => null,
+                'is_active' => true,
+            ]
+        );
+    }
+
+    /** @deprecated use seedVirginTenant */
+    private function seedVirginSandboxTenant(TenantDemoProfile $profile, string $password): Company
+    {
+        return $this->seedVirginTenant($profile, $password);
     }
 
     private function seedDemonstrationTenant(TenantDemoProfile $profile, string $password): Company
@@ -398,7 +541,7 @@ class PhoenixDemoSeeder extends Seeder
 
         $normalizedFormDef = FormDefinition::query()->updateOrCreate(
             ['company_id' => $company->id, 'slug' => 'inspeccion-vehiculo-v1'],
-            ['name' => 'Inspección vehículo (normalizada)', 'usage' => FormUsage::Routine]
+            ['name' => 'Inspección vehículo (normalizada)', 'usage' => FormUsage::Service]
         );
 
         $normalizedFormVersion = FormVersion::query()->updateOrCreate(
@@ -421,7 +564,7 @@ class PhoenixDemoSeeder extends Seeder
 
         $fichaVehiculoFormDef = FormDefinition::query()->updateOrCreate(
             ['company_id' => $company->id, 'slug' => 'ficha-tecnica-vehiculo-v1'],
-            ['name' => 'Ficha técnica vehículo', 'usage' => FormUsage::Equipment]
+            ['name' => 'Ficha técnica vehículo', 'usage' => FormUsage::Article]
         );
 
         $fichaVehiculoFormVersion = FormVersion::query()->updateOrCreate(
@@ -443,7 +586,7 @@ class PhoenixDemoSeeder extends Seeder
 
         $formFiltrosDef = FormDefinition::query()->updateOrCreate(
             ['company_id' => $company->id, 'slug' => 'ficha-insumo-filtros-v1'],
-            ['name' => 'Ficha insumo — filtros', 'usage' => FormUsage::Supply]
+            ['name' => 'Ficha insumo — filtros', 'usage' => FormUsage::Inventory]
         );
         $formFiltrosVersion = FormVersion::query()->updateOrCreate(
             ['form_definition_id' => $formFiltrosDef->id, 'version' => 1],
@@ -461,7 +604,7 @@ class PhoenixDemoSeeder extends Seeder
 
         $formFrenosDef = FormDefinition::query()->updateOrCreate(
             ['company_id' => $company->id, 'slug' => 'ficha-insumo-frenos-v1'],
-            ['name' => 'Ficha insumo — frenos y balatas', 'usage' => FormUsage::Supply]
+            ['name' => 'Ficha insumo — frenos y balatas', 'usage' => FormUsage::Inventory]
         );
         $formFrenosVersion = FormVersion::query()->updateOrCreate(
             ['form_definition_id' => $formFrenosDef->id, 'version' => 1],
@@ -479,7 +622,7 @@ class PhoenixDemoSeeder extends Seeder
 
         $formSuspensionDef = FormDefinition::query()->updateOrCreate(
             ['company_id' => $company->id, 'slug' => 'ficha-insumo-suspension-v1'],
-            ['name' => 'Ficha insumo — suspensión', 'usage' => FormUsage::Supply]
+            ['name' => 'Ficha insumo — suspensión', 'usage' => FormUsage::Inventory]
         );
         $formSuspensionVersion = FormVersion::query()->updateOrCreate(
             ['form_definition_id' => $formSuspensionDef->id, 'version' => 1],
@@ -498,7 +641,7 @@ class PhoenixDemoSeeder extends Seeder
 
         $formFluidosDef = FormDefinition::query()->updateOrCreate(
             ['company_id' => $company->id, 'slug' => 'ficha-insumo-fluidos-v1'],
-            ['name' => 'Ficha insumo — fluidos y lubricantes', 'usage' => FormUsage::Supply]
+            ['name' => 'Ficha insumo — fluidos y lubricantes', 'usage' => FormUsage::Inventory]
         );
         $formFluidosVersion = FormVersion::query()->updateOrCreate(
             ['form_definition_id' => $formFluidosDef->id, 'version' => 1],
@@ -704,7 +847,7 @@ class PhoenixDemoSeeder extends Seeder
 
         $formDef = FormDefinition::query()->updateOrCreate(
             ['company_id' => $company->id, 'slug' => 'revision-mayor-vehiculo-premium'],
-            ['name' => 'Revisión mayor vehículo — agencia premium', 'usage' => FormUsage::Routine]
+            ['name' => 'Revisión mayor vehículo — agencia premium', 'usage' => FormUsage::Service]
         );
 
         $formVersion = FormVersion::query()->updateOrCreate(
@@ -915,7 +1058,7 @@ class PhoenixDemoSeeder extends Seeder
                     'font_family' => 'source_sans',
                     'header' => [
                         'enabled' => true,
-                        'text' => '{{company}} · Revisión mayor · Rutina #{{routine_id}}',
+                        'text' => '{{company}} · Revisión mayor · Servicio #{{routine_id}}',
                     ],
                     'footer' => [
                         'enabled' => true,
@@ -943,7 +1086,7 @@ class PhoenixDemoSeeder extends Seeder
             ['company_id' => $company->id, 'slug' => 'revision-mayor-vehiculo-premium'],
             [
                 'name' => 'Revisión mayor vehículo (premium)',
-                'service_line' => ServiceLine::Maintenance,
+                'service_category' => ServiceCategory::Maintenance,
                 'form_version_id' => $formVersion->id,
                 'report_template_version_id' => $reportVersion->id,
                 'is_active' => true,
@@ -957,13 +1100,13 @@ class PhoenixDemoSeeder extends Seeder
             [
                 'slug' => 'orden-manufactura',
                 'name' => $profile->isDomG() ? 'Orden de producción' : 'Orden de manufactura',
-                'line' => ServiceLine::Fabrication,
+                'line' => ServiceCategory::Manufacturing,
                 'legacy_slugs' => ['fabricacion-estructuras'],
             ],
             [
                 'slug' => 'suministro-insumos-cliente',
                 'name' => 'Suministro de insumos a cliente',
-                'line' => ServiceLine::Supply,
+                'line' => ServiceCategory::Installation,
                 'legacy_slugs' => [],
             ],
         ] as $extraType) {
@@ -974,7 +1117,7 @@ class PhoenixDemoSeeder extends Seeder
                     ->update([
                         'slug' => $extraType['slug'],
                         'name' => $extraType['name'],
-                        'service_line' => $extraType['line'],
+                        'service_category' => $extraType['line'],
                     ]);
             }
 
@@ -982,7 +1125,7 @@ class PhoenixDemoSeeder extends Seeder
                 ['company_id' => $company->id, 'slug' => $extraType['slug']],
                 [
                     'name' => $extraType['name'],
-                    'service_line' => $extraType['line'],
+                    'service_category' => $extraType['line'],
                     'form_version_id' => $formVersion->id,
                     'report_template_version_id' => $reportVersion->id,
                     'workflow_definition_id' => $workflowDef->id,
@@ -1005,55 +1148,51 @@ class PhoenixDemoSeeder extends Seeder
             ]
         );
 
-        if ($profile->isDomG()) {
-            app(DomGInventorySpreadsheetSeeder::class)->seed($company, $supplier);
-        } else {
-            foreach ([
-                [
-                    'sku' => 'FLT-AIR-01',
-                    'supply_type_id' => $supplyTypeFiltros->id,
-                    'name' => 'Filtro de aire motor',
-                    'sector' => 'mechanical',
-                    'material_kind' => 'spare_part',
-                    'unit' => 'pza',
-                    'standard_cost' => 320.00,
-                    'quantity_on_hand' => 18,
-                    'min_stock' => 6,
-                    'storage_location' => 'Rack M-12',
-                    'is_active' => true,
-                ],
-                [
-                    'sku' => 'LUB-5W30',
-                    'supply_type_id' => $supplyTypeFiltros->id,
-                    'name' => 'Aceite sintético 5W-30',
-                    'sector' => 'mechanical',
-                    'material_kind' => 'chemical',
-                    'unit' => 'lt',
-                    'standard_cost' => 180.00,
-                    'quantity_on_hand' => 42,
-                    'min_stock' => 15,
-                    'storage_location' => 'Bodega fluidos',
-                    'is_active' => true,
-                ],
-                [
-                    'sku' => 'EPP-GLOVE',
-                    'supply_type_id' => $supplyTypeFiltros->id,
-                    'name' => 'Guantes nitrilo industrial',
-                    'sector' => 'safety',
-                    'material_kind' => 'consumable',
-                    'unit' => 'pqt',
-                    'standard_cost' => 95.00,
-                    'quantity_on_hand' => 8,
-                    'min_stock' => 10,
-                    'storage_location' => 'EPP entrada',
-                    'is_active' => true,
-                ],
-            ] as $stockSeed) {
-                SupplyItem::query()->updateOrCreate(
-                    ['company_id' => $company->id, 'sku' => $stockSeed['sku']],
-                    array_merge($stockSeed, ['supplier_id' => $supplier->id]),
-                );
-            }
+        foreach ([
+            [
+                'sku' => 'FLT-AIR-01',
+                'supply_type_id' => $supplyTypeFiltros->id,
+                'name' => 'Filtro de aire motor',
+                'sector' => 'mechanical',
+                'material_kind' => 'spare_part',
+                'unit' => 'pza',
+                'standard_cost' => 320.00,
+                'quantity_on_hand' => 18,
+                'min_stock' => 6,
+                'storage_location' => 'Rack M-12',
+                'is_active' => true,
+            ],
+            [
+                'sku' => 'LUB-5W30',
+                'supply_type_id' => $supplyTypeFiltros->id,
+                'name' => 'Aceite sintético 5W-30',
+                'sector' => 'mechanical',
+                'material_kind' => 'chemical',
+                'unit' => 'lt',
+                'standard_cost' => 180.00,
+                'quantity_on_hand' => 42,
+                'min_stock' => 15,
+                'storage_location' => 'Bodega fluidos',
+                'is_active' => true,
+            ],
+            [
+                'sku' => 'EPP-GLOVE',
+                'supply_type_id' => $supplyTypeFiltros->id,
+                'name' => 'Guantes nitrilo industrial',
+                'sector' => 'safety',
+                'material_kind' => 'consumable',
+                'unit' => 'pqt',
+                'standard_cost' => 95.00,
+                'quantity_on_hand' => 8,
+                'min_stock' => 10,
+                'storage_location' => 'EPP entrada',
+                'is_active' => true,
+            ],
+        ] as $stockSeed) {
+            SupplyItem::query()->updateOrCreate(
+                ['company_id' => $company->id, 'sku' => $stockSeed['sku']],
+                array_merge($stockSeed, ['supplier_id' => $supplier->id]),
+            );
         }
 
         $this->ensureDemonstrationRoutine($company, $profile);
@@ -1098,6 +1237,11 @@ class PhoenixDemoSeeder extends Seeder
 
     private function seedExtraDemoClients(Company $company, TenantDemoProfile $profile): void
     {
+        // Sandbox: solo el cliente primario del playground (ya creado arriba).
+        if ($profile->isSandbox()) {
+            return;
+        }
+
         $extras = [
             [
                 'code' => $profile->isDomG() ? 'DOMG-INTERNO' : 'MEIN-INTERNO',
@@ -1107,14 +1251,6 @@ class PhoenixDemoSeeder extends Seeder
                     : 'Trabajos internos Mein Company',
             ],
         ];
-
-        if (! $profile->isDomG()) {
-            $extras[] = [
-                'code' => 'MEIN-CLI-002',
-                'trade_name' => 'Presidencia Municipal Sombrerete',
-                'legal_name' => 'Presidencia Municipal de Sombrerete',
-            ];
-        }
 
         foreach ($extras as $row) {
             Client::query()->updateOrCreate(
@@ -1128,6 +1264,142 @@ class PhoenixDemoSeeder extends Seeder
                 ]
             );
         }
+    }
+
+    private function seedPlatformCatalogCompany(): void
+    {
+        $company = Company::query()->updateOrCreate(
+            ['name' => PlatformCatalogCompany::NAME],
+            [
+                'legal_name' => PlatformCatalogCompany::NAME,
+                'currency' => 'MXN',
+                'timezone' => 'America/Mexico_City',
+                'is_active' => true,
+            ],
+        );
+
+        // Retirar plantillas de manufactura / tipos vacíos de iteraciones anteriores.
+        CatalogItem::withoutGlobalScope('company')
+            ->where('company_id', $company->id)
+            ->whereIn('code', ['SYS-DOMO-01', 'SYS-ESC-01', 'SYS-CIVIL-01'])
+            ->delete();
+        EquipmentType::withoutGlobalScope('company')
+            ->where('company_id', $company->id)
+            ->whereIn('code', ['SYS-STRUCT', 'SYS-MOTOR', 'SYS-PUMP'])
+            ->delete();
+
+        $typeVehicle = EquipmentType::withoutGlobalScope('company')->updateOrCreate(
+            ['company_id' => $company->id, 'code' => 'SYS-VEHICLE'],
+            [
+                'name' => 'Vehículo',
+                'description' => 'Plantillas de vehículos ligeros / utilitarios',
+                'sort_order' => 0,
+            ],
+        );
+
+        $typeByClass = [
+            'SCOOPTRAM' => EquipmentType::withoutGlobalScope('company')->updateOrCreate(
+                ['company_id' => $company->id, 'code' => 'SYS-LHD'],
+                [
+                    'name' => 'Cargador LHD',
+                    'description' => 'Scooptram / Toro — carga y acarreo subterráneo',
+                    'sort_order' => 1,
+                ],
+            ),
+            'CAMION_BAJO_PERFIL' => EquipmentType::withoutGlobalScope('company')->updateOrCreate(
+                ['company_id' => $company->id, 'code' => 'SYS-TRUCK'],
+                [
+                    'name' => 'Camión minero',
+                    'description' => 'Minetruck / Toro TH — acarreo de bajo perfil',
+                    'sort_order' => 2,
+                ],
+            ),
+            'JUMBO' => EquipmentType::withoutGlobalScope('company')->updateOrCreate(
+                ['company_id' => $company->id, 'code' => 'SYS-DRILL'],
+                [
+                    'name' => 'Perforadora',
+                    'description' => 'Jumbos, taladros largos y empernadoras',
+                    'sort_order' => 3,
+                ],
+            ),
+        ];
+
+        CatalogItem::withoutGlobalScope('company')->updateOrCreate(
+            ['company_id' => $company->id, 'code' => 'SYS-L200-2018'],
+            [
+                'is_system_template' => true,
+                'equipment_type_id' => $typeVehicle->id,
+                'name' => 'Mitsubishi L200 2018',
+                'manufacturer' => 'Mitsubishi',
+                'specifications' => [
+                    'modelo' => 'L200',
+                    'anio' => 2018,
+                    'mercado' => 'México',
+                    'chasis' => 'Rise Body',
+                    'variante' => '2.5L DI-D 4x4',
+                    'tipo_combustible' => 'diesel',
+                    'motor' => '2.5 Litros, 4 cilindros Turbo Diésel (Intercooler)',
+                    'potencia_hp' => 134,
+                    'torque_lb_pie' => 232,
+                    'transmision' => 'Manual de 5 velocidades (con caja reductora)',
+                    'traccion' => '4x4',
+                ],
+            ],
+        );
+
+        $oemModels = \App\Models\OemEquipmentModel::query()
+            ->whereIn('manufacturer', ['Epiroc', 'Sandvik'])
+            ->orderBy('manufacturer')
+            ->orderBy('family')
+            ->orderBy('model')
+            ->get();
+
+        $keepCodes = ['SYS-L200-2018'];
+
+        foreach ($oemModels as $oem) {
+            $class = (string) $oem->equipment_class;
+            $type = $typeByClass[$class] ?? null;
+            if ($type === null) {
+                continue;
+            }
+
+            $code = \Illuminate\Support\Str::limit(
+                'SYS-'.\Illuminate\Support\Str::upper(
+                    \Illuminate\Support\Str::slug($oem->manufacturer.' '.$oem->model, '-')
+                ),
+                64,
+                '',
+            );
+            $keepCodes[] = $code;
+
+            $specs = is_array($oem->specifications) ? $oem->specifications : [];
+            CatalogItem::withoutGlobalScope('company')->updateOrCreate(
+                ['company_id' => $company->id, 'code' => $code],
+                [
+                    'is_system_template' => true,
+                    'equipment_type_id' => $type->id,
+                    'name' => trim($oem->manufacturer.' '.$oem->model),
+                    'manufacturer' => $oem->manufacturer,
+                    'oem_equipment_model_id' => $oem->id,
+                    'specifications' => array_filter([
+                        'modelo' => $oem->model,
+                        'family' => $oem->family,
+                        'equipment_class' => $class,
+                        'application' => $oem->application,
+                        'description' => $oem->description,
+                        'source_url' => $oem->source_url,
+                        ...$specs,
+                    ], fn ($v) => $v !== null && $v !== ''),
+                ],
+            );
+        }
+
+        // Limpiar plantillas huérfanas (p. ej. códigos viejos) que ya no forman parte del catálogo.
+        CatalogItem::withoutGlobalScope('company')
+            ->where('company_id', $company->id)
+            ->where('is_system_template', true)
+            ->whereNotIn('code', $keepCodes)
+            ->delete();
     }
 
     private function seedDemoClientLogo(Client $client): void

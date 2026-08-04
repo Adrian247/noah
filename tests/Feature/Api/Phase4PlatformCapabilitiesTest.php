@@ -31,7 +31,7 @@ class Phase4PlatformCapabilitiesTest extends TestCase
     public function test_webhook_and_automation_crud(): void
     {
         $company = $this->meinCompany();
-        $admin = $this->meinUser('emilio.sanchez@mein-company.com');
+        $admin = $this->meinUser('admin@sandbox-demo.com');
         Sanctum::actingAs($admin);
 
         $create = $this->withHeader('X-Company-Id', (string) $company->id)
@@ -75,7 +75,7 @@ class Phase4PlatformCapabilitiesTest extends TestCase
     public function test_dashboard_preferences_roundtrip(): void
     {
         $company = $this->meinCompany();
-        $admin = $this->meinUser('emilio.sanchez@mein-company.com');
+        $admin = $this->meinUser('admin@sandbox-demo.com');
         Sanctum::actingAs($admin);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
@@ -98,7 +98,7 @@ class Phase4PlatformCapabilitiesTest extends TestCase
     public function test_insights_assistant_returns_answer(): void
     {
         $company = $this->meinCompany();
-        $admin = $this->meinUser('emilio.sanchez@mein-company.com');
+        $admin = $this->meinUser('admin@sandbox-demo.com');
         Sanctum::actingAs($admin);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
@@ -120,7 +120,7 @@ class Phase4PlatformCapabilitiesTest extends TestCase
     public function test_company_ai_settings_roundtrip(): void
     {
         $company = $this->meinCompany();
-        $admin = $this->meinUser('emilio.sanchez@mein-company.com');
+        $admin = $this->meinUser('admin@sandbox-demo.com');
         Sanctum::actingAs($admin);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
@@ -153,8 +153,8 @@ class Phase4PlatformCapabilitiesTest extends TestCase
         Queue::fake();
 
         $company = $this->meinCompany();
-        $technician = $this->meinUser('misael.palos@mein-company.com');
-        $supervisor = $this->meinUser('claudio.rodriguez@mein-company.com');
+        $technician = $this->meinUser('technician@sandbox-demo.com');
+        $supervisor = $this->meinUser('supervisor@sandbox-demo.com');
 
         WebhookSubscription::query()->create([
             'company_id' => $company->id,
@@ -187,7 +187,7 @@ class Phase4PlatformCapabilitiesTest extends TestCase
     public function test_execution_evidence_upload(): void
     {
         $company = $this->meinCompany();
-        $technician = $this->meinUser('misael.palos@mein-company.com');
+        $technician = $this->meinUser('technician@sandbox-demo.com');
         $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
 
         $this->withToken($technician->createToken('t')->plainTextToken)

@@ -9,10 +9,10 @@ use App\Support\CurrentCompany;
 class FormFieldCatalog
 {
     /**
-     * @param  FormUsage|null  $usage  Por defecto solo formularios de rutina (informes).
+     * @param  FormUsage|null  $usage  Por defecto solo formularios de servicio (informes).
      * @return list<array{key: string, label: string, form_name: string, field_type?: string}>
      */
-    public function listForCurrentCompany(?FormUsage $usage = FormUsage::Routine): array
+    public function listForCurrentCompany(?FormUsage $usage = FormUsage::Service): array
     {
         $companyId = app(CurrentCompany::class)->id();
         if ($companyId === null) {

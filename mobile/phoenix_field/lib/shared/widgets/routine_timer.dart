@@ -12,7 +12,7 @@ class RoutineTimer extends StatefulWidget {
 
   final void Function(int minutes) onMinutesChanged;
   final int? initialMinutes;
-  /// Inicia el cronómetro al abrir la rutina (p. ej. ejecución en sitio).
+  /// Inicia el cronómetro al abrir el servicio (p. ej. ejecución en sitio).
   final bool autoStart;
 
   @override

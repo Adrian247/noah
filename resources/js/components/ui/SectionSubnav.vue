@@ -23,7 +23,14 @@ const visibleItems = computed(() =>
 );
 
 function isActive(to: string): boolean {
-    return route.path === to;
+    if (route.path === to) {
+        return true;
+    }
+    // Lista de clientes: activa solo en la lista exacta, no en detalle.
+    if (to === '/app/catalog/clients') {
+        return route.path === '/app/catalog/clients';
+    }
+    return route.path.startsWith(`${to}/`) || route.path === to;
 }
 </script>
 

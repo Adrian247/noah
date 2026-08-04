@@ -85,7 +85,7 @@ onMounted(load);
                         <dd>{{ formatPortalDateTime(inv.issued_at) }}</dd>
                     </div>
                     <div v-if="inv.routine_id">
-                        <dt>Rutina</dt>
+                        <dt>Servicio</dt>
                         <dd>
                             <RouterLink
                                 class="text-portal-link underline"

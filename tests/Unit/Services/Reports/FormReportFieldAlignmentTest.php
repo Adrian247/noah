@@ -21,7 +21,7 @@ class FormReportFieldAlignmentTest extends TestCase
 
         $form = FormDefinition::query()->where('slug', 'revision-mayor-vehiculo-premium')->firstOrFail();
         $formVersion = $form->versions()->where('status', 'published')->firstOrFail();
-        $author = User::query()->where('email', 'emilio.sanchez@mein-company.com')->firstOrFail();
+        $author = User::query()->where('email', 'admin@sandbox-demo.com')->firstOrFail();
 
         $template = ReportTemplate::query()->create([
             'company_id' => $form->company_id,

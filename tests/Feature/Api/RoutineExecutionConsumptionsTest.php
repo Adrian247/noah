@@ -20,7 +20,7 @@ class RoutineExecutionConsumptionsTest extends TestCase
     {
         $this->seed();
         $company = $this->meinCompany();
-        $user = $this->meinUser('misael.palos@mein-company.com');
+        $user = $this->meinUser('technician@sandbox-demo.com');
         $routine = $this->demoRoutine($user);
         $supply = SupplyItem::query()->where('company_id', $company->id)->orderBy('id')->firstOrFail();
         $supply->update(['quantity_on_hand' => 50]);

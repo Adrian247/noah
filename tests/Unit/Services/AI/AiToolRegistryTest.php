@@ -34,8 +34,10 @@ class AiToolRegistryTest extends TestCase
             'get_routine',
             'list_audit_entries',
             'search_assets',
+            'list_catalog_items',
             'list_supply_items',
             'list_clients',
+            'get_client_detail',
             'list_invoices',
             'list_sites',
             'get_operational_kpis',
@@ -46,7 +48,7 @@ class AiToolRegistryTest extends TestCase
         ], $registry->names());
 
         $schemas = $registry->openAiToolSchemas();
-        $this->assertCount(13, $schemas);
+        $this->assertCount(15, $schemas);
         $this->assertSame('function', $schemas[0]['type']);
 
         $company = $this->meinCompany();

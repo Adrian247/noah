@@ -102,7 +102,7 @@ class ReportPresetApplier
         $formVersion = $this->resolveFormVersion($companyId, $formSlug);
         if ($formVersion === null) {
             throw ValidationException::withMessages([
-                'form_slug' => ['No hay formulario de rutina publicado para generar el informe. Publica un formulario con uso Rutina primero.'],
+                'form_slug' => ['No hay formulario de servicio publicado para generar el informe. Publica un formulario con uso Servicio primero.'],
             ]);
         }
 
@@ -209,7 +209,7 @@ class ReportPresetApplier
     {
         $query = FormDefinition::query()
             ->where('company_id', $companyId)
-            ->where('usage', FormUsage::Routine);
+            ->where('usage', FormUsage::Service);
 
         if ($formSlug !== null && $formSlug !== '') {
             $query->where('slug', $formSlug);

@@ -4,8 +4,8 @@ Esta carpeta describe **experiencia de usuario**, **arquitectura de información
 
 ## Objetivos de diseño
 
-1. Que un administrador configure tipos de rutina y reportes **sin sensación de “desarrollo”**.
-2. Que el técnico en móvil complete rutinas **en pocos toques**, con feedback claro de estado offline/sync.
+1. Que un administrador configure tipos de servicio y reportes **sin sensación de “desarrollo”**.
+2. Que el técnico en móvil complete servicios **en pocos toques**, con feedback claro de estado offline/sync.
 3. Que supervisor y facturación tengan **colas de trabajo** claras (pendientes de validar / facturar).
 
 ## Documentos

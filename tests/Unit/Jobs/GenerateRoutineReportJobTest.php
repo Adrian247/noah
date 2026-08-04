@@ -28,7 +28,7 @@ class GenerateRoutineReportJobTest extends TestCase
         $companies = Company::query()->orderBy('id')->get();
         $this->assertGreaterThanOrEqual(1, $companies->count());
 
-        $technician = \App\Models\User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
+        $technician = \App\Models\User::query()->where('email', 'technician@sandbox-demo.com')->firstOrFail();
         $routine = $this->demoRoutine($technician);
         $execution = $routine->latestExecution ?? $routine->executions()->create([
             'performed_by' => $technician->id,

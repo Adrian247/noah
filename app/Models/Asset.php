@@ -15,11 +15,19 @@ class Asset extends Model
 
     protected $fillable = [
         'company_id',
+        'client_id',
         'site_id',
         'catalog_item_id',
+        'base_catalog_item_id',
+        'source_system_catalog_item_id',
+        'import_generation',
         'tag',
         'serial_number',
         'location_label',
+        'image_path',
+        'sync_mode',
+        'detached_at',
+        'ocr_plate_text',
         'status',
         'metadata',
     ];
@@ -28,7 +36,19 @@ class Asset extends Model
     {
         return [
             'metadata' => 'array',
+            'import_generation' => 'integer',
+            'detached_at' => 'datetime',
         ];
+    }
+
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
+    }
+
+    public function baseCatalogItem(): BelongsTo
+    {
+        return $this->belongsTo(CatalogItem::class, 'base_catalog_item_id');
     }
 
     public function site(): BelongsTo

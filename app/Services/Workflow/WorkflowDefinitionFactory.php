@@ -183,8 +183,8 @@ class WorkflowDefinitionFactory
                 'email' => [
                     'roles' => ['supervisor', 'administrator'],
                     'template' => 'routine_pending_validation',
-                    'subject' => 'Phoenix — Rutina pendiente de validación',
-                    'message' => 'Un técnico envió una rutina para tu revisión.',
+                    'subject' => 'Phoenix — Servicio pendiente de validación',
+                    'message' => 'Un técnico envió un servicio para tu revisión.',
                 ],
             ];
             $transitions[] = [
@@ -305,8 +305,8 @@ class WorkflowDefinitionFactory
             'email' => [
                 'roles' => ['supervisor', 'administrator'],
                 'template' => 'routine_pending_validation',
-                'subject' => 'Phoenix — Notificación de rutina',
-                'message' => 'Hay una rutina que requiere tu atención.',
+                'subject' => 'Phoenix — Notificación de servicio',
+                'message' => 'Hay un servicio que requiere tu atención.',
             ],
         ];
     }

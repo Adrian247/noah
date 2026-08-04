@@ -13,9 +13,14 @@ class CatalogItem extends Model
 
     protected $fillable = [
         'company_id',
+        'is_system_template',
+        'source_system_catalog_item_id',
+        'import_generation',
         'equipment_type_id',
         'code',
         'name',
+        'image_path',
+        'is_detached_copy',
         'manufacturer',
         'oem_equipment_model_id',
         'specifications',
@@ -25,7 +30,15 @@ class CatalogItem extends Model
     {
         return [
             'specifications' => 'array',
+            'is_system_template' => 'boolean',
+            'is_detached_copy' => 'boolean',
+            'import_generation' => 'integer',
         ];
+    }
+
+    public function sourceSystemCatalogItem(): BelongsTo
+    {
+        return $this->belongsTo(CatalogItem::class, 'source_system_catalog_item_id');
     }
 
     public function equipmentType(): BelongsTo

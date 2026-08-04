@@ -61,8 +61,8 @@ class NotifySupervisorsOfPendingValidation
 
         $this->push->notifyUsers(
             $users->pluck('id')->all(),
-            'Rutina pendiente de validación',
-            'La rutina #'.$routine->id.' espera revisión del supervisor.',
+            'Servicio pendiente de validación',
+            'El servicio #'.$routine->id.' espera revisión del supervisor.',
             [
                 'type' => 'routine_pending_validation',
                 'routine_id' => (string) $routine->id,

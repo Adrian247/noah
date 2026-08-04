@@ -57,10 +57,13 @@ export const useNotificationPreferencesStore = defineStore('notificationPreferen
         if (!audioEl) {
             audioEl = new Audio();
             audioEl.preload = 'auto';
+            // Clip regenerados ya son suaves; volumen bajo de reproducción como margen.
+            audioEl.volume = 0.35;
         }
         const url = NOTIFICATION_SOUND_URLS[variant];
         audioEl.pause();
         audioEl.src = url;
+        audioEl.volume = 0.35;
         audioEl.currentTime = 0;
         void audioEl.play().catch(() => {
             /* autoplay policy or missing file */

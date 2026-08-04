@@ -1,0 +1,24 @@
+{
+    "contract": "phoenix.predictive.training/v1",
+    "kind": "manufacturing_demand_v1",
+    "records": [
+        {
+            "client_code": "SANDBOX-CLI-001",
+            "service_type": "Orden de manufactura",
+            "occurred_at": "2026-02-01",
+            "quantity": 1
+        },
+        {
+            "client_code": "SANDBOX-CLI-001",
+            "service_type": "Orden de manufactura",
+            "occurred_at": "2026-02-20",
+            "quantity": 2
+        },
+        {
+            "client_code": "SANDBOX-CLI-002",
+            "service_type": "Fabricación estructural",
+            "occurred_at": "2026-03-05",
+            "quantity": 1
+        }
+    ]
+}

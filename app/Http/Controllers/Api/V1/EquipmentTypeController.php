@@ -34,7 +34,7 @@ class EquipmentTypeController extends Controller
     public function formOptions(): JsonResponse
     {
         $forms = FormDefinition::query()
-            ->where('usage', FormUsage::Equipment)
+            ->where('usage', FormUsage::Article)
             ->orderBy('name')
             ->get(['id', 'name', 'slug']);
 
@@ -65,7 +65,7 @@ class EquipmentTypeController extends Controller
 
         $this->formGuard->assertUsageForCompany(
             $data['default_form_definition_id'] ?? null,
-            FormUsage::Equipment,
+            FormUsage::Article,
             $companyId,
         );
 
@@ -89,7 +89,7 @@ class EquipmentTypeController extends Controller
         if (array_key_exists('default_form_definition_id', $data)) {
             $this->formGuard->assertUsageForCompany(
                 $data['default_form_definition_id'],
-                FormUsage::Equipment,
+                FormUsage::Article,
                 $companyId,
             );
         }

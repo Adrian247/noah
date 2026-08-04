@@ -39,7 +39,7 @@ class CompanyUsersApiTest extends TestCase
     public function test_technician_without_clients_permission_cannot_list_clients(): void
     {
         $company = $this->meinCompany();
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->first();
         Sanctum::actingAs($technician);
 
         $me = $this->withHeader('X-Company-Id', (string) $company->id)
@@ -58,7 +58,7 @@ class CompanyUsersApiTest extends TestCase
     {
         $company = $this->meinCompany();
         $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->first();
         Sanctum::actingAs($admin);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
@@ -72,7 +72,7 @@ class CompanyUsersApiTest extends TestCase
     public function test_supervisor_cannot_manage_users(): void
     {
         $company = $this->meinCompany();
-        $supervisor = User::query()->where('email', 'claudio.rodriguez@mein-company.com')->first();
+        $supervisor = User::query()->where('email', 'supervisor@sandbox-demo.com')->first();
         Sanctum::actingAs($supervisor);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
@@ -84,7 +84,7 @@ class CompanyUsersApiTest extends TestCase
     {
         $company = $this->meinCompany();
         $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->first();
         Sanctum::actingAs($admin);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
@@ -105,7 +105,7 @@ class CompanyUsersApiTest extends TestCase
     {
         $company = $this->meinCompany();
         $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->first();
         Sanctum::actingAs($admin);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
@@ -119,7 +119,7 @@ class CompanyUsersApiTest extends TestCase
     {
         $company = $this->meinCompany();
         $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->first();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->first();
         Sanctum::actingAs($admin);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
@@ -191,7 +191,7 @@ class CompanyUsersApiTest extends TestCase
     {
         $company = $this->meinCompany();
         $admin = User::query()->where('email', 'admin@pyro-systems.com')->first();
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->firstOrFail();
         Sanctum::actingAs($admin);
 
         $this->withHeader('X-Company-Id', (string) $company->id)
@@ -207,7 +207,7 @@ class CompanyUsersApiTest extends TestCase
     public function test_admin_cannot_reset_own_password_via_company_users(): void
     {
         $company = $this->meinCompany();
-        $admin = User::query()->where('email', 'emilio.sanchez@mein-company.com')->firstOrFail();
+        $admin = User::query()->where('email', 'admin@sandbox-demo.com')->firstOrFail();
         Sanctum::actingAs($admin);
 
         $this->withHeader('X-Company-Id', (string) $company->id)

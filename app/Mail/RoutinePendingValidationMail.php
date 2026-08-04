@@ -18,14 +18,14 @@ class RoutinePendingValidationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Phoenix — Rutina pendiente de validación #'.$this->routine->id,
+            subject: 'Phoenix — Servicio pendiente de validación #'.$this->routine->id,
         );
     }
 
     public function content(): Content
     {
         $assetTag = $this->routine->asset?->tag ?? '—';
-        $typeName = $this->routine->routineType?->name ?? 'Rutina';
+        $typeName = $this->routine->routineType?->name ?? 'Servicio';
         $url = rtrim(config('app.url'), '/').'/app/routines/'.$this->routine->id;
 
         return new Content(

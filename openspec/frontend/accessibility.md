@@ -16,7 +16,7 @@ WCAG 2.1 nivel AA en flujos administrativos principales.
 ## Pruebas
 
 - axe en CI en páginas críticas (Vitest + axe-core).
-- Revisión manual de validación de rutina y login.
+- Revisión manual de validación de servicio y login.
 
 ## Móvil
 

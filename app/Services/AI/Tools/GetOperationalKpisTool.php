@@ -21,7 +21,7 @@ class GetOperationalKpisTool implements AiTool
 
     public function description(): string
     {
-        return 'Obtiene KPIs agregados de la empresa: rutinas por estado, facturas y activos. Úsalo para dashboards o preguntas de indicadores.';
+        return 'Obtiene KPIs agregados de la empresa: servicios por estado, facturas y activos. Úsalo para dashboards o preguntas de indicadores.';
     }
 
     public function requiredPermissions(): array
@@ -40,7 +40,7 @@ class GetOperationalKpisTool implements AiTool
     {
         return [
             'type' => 'object',
-            'properties' => [],
+            'properties' => new \stdClass,
         ];
     }
 

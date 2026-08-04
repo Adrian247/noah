@@ -27,7 +27,7 @@ function blockClass(kind: BlockNode['kind']): string {
             <Handle id="out-forward" type="source" :position="Position.Right" class="wf-handle wf-handle--routine" />
             <div :class="blockClass('routine')">
                 <p class="wf-node__badge">INICIO</p>
-                <p class="wf-node__title">{{ node().label || 'Rutina' }}</p>
+                <p class="wf-node__title">{{ node().label || 'Servicio' }}</p>
                 <p class="wf-node__meta">Técnico ejecuta en campo</p>
             </div>
         </template>

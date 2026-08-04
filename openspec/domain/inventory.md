@@ -13,20 +13,20 @@ Insumos, refacciones, costos unitarios y movimientos asociados a mantenimiento.
 
 ### ConsumptionLine
 
-- Ligada a **Execution** de rutina: `supply_item_id`, cantidad, costo unitario capturado o calculado.
+- Ligada a **Execution** de servicio: `supply_item_id`, cantidad, costo unitario capturado o calculado.
 - Contribuye al **costo de mantenimiento** agregado.
 
 ### StockMovement (fase opcional)
 
 - Entrada/salida; ajuste manual por administrador.
 
-## Cálculo de costo en rutina
+## Cálculo de costo en servicio
 
 ```
 costo_mantenimiento = Σ(consumos) + costo_mano_obra(tiempos, tarifas configurables)
 ```
 
-Tarifas de mano de obra: configuración por empresa o tipo de rutina (metadatos).
+Tarifas de mano de obra: configuración por empresa o tipo de servicio (metadatos).
 
 ## Invariantes
 

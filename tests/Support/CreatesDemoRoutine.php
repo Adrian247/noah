@@ -11,7 +11,7 @@ trait CreatesDemoRoutine
 {
     protected function demoRoutine(?User $technician = null): Routine
     {
-        $technician ??= User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
+        $technician ??= User::query()->where('email', 'technician@sandbox-demo.com')->firstOrFail();
 
         // La empresa sale de la membresía del técnico: con `Company::first()` la rutina caía en una
         // empresa arbitraria (Postgres no garantiza orden sin `ORDER BY`) y las peticiones que

@@ -7,6 +7,9 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\AutomationRuleController;
 use App\Http\Controllers\Api\V1\BillingSettingsController;
 use App\Http\Controllers\Api\V1\CatalogItemController;
+use App\Http\Controllers\Api\V1\CatalogImportController;
+use App\Http\Controllers\Api\V1\ClientInventoryController;
+use App\Http\Controllers\Api\V1\ClientSiteController;
 use App\Http\Controllers\Api\V1\ClientController;
 use App\Http\Controllers\Api\V1\ClientPortalController;
 use App\Http\Controllers\Api\V1\CompanyAiSettingsController;
@@ -27,11 +30,16 @@ use App\Http\Controllers\Api\V1\InventoryMetaController;
 use App\Http\Controllers\Api\V1\InventoryMovementController;
 use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\InvoiceEvidenceController;
+use App\Http\Controllers\Api\V1\McpProtocolController;
+use App\Http\Controllers\Api\V1\McpTokenController;
+use App\Http\Controllers\Api\V1\McpToolsController;
 use App\Http\Controllers\Api\V1\MobileSecuritySettingsController;
 use App\Http\Controllers\Api\V1\PlatformAiSettingsController;
 use App\Http\Controllers\Api\V1\PlatformPredictiveAlgorithmController;
+use App\Http\Controllers\Api\V1\PlatformPredictiveTrainingDocumentController;
 use App\Http\Controllers\Api\V1\PlatformRolePermissionController;
 use App\Http\Controllers\Api\V1\PlatformTenantController;
+use App\Http\Controllers\Api\V1\PlatformSystemArticleController;
 use App\Http\Controllers\Api\V1\PortalController;
 use App\Http\Controllers\Api\V1\PredictiveMaintenanceController;
 use App\Http\Controllers\Api\V1\ProfileController;
@@ -94,9 +102,17 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/ai/models', [PlatformAiSettingsController::class, 'models']);
             Route::post('/ai/validate', [PlatformAiSettingsController::class, 'validateProvider']);
             Route::get('/predictive/algorithms', [PlatformPredictiveAlgorithmController::class, 'index']);
+            Route::get('/predictive/algorithms/corpus', [PlatformPredictiveAlgorithmController::class, 'corpus']);
             Route::post('/predictive/algorithms/train', [PlatformPredictiveAlgorithmController::class, 'train']);
+            Route::post('/predictive/algorithms/{version}/regression', [PlatformPredictiveAlgorithmController::class, 'regression']);
+            Route::patch('/predictive/algorithms/{version}', [PlatformPredictiveAlgorithmController::class, 'updateNotes']);
             Route::post('/predictive/algorithms/{version}/publish', [PlatformPredictiveAlgorithmController::class, 'publish']);
             Route::post('/predictive/algorithms/{version}/archive', [PlatformPredictiveAlgorithmController::class, 'archive']);
+            Route::get('/predictive/training-documents', [PlatformPredictiveTrainingDocumentController::class, 'index']);
+            Route::get('/predictive/training-documents/schemas', [PlatformPredictiveTrainingDocumentController::class, 'schemas']);
+            Route::get('/predictive/training-documents/templates/{kind}', [PlatformPredictiveTrainingDocumentController::class, 'template']);
+            Route::post('/predictive/training-documents', [PlatformPredictiveTrainingDocumentController::class, 'store']);
+            Route::delete('/predictive/training-documents/{document}', [PlatformPredictiveTrainingDocumentController::class, 'destroy']);
             Route::get('/tenants', [PlatformTenantController::class, 'index']);
             Route::post('/tenants', [PlatformTenantController::class, 'store']);
             Route::patch('/tenants/{company}', [PlatformTenantController::class, 'update']);
@@ -104,6 +120,12 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/tenants/{company}/memberships', [PlatformTenantController::class, 'storeMembership']);
             Route::post('/users/{user}/avatar', [PlatformTenantController::class, 'updateUserAvatar']);
             Route::post('/tenants/{company}/assume', [PlatformTenantController::class, 'assume']);
+            Route::get('/catalog/system-articles', [PlatformSystemArticleController::class, 'index']);
+            Route::get('/catalog/system-article-types', [PlatformSystemArticleController::class, 'types']);
+            Route::post('/catalog/system-articles', [PlatformSystemArticleController::class, 'store']);
+            Route::put('/catalog/system-articles/{catalogItem}', [PlatformSystemArticleController::class, 'update']);
+            Route::post('/catalog/system-articles/{catalogItem}/image', [PlatformSystemArticleController::class, 'updateImage']);
+            Route::delete('/catalog/system-articles/{catalogItem}', [PlatformSystemArticleController::class, 'destroy']);
         });
 
         Route::middleware('company')->group(function (): void {
@@ -120,6 +142,21 @@ Route::prefix('v1')->group(function (): void {
             Route::delete('/integrations/webhooks/{webhookSubscription}', [WebhookSubscriptionController::class, 'destroy'])
                 ->middleware('company.module:integrations,write');
             Route::post('/integrations/webhooks/{webhookSubscription}/test', [WebhookSubscriptionController::class, 'test'])
+                ->middleware('company.module:integrations,write');
+
+            Route::match(['get', 'post'], '/integrations/mcp', [McpProtocolController::class, 'handle'])
+                ->middleware('company.module:integrations,read');
+            Route::get('/integrations/mcp/connection', [McpToolsController::class, 'connection'])
+                ->middleware('company.module:integrations,read');
+            Route::get('/integrations/mcp/tools', [McpToolsController::class, 'index'])
+                ->middleware('company.module:integrations,read');
+            Route::post('/integrations/mcp/tools/{toolName}/invoke', [McpToolsController::class, 'invoke'])
+                ->middleware('company.module:integrations,read');
+            Route::get('/integrations/mcp/tokens', [McpTokenController::class, 'index'])
+                ->middleware('company.module:integrations,read');
+            Route::post('/integrations/mcp/tokens', [McpTokenController::class, 'store'])
+                ->middleware('company.module:integrations,write');
+            Route::delete('/integrations/mcp/tokens/{tokenId}', [McpTokenController::class, 'destroy'])
                 ->middleware('company.module:integrations,write');
 
             Route::get('/automation/rules', [AutomationRuleController::class, 'index'])
@@ -171,6 +208,28 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/clients/{client}/logo', [ClientController::class, 'updateLogo'])
                 ->middleware('company.module:clients,write');
             Route::delete('/clients/{client}', [ClientController::class, 'destroy'])
+                ->middleware('company.module:clients,write');
+            Route::get('/clients/{client}/sites', [ClientSiteController::class, 'index'])
+                ->middleware('company.module:clients,read');
+            Route::post('/clients/{client}/sites', [ClientSiteController::class, 'store'])
+                ->middleware('company.module:clients,write');
+            Route::put('/clients/{client}/sites/{site}', [ClientSiteController::class, 'update'])
+                ->middleware('company.module:clients,write');
+            Route::delete('/clients/{client}/sites/{site}', [ClientSiteController::class, 'destroy'])
+                ->middleware('company.module:clients,write');
+            Route::get('/clients/{client}/inventory', [ClientInventoryController::class, 'index'])
+                ->middleware('company.module:clients,read');
+            Route::post('/clients/{client}/inventory', [ClientInventoryController::class, 'store'])
+                ->middleware('company.module:clients,write');
+            Route::put('/clients/{client}/inventory/{asset}', [ClientInventoryController::class, 'update'])
+                ->middleware('company.module:clients,write');
+            Route::post('/clients/{client}/inventory/{asset}/image', [ClientInventoryController::class, 'updateImage'])
+                ->middleware('company.module:clients,write');
+            Route::post('/clients/{client}/inventory/{asset}/detach-catalog', [ClientInventoryController::class, 'detachCatalog'])
+                ->middleware('company.module:clients,write');
+            Route::post('/clients/{client}/inventory/{asset}/reset-catalog', [ClientInventoryController::class, 'resetCatalog'])
+                ->middleware('company.module:clients,write');
+            Route::delete('/clients/{client}/inventory/{asset}', [ClientInventoryController::class, 'destroy'])
                 ->middleware('company.module:clients,write');
 
             Route::middleware('company.role:administrator')->group(function (): void {
@@ -229,6 +288,12 @@ Route::prefix('v1')->group(function (): void {
                 ->middleware('company.module:catalog_items,write');
             Route::delete('/catalog/items/{catalogItem}', [CatalogItemController::class, 'destroy'])
                 ->middleware('company.module:catalog_items,write');
+            Route::post('/catalog/items/{catalogItem}/image', [CatalogItemController::class, 'updateImage'])
+                ->middleware('company.module:catalog_items,write');
+            Route::get('/catalog/import/system', [CatalogImportController::class, 'systemCatalog'])
+                ->middleware('company.module:catalog_items,read');
+            Route::post('/catalog/import', [CatalogImportController::class, 'import'])
+                ->middleware('company.module:catalog_items,write');
 
             Route::get('/inventory/meta', [InventoryMetaController::class, 'options'])
                 ->middleware('company.module:inventory,read');
@@ -263,16 +328,17 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/assets/{asset}/client-assignments', [AssetClientAssignmentController::class, 'store'])
                 ->middleware('company.module:assets,write');
 
-            Route::prefix('predictive')->middleware('company.module:assets,read')->group(function (): void {
+            Route::prefix('predictive')->middleware('company.module:predictive,read')->group(function (): void {
                 Route::get('/predictions', [PredictiveMaintenanceController::class, 'predictions']);
                 Route::get('/client-demand', [PredictiveMaintenanceController::class, 'clientDemand']);
+                Route::get('/inventory-demand', [PredictiveMaintenanceController::class, 'inventoryDemand']);
                 Route::get('/assets/{asset}/health', [PredictiveMaintenanceController::class, 'health']);
                 Route::get('/failure-modes', [PredictiveMaintenanceController::class, 'failureModes']);
                 Route::get('/oem-models', [PredictiveMaintenanceController::class, 'oemModels']);
                 Route::get('/oem-plans', [PredictiveMaintenanceController::class, 'oemPlans']);
                 Route::get('/accuracy', [PredictiveMaintenanceController::class, 'accuracy']);
                 Route::post('/evaluate', [PredictiveMaintenanceController::class, 'evaluate'])
-                    ->middleware('company.module:assets,write');
+                    ->middleware('company.module:predictive,write');
             });
 
             Route::middleware('company.client_portal')->prefix('portal')->group(function (): void {

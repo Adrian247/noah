@@ -8,10 +8,10 @@ Phoenix reduce el costo de **adaptar** operaciones de mantenimiento y documentac
 
 | Segmento | Dolor | Cómo ayuda Phoenix |
 |----------|-------|-----------------|
-| Empresas de mantenimiento industrial | PDFs y Excel por cliente | Tipos de rutina y plantillas configurables |
+| Empresas de mantenimiento industrial | PDFs y Excel por cliente | Tipos de servicio y plantillas configurables |
 | Contratistas multi-sitio | Campo sin señal | Móvil offline + sync (fase 2) |
-| Operaciones con supervisión | Evidencia dispersa | Rutina → validación → reporte PDF |
-| Áreas con facturación posterior | Re-captura de datos | Borrador desde rutina validada |
+| Operaciones con supervisión | Evidencia dispersa | Servicio → validación → reporte PDF |
+| Áreas con facturación posterior | Re-captura de datos | Borrador desde servicio validado |
 
 ## Modelo de ingresos (orientativo)
 

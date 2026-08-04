@@ -2,7 +2,7 @@
 
 Los formularios son metadatos.
 
-Cada **definición** tiene un **uso** fijo al crearla: rutina, equipo o insumo. Eso determina dónde puede enlazarse (tipo de rutina, tipo de equipo, tipo de insumo).
+Cada **definición** tiene un **uso** fijo al crearla: servicio, equipo o insumo. Eso determina dónde puede enlazarse (tipo de servicio, tipo de equipo, tipo de insumo).
 
 Cada formulario está compuesto por:
 

@@ -31,21 +31,21 @@ class PhoenixModuleCatalog
             ],
             [
                 'id' => 'routines',
-                'label' => 'Rutinas',
+                'label' => 'Servicios',
                 'nav_routes' => ['/app/routines'],
                 'read' => ['routines.execute', 'routines.assign', 'routines.validate', 'costs.view'],
                 'write' => ['routines.assign', 'routines.validate'],
             ],
             [
-                'id' => 'assets',
-                'label' => 'Activos',
-                'nav_routes' => ['/app/assets', '/app/predictive'],
+                'id' => 'predictive',
+                'label' => 'Mantenimiento predictivo',
+                'nav_routes' => ['/app/predictive'],
                 'read' => ['assets.view', 'assets.manage'],
                 'write' => ['assets.manage'],
             ],
             [
                 'id' => 'catalog_items',
-                'label' => 'Equipos',
+                'label' => 'Artículos',
                 'nav_routes' => ['/app/catalog/items'],
                 'read' => ['catalog.view', 'catalog.manage'],
                 'write' => ['catalog.manage'],
@@ -74,13 +74,14 @@ class PhoenixModuleCatalog
             [
                 'id' => 'sites',
                 'label' => 'Sitios',
-                'nav_routes' => ['/app/sites'],
+                'nav_routes' => [],
                 'read' => ['sites.view', 'sites.manage'],
                 'write' => ['sites.manage'],
+                'default_visible' => false,
             ],
             [
                 'id' => 'design_routine_types',
-                'label' => 'Tipos de rutina',
+                'label' => 'Tipos de servicio',
                 'nav_routes' => ['/app/routines/types'],
                 'read' => [
                     'design.forms.view',
@@ -135,7 +136,12 @@ class PhoenixModuleCatalog
             [
                 'id' => 'integrations',
                 'label' => 'Integraciones',
-                'nav_routes' => ['/app/integrations', '/app/automation'],
+                'nav_routes' => [
+                    '/app/integrations',
+                    '/app/integrations/webhooks',
+                    '/app/integrations/automation',
+                    '/app/integrations/mcp',
+                ],
                 'read' => ['integrations.view', 'integrations.manage', 'automation.manage'],
                 'write' => ['integrations.manage', 'automation.manage'],
             ],

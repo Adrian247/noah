@@ -59,7 +59,7 @@ const routeContext = computed(() => {
     const parts: string[] = [`Pantalla: ${route.path}`];
     const routineId = route.params.id;
     if (routineId && String(route.name ?? '').includes('routine')) {
-        parts.push(`Rutina en contexto: #${routineId}`);
+        parts.push(`Servicio en contexto: #${routineId}`);
     }
     const assetId = route.params.assetId ?? route.query.asset;
     if (assetId) {
@@ -71,7 +71,7 @@ const routeContext = computed(() => {
 
 const suggestions = [
     'Muéstrame el dashboard de KPIs',
-    '¿Qué rutinas hay recientes?',
+    '¿Qué servicios hay recientes?',
     'Demanda de manufactura a clientes',
     'Riesgo de falla en toda la flota',
 ];
@@ -91,7 +91,7 @@ watch(
             if (messages.value.length === 0) {
                 messages.value.push({
                     role: 'assistant',
-                    text: 'Soy el asistente de Phoenix. Consulto datos reales: rutinas (mantenimiento, manufactura o suministro), clientes, facturas, sitios y KPIs. Puedo estimar riesgo en equipos o demanda de servicios a clientes. En la ficha de una rutina puedes generar narrativa y costo; en activos, OCR y sugerencias de insumos.',
+                    text: 'Soy el asistente de Phoenix. Consulto datos reales: servicios (mantenimiento, manufactura o suministro), clientes, facturas, sitios y KPIs. Puedo estimar riesgo en equipos o demanda de servicios a clientes. En la ficha de un servicio puedes generar narrativa y costo; en activos, OCR y sugerencias de insumos.',
                 });
             }
             void nextTick(() => closeButtonRef.value?.focus());
@@ -364,7 +364,7 @@ function formatKpiValue(value: number | string | undefined, unit?: string): stri
                     <MaterialField
                         v-model="draft"
                         label="Mensaje"
-                        placeholder="Pregunta sobre KPIs, rutinas, clientes…"
+                        placeholder="Pregunta sobre KPIs, servicios, clientes…"
                         @keydown="onKeydown"
                     />
                     <AppButton type="button" class="w-full" :disabled="loading || !draft.trim()" @click="send">

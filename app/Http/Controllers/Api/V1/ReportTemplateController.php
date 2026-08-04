@@ -285,7 +285,7 @@ class ReportTemplateController extends Controller
     {
         return FormDefinition::query()
             ->where('company_id', $companyId)
-            ->where('usage', FormUsage::Routine)
+            ->where('usage', FormUsage::Service)
             ->whereHas('versions', fn ($q) => $q->where('status', 'published'))
             ->orderBy('name')
             ->get(['slug', 'name'])
@@ -416,7 +416,7 @@ class ReportTemplateController extends Controller
         if ($orphans !== []) {
             throw ValidationException::withMessages([
                 'components' => [
-                    'No se puede publicar: el informe referencia campos que no existen en ningún formulario de rutina publicado: '
+                    'No se puede publicar: el informe referencia campos que no existen en ningún formulario de servicio publicado: '
                     .implode(', ', $orphans)
                     .'. Corrige los bloques párrafo/imagen o publica primero el formulario con esas keys.',
                 ],

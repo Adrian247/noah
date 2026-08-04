@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Enums\ServiceLine;
+use App\Enums\ServiceCategory;
 use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,7 +16,7 @@ class RoutineType extends Model
         'company_id',
         'name',
         'slug',
-        'service_line',
+        'service_category',
         'form_version_id',
         'report_template_version_id',
         'workflow_definition_id',
@@ -27,7 +27,7 @@ class RoutineType extends Model
     {
         return [
             'is_active' => 'boolean',
-            'service_line' => ServiceLine::class,
+            'service_category' => ServiceCategory::class,
         ];
     }
 

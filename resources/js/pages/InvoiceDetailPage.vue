@@ -507,7 +507,7 @@ onMounted(load);
             <GlassCard padding="lg" class="max-w-4xl">
                 <div class="mb-4 flex flex-wrap items-center gap-3">
                     <StatusBadge :status="invoice.status" />
-                    <span class="text-sm text-slate-600">Rutina #{{ invoice.routine_id }}</span>
+                    <span class="text-sm text-slate-600">Servicio #{{ invoice.routine_id }}</span>
                 </div>
 
                 <section class="portal-form-panel mb-6 space-y-3 p-4">
@@ -611,9 +611,9 @@ onMounted(load);
                     </div>
 
                     <div class="border-portal-border/30 border-t pt-4">
-                        <p class="text-portal-heading font-medium">Reporte de inspección (rutina)</p>
+                        <p class="text-portal-heading font-medium">Reporte de inspección (servicio)</p>
                         <p class="text-portal-muted mt-1 text-xs">
-                            Incluye el PDF generado al validar la rutina en el paquete ZIP (carpeta
+                            Incluye el PDF generado al validar el servicio en el paquete ZIP (carpeta
                             <code class="text-xs">reportes/</code>).
                         </p>
                         <ul v-if="routineReportEvidences.length" class="mt-3 space-y-2 text-sm">
@@ -639,13 +639,13 @@ onMounted(load);
                                 />
                             </li>
                         </ul>
-                        <p v-else class="text-portal-muted mt-2 text-sm">Sin reporte de rutina adjunto.</p>
+                        <p v-else class="text-portal-muted mt-2 text-sm">Sin reporte de servicio adjunto.</p>
                         <div
                             v-if="isDraft && canEdit && routineReportsAvailable.length"
                             class="mt-3 flex flex-wrap items-end gap-2"
                         >
                             <label class="block min-w-[14rem] flex-1 text-sm">
-                                <span class="text-portal-muted text-xs">Reportes listos en esta rutina</span>
+                                <span class="text-portal-muted text-xs">Reportes listos en este servicio</span>
                                 <select v-model="selectedRoutineReportId" class="field-input mt-1 w-full">
                                     <option
                                         v-for="opt in routineReportsAvailable"
@@ -669,7 +669,7 @@ onMounted(load);
                             v-else-if="isDraft && canEdit && !routineReportsAvailable.length && !routineReportEvidences.length"
                             class="text-portal-muted mt-2 text-xs"
                         >
-                            No hay reportes PDF listos para esta rutina. Valida la rutina o espera a que termine la
+                            No hay reportes PDF listos para este servicio. Validal servicio o espera a que termine la
                             generación del informe.
                         </p>
                     </div>

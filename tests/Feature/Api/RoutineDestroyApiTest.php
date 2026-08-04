@@ -17,7 +17,7 @@ class RoutineDestroyApiTest extends TestCase
 
     private function createRoutineViaApi(string $adminToken, int $companyId): int
     {
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->firstOrFail();
 
         $response = $this->withToken($adminToken)
             ->withHeader('X-Company-Id', (string) $companyId)
@@ -54,7 +54,7 @@ class RoutineDestroyApiTest extends TestCase
         $this->seed();
 
         $admin = User::query()->where('email', 'admin@pyro-systems.com')->firstOrFail();
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->firstOrFail();
         $company = Company::query()->firstOrFail();
         $adminToken = $admin->createToken('test')->plainTextToken;
         $routineId = $this->createRoutineViaApi($adminToken, $company->id);
@@ -89,7 +89,7 @@ class RoutineDestroyApiTest extends TestCase
             ->withHeader('X-Company-Id', (string) $company->id)
             ->deleteJson('/api/v1/routines/'.$routineId)
             ->assertStatus(422)
-            ->assertJsonPath('message', 'No se puede eliminar: la rutina tiene una factura emitida.');
+            ->assertJsonPath('message', 'No se puede eliminar: el servicio tiene una factura emitida.');
 
         $this->assertNotNull(Routine::query()->withoutGlobalScopes()->find($routineId));
     }

@@ -2,7 +2,7 @@
 
 ## Responsabilidad
 
-Autenticación, identidad de usuario y asignación de roles por empresa. No contiene lógica de rutinas ni facturación.
+Autenticación, identidad de usuario y asignación de roles por empresa. No contiene lógica de servicios ni facturación.
 
 ## Agregados
 

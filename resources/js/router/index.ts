@@ -61,7 +61,7 @@ const router = createRouter({
                     path: 'routines',
                     name: 'routines',
                     component: () => import('@/pages/RoutinesPage.vue'),
-                    meta: { title: 'Rutinas', moduleId: 'routines' },
+                    meta: { title: 'Servicios', moduleId: 'routines' },
                 },
                 {
                     path: 'validation',
@@ -77,13 +77,13 @@ const router = createRouter({
                     path: 'routines/types',
                     name: 'routine-types',
                     component: () => import('@/pages/RoutineTypesPage.vue'),
-                    meta: { title: 'Tipos de rutina', moduleId: 'design_routine_types' },
+                    meta: { title: 'Tipos de servicio', moduleId: 'design_routine_types' },
                 },
                 {
                     path: 'routines/:id',
                     name: 'routine-detail',
                     component: () => import('@/pages/RoutineDetailPage.vue'),
-                    meta: { title: 'Detalle rutina', moduleId: 'routines' },
+                    meta: { title: 'Detalle servicio', moduleId: 'routines' },
                 },
                 {
                     path: 'billing',
@@ -105,13 +105,13 @@ const router = createRouter({
                     path: 'catalog/items',
                     name: 'catalog-items',
                     component: () => import('@/pages/CatalogItemsPage.vue'),
-                    meta: { title: 'Catálogo de equipos', moduleId: 'catalog_items' },
+                    meta: { title: 'Catálogo de artículos', moduleId: 'catalog_items' },
                 },
                 {
                     path: 'catalog/items/types',
                     name: 'catalog-equipment-types',
                     component: () => import('@/pages/EquipmentTypesPage.vue'),
-                    meta: { title: 'Tipos de equipo', moduleId: 'catalog_items' },
+                    meta: { title: 'Tipos de artículo', moduleId: 'catalog_items' },
                 },
                 {
                     path: 'catalog/equipment-types',
@@ -127,7 +127,7 @@ const router = createRouter({
                     path: 'inventory/types',
                     name: 'inventory-supply-types',
                     component: () => import('@/pages/SupplyTypesPage.vue'),
-                    meta: { title: 'Tipos de insumo', moduleId: 'inventory' },
+                    meta: { title: 'Tipos de artículo', moduleId: 'inventory' },
                 },
                 {
                     path: 'catalog/supplies',
@@ -142,6 +142,23 @@ const router = createRouter({
                     name: 'catalog-suppliers',
                     component: () => import('@/pages/SuppliersPage.vue'),
                     meta: { title: 'Proveedores', moduleId: 'catalog_suppliers' },
+                },
+                {
+                    path: 'catalog/clients/:id/sites',
+                    name: 'client-sites',
+                    component: () => import('@/pages/ClientDetailPage.vue'),
+                    meta: { title: 'Sitios del cliente', moduleId: 'clients', clientTab: 'sites' },
+                },
+                {
+                    path: 'catalog/clients/:id/inventory',
+                    name: 'client-inventory',
+                    component: () => import('@/pages/ClientDetailPage.vue'),
+                    meta: { title: 'Inventario del cliente', moduleId: 'clients', clientTab: 'inventory' },
+                },
+                {
+                    path: 'catalog/clients/:id',
+                    name: 'client-detail',
+                    redirect: (to) => ({ name: 'client-sites', params: { id: to.params.id } }),
                 },
                 {
                     path: 'catalog/clients',
@@ -159,21 +176,17 @@ const router = createRouter({
                 },
                 {
                     path: 'sites',
-                    name: 'sites',
-                    component: () => import('@/pages/SitesPage.vue'),
-                    meta: { title: 'Sitios', moduleId: 'sites' },
+                    redirect: { name: 'catalog-clients' },
                 },
                 {
                     path: 'assets',
-                    name: 'assets',
-                    component: () => import('@/pages/AssetsPage.vue'),
-                    meta: { title: 'Activos', moduleId: 'assets' },
+                    redirect: { name: 'catalog-clients' },
                 },
                 {
                     path: 'predictive',
                     name: 'predictive',
                     component: () => import('@/pages/PredictiveMaintenancePage.vue'),
-                    meta: { title: 'Mantenimiento predictivo', moduleId: 'assets' },
+                    meta: { title: 'Predictivo', moduleId: 'predictive' },
                 },
                 {
                     path: 'design/routine-types',
@@ -235,9 +248,25 @@ const router = createRouter({
                 },
                 {
                     path: 'integrations',
-                    name: 'integrations',
-                    component: () => import('@/pages/IntegrationsPage.vue'),
-                    meta: { title: 'Integraciones', moduleId: 'integrations' },
+                    redirect: { name: 'integrations-webhooks' },
+                },
+                {
+                    path: 'integrations/webhooks',
+                    name: 'integrations-webhooks',
+                    component: () => import('@/pages/IntegrationsWebhooksPage.vue'),
+                    meta: { title: 'Webhooks', moduleId: 'integrations' },
+                },
+                {
+                    path: 'integrations/automation',
+                    name: 'integrations-automation',
+                    component: () => import('@/pages/IntegrationsAutomationPage.vue'),
+                    meta: { title: 'Automatización', moduleId: 'integrations' },
+                },
+                {
+                    path: 'integrations/mcp',
+                    name: 'integrations-mcp',
+                    component: () => import('@/pages/IntegrationsMcpPage.vue'),
+                    meta: { title: 'MCP', moduleId: 'integrations' },
                 },
                 {
                     path: 'insights',
@@ -248,6 +277,12 @@ const router = createRouter({
                     name: 'company-users',
                     component: () => import('@/pages/CompanyUsersPage.vue'),
                     meta: { title: 'Usuarios', requiresRole: 'administrator' },
+                },
+                {
+                    path: 'platform/catalog/system-articles',
+                    name: 'platform-system-articles',
+                    component: () => import('@/pages/PlatformSystemArticlesPage.vue'),
+                    meta: { title: 'Artículos de sistema', requiresPlatformAdmin: true },
                 },
                 {
                     path: 'platform/tenants',

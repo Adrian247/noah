@@ -2,7 +2,7 @@
 
 ## Responsabilidad
 
-Estimar riesgo de falla por equipo a partir del **historial de rutinas aplicadas** al activo
+Estimar riesgo de falla por equipo a partir del **historial de servicios aplicados** al activo
 y explicar cada estimación con la evidencia que la produjo. Arquitectura:
 [ADR-013](../decisions/ADR-013-predictive-maintenance.md). Operación:
 [docs/PREDICTIVE_MAINTENANCE.md](../../docs/PREDICTIVE_MAINTENANCE.md).
@@ -12,8 +12,9 @@ y explicar cada estimación con la evidencia que la produjo. Arquitectura:
 ### PredictiveAlgorithmVersion (plataforma)
 
 Versión semántica del algoritmo (`draft` | `published` | `archived`). Solo las publicadas
-son seleccionables por empresas. El entrenamiento resume rutinas validadas de tenants con
-`allow_predictive_training_collection`.
+son seleccionables por empresas. El entrenamiento resume servicios validados de tenants con
+`allow_predictive_training_collection`. La UI de plataforma muestra un snapshot de corpus
+(opt-in + volumen recomendado) vía `GET /platform/predictive/algorithms/corpus`.
 
 ### FailureMode (taxonomía, por empresa)
 
@@ -43,15 +44,15 @@ del producto.**
 ## Relaciones
 
 - Todo cuelga de **Asset** ([assets.md](assets.md)).
-- Las **Rutinas** ([maintenance.md](maintenance.md)) son la fuente primaria de features.
+- Los **servicios** ([maintenance.md](maintenance.md)) son la fuente primaria de features.
 - El asistente consume el dominio por tools ([ai.md](ai.md)).
 - **Company**: `allow_predictive_training_collection`, `predictive_algorithm_version_id`.
 
 ## Invariantes
 
-- Predicción de flota sin filtro de tags/ids: solo activos con al menos una rutina validada.
+- Predicción de flota sin filtro de tags/ids: solo activos con al menos un servicio validado.
 - Una predicción es única por activo, fecha, ventana y modo de falla.
 - El nivel de riesgo se deriva de `expected_failures`, nunca de la probabilidad sola.
-- Entrenamiento multi-empresa: solo rutinas de empresas con opt-in.
+- Entrenamiento multi-empresa: solo servicios de empresas con opt-in.
 - Solo versiones `published` son seleccionables por clientes.
 - Movimientos de algoritmo y settings de empresa quedan en auditoría.

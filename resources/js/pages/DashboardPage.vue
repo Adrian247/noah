@@ -238,7 +238,7 @@ const quickLinks = computed(() => {
     const all: QuickLink[] = [
         {
             to: '/app/routines',
-            label: 'Rutinas',
+            label: 'Servicios',
             description: 'Asignar, ejecutar y validar',
             icon: 'clipboard-list',
             moduleId: 'routines',
@@ -251,11 +251,11 @@ const quickLinks = computed(() => {
             moduleId: 'inventory',
         },
         {
-            to: '/app/assets',
-            label: 'Activos',
-            description: 'Equipos en campo',
-            icon: 'cube',
-            moduleId: 'assets',
+            to: '/app/catalog/clients',
+            label: 'Clientes',
+            description: 'Sitios e inventario vinculado',
+            icon: 'briefcase',
+            moduleId: 'clients',
         },
         {
             to: '/app/design/forms',
@@ -302,11 +302,9 @@ const catalogTiles = computed(() => {
         return [];
     }
     return [
-        { label: 'Activos', value: c.assets, to: '/app/assets', moduleId: 'assets', icon: 'cube' as NavIconName },
-        { label: 'Sitios', value: c.sites, to: '/app/sites', moduleId: 'sites', icon: 'map-pin' as NavIconName },
         { label: 'Clientes', value: c.clients, to: '/app/catalog/clients', moduleId: 'clients', icon: 'briefcase' as NavIconName },
         { label: 'Insumos', value: c.supply_items, to: '/app/inventory', moduleId: 'inventory', icon: 'archive' as NavIconName },
-        { label: 'Equipos cat.', value: c.equipment_items, to: '/app/catalog/items', moduleId: 'catalog_items', icon: 'factory' as NavIconName },
+        { label: 'Artículos cat.', value: c.equipment_items, to: '/app/catalog/items', moduleId: 'catalog_items', icon: 'boxes' as NavIconName },
         { label: 'Proveedores', value: c.suppliers, to: '/app/catalog/suppliers', moduleId: 'catalog_suppliers', icon: 'truck' as NavIconName },
     ].filter((t) => isVisible(t.moduleId));
 });
@@ -320,7 +318,7 @@ const designTiles = computed(() => {
         { label: 'Formularios', value: d.forms, to: '/app/design/forms', moduleId: 'design_forms' },
         { label: 'Reportes', value: d.reports, to: '/app/design/reports', moduleId: 'design_reports' },
         { label: 'Workflows', value: d.workflows, to: '/app/design/workflows', moduleId: 'design_workflows' },
-        { label: 'Tipos rutina', value: d.routine_types, to: '/app/routines/types', moduleId: 'design_routine_types' },
+        { label: 'Tipos de servicio', value: d.routine_types, to: '/app/routines/types', moduleId: 'design_routine_types' },
     ].filter((t) => isVisible(t.moduleId));
 });
 
@@ -391,7 +389,7 @@ const primaryKpis = computed(() => [
     },
     {
         key: 'assigned',
-        label: 'Rutinas asignadas',
+        label: 'Servicios asignados',
         value: summary.value?.routines_assigned ?? '—',
         to: '/app/routines?status=assigned',
         icon: 'clipboard-list' as NavIconName,
@@ -468,12 +466,12 @@ const primaryKpis = computed(() => [
             <GlassCard v-if="enabledWidgets.has('operations')" class="dashboard-panel dashboard-panel--pipeline" padding="lg">
                 <div class="dashboard-panel__head">
                     <div>
-                        <h2 class="dashboard-panel__title">Flujo de rutinas</h2>
+                        <h2 class="dashboard-panel__title">Flujo de servicios</h2>
                         <p class="dashboard-panel__desc">{{ pipelineTotal }} en el ciclo operativo</p>
                     </div>
                     <RouterLink to="/app/routines" class="dashboard-panel__link">Ver todas</RouterLink>
                 </div>
-                <div class="dashboard-pipeline-bar" role="img" :aria-label="`Distribución de ${pipelineTotal} rutinas`">
+                <div class="dashboard-pipeline-bar" role="img" :aria-label="`Distribución de ${pipelineTotal} servicios`">
                     <div
                         v-for="seg in pipelineSegments"
                         :key="seg.key"
@@ -541,7 +539,7 @@ const primaryKpis = computed(() => [
                         <RouterLink :to="`/app/routines/${r.id}`" class="dashboard-focus-item">
                             <div class="dashboard-focus-item__main">
                                 <span class="dashboard-focus-item__title">
-                                    {{ r.routine_type_name ?? 'Rutina' }}
+                                    {{ r.routine_type_name ?? 'Servicio' }}
                                     <span v-if="r.asset_tag" class="text-portal-muted font-normal">· {{ r.asset_tag }}</span>
                                 </span>
                                 <span class="dashboard-focus-item__meta">
@@ -668,7 +666,7 @@ const primaryKpis = computed(() => [
 
         <AppModal :open="showTourInvite" title="Tour de Phoenix" size="sm" @close="showTourInvite = false">
             <p class="text-portal-muted text-sm leading-relaxed">
-                ¿Quieres un recorrido guiado por el inicio, rutinas, catálogos y facturación?
+                ¿Quieres un recorrido guiado por el inicio, servicios, catálogos y facturación?
             </p>
             <template #footer>
                 <button

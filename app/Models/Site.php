@@ -11,7 +11,12 @@ class Site extends Model
 {
     use BelongsToCompany;
 
-    protected $fillable = ['company_id', 'name', 'address'];
+    protected $fillable = ['company_id', 'client_id', 'name', 'address'];
+
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
+    }
 
     public function company(): BelongsTo
     {

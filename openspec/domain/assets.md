@@ -2,7 +2,7 @@
 
 ## Responsabilidad
 
-Instancias de equipo instalado en un sitio. Enlace operativo con rutinas y catálogo.
+Instancias de equipo instalado en un sitio. Enlace operativo con servicios y catálogo.
 
 ## Agregados
 
@@ -16,13 +16,13 @@ Instancias de equipo instalado en un sitio. Enlace operativo con rutinas y catá
 
 ## Relaciones
 
-- Una **Rutina** apunta a un **Asset** (ver [maintenance.md](maintenance.md)).
-- Historial de rutinas validadas = historial de mantenimiento del activo (vista de lectura).
+- Un **Servicio** (`Routine`) apunta a un **Asset** (ver [maintenance.md](maintenance.md)).
+- Historial de servicios validados = historial de mantenimiento del activo (vista de lectura).
 
 ## Invariantes
 
 - Asset siempre bajo un sitio de la misma empresa.
-- Baja lógica: no asignar nuevas rutinas; historial conservado.
+- Baja lógica: no asignar nuevos servicios; historial conservado.
 
 ## Eventos
 

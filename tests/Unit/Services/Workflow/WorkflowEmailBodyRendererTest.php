@@ -20,8 +20,8 @@ class WorkflowEmailBodyRendererTest extends TestCase
     public function test_renders_html_tokens_and_falls_back_asset_name_to_tag(): void
     {
         $this->seed();
-        $company = Company::query()->firstOrFail();
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
+        $company = Company::query()->where('name', 'Sandbox')->firstOrFail();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->firstOrFail();
         $site = Site::query()->where('company_id', $company->id)->firstOrFail();
         $type = RoutineType::query()->where('company_id', $company->id)->firstOrFail();
         $asset = Asset::query()->where('company_id', $company->id)->firstOrFail();
@@ -40,7 +40,7 @@ class WorkflowEmailBodyRendererTest extends TestCase
             'body_html' => '<p>Hola {user.name}, activo {asset.name} / {asset.tag}</p>',
         ], $technician);
 
-        $this->assertStringContainsString('<p>Hola Misael Palos, activo', $html);
+        $this->assertStringContainsString('<p>Hola Técnico Sandbox, activo', $html);
         $this->assertStringContainsString('L200-DEMO', $html);
         $this->assertStringNotContainsString('{asset.', $html);
         $this->assertStringNotContainsString('activo —', $html);
@@ -49,8 +49,8 @@ class WorkflowEmailBodyRendererTest extends TestCase
     public function test_workflow_step_mail_exposes_html_without_escaping_tags(): void
     {
         $this->seed();
-        $company = Company::query()->firstOrFail();
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
+        $company = Company::query()->where('name', 'Sandbox')->firstOrFail();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->firstOrFail();
         $site = Site::query()->where('company_id', $company->id)->firstOrFail();
         $type = RoutineType::query()->where('company_id', $company->id)->firstOrFail();
         $asset = Asset::query()->where('company_id', $company->id)->firstOrFail();
@@ -67,11 +67,11 @@ class WorkflowEmailBodyRendererTest extends TestCase
         $mailable = new WorkflowStepMail(
             $routine,
             'Asunto prueba',
-            '<p>Hola Misael Palos, rutina lista.</p>',
+            '<p>Hola Técnico Sandbox, servicio listo.</p>',
         );
 
-        $mailable->assertSeeInHtml('Hola Misael Palos, rutina lista.', false);
+        $mailable->assertSeeInHtml('Hola Técnico Sandbox, servicio listo.', false);
         $mailable->assertDontSeeInHtml('&lt;p&gt;');
-        $mailable->assertSeeInOrderInText(['Rutina #', 'Hola Misael Palos, rutina lista.']);
+        $mailable->assertSeeInOrderInText(['Servicio #', 'Hola Técnico Sandbox, servicio listo.']);
     }
 }

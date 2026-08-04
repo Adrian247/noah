@@ -19,7 +19,7 @@ class RoutineCreatedAuditTest extends TestCase
         Mail::fake();
 
         $admin = User::query()->where('email', 'admin@pyro-systems.com')->firstOrFail();
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->firstOrFail();
         $company = Company::query()->firstOrFail();
         $token = $admin->createToken('test')->plainTextToken;
 

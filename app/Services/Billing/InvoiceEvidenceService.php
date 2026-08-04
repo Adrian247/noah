@@ -118,7 +118,7 @@ class InvoiceEvidenceService
 
         if ($invoice->routine_id === null) {
             throw ValidationException::withMessages([
-                'generated_report_id' => ['La prefactura no tiene rutina vinculada.'],
+                'generated_report_id' => ['La prefactura no tiene servicio vinculado.'],
             ]);
         }
 
@@ -129,7 +129,7 @@ class InvoiceEvidenceService
 
         if ((int) $report->routine_id !== (int) $invoice->routine_id) {
             throw ValidationException::withMessages([
-                'generated_report_id' => ['El reporte debe pertenecer a la misma rutina que la prefactura.'],
+                'generated_report_id' => ['El reporte debe pertenecer al mismo servicio que la prefactura.'],
             ]);
         }
 
@@ -158,7 +158,7 @@ class InvoiceEvidenceService
         }
 
         $size = (int) ($disk->size($report->path) ?: 0);
-        $filename = 'reporte-inspeccion-rutina-'.$report->routine_id.'-'.$report->id.'.pdf';
+        $filename = 'reporte-inspeccion-servicio-'.$report->routine_id.'-'.$report->id.'.pdf';
 
         return InvoiceEvidence::query()->create([
             'company_id' => $invoice->company_id,

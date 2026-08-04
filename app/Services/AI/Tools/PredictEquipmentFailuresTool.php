@@ -23,7 +23,7 @@ class PredictEquipmentFailuresTool implements AiTool
 
     public function description(): string
     {
-        return 'Predice riesgo de falla solo con rutinas de línea mantenimiento aplicadas a activos. '
+        return 'Predice riesgo de falla solo con servicios de línea mantenimiento aplicados a activos. '
             .'No uses esta tool para manufactura o suministro a cliente (usa predict_client_demand). '
             .'Filtra por tags, clase (scooptram, camión, jumbo…), sitio o modo de falla. '
             .'Antes de llamarla, asegúrate de tener tag, clase o flota explícita del usuario. '
@@ -43,7 +43,7 @@ class PredictEquipmentFailuresTool implements AiTool
                 'tags' => [
                     'type' => 'array',
                     'items' => ['type' => 'string'],
-                    'description' => 'Etiquetas de equipo, p. ej. ["SS-305", "JB-101"]. Vacío = flota con rutinas validadas.',
+                    'description' => 'Etiquetas de equipo, p. ej. ["SS-305", "JB-101"]. Vacío = flota con servicios validados.',
                 ],
                 'equipment_class' => [
                     'type' => 'string',

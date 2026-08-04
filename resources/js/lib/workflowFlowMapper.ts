@@ -145,8 +145,8 @@ export function createEmailStep(): { id: string; meta: StepMeta } {
             email: {
                 roles: ['supervisor', 'administrator'],
                 template: 'routine_pending_validation',
-                subject: 'Phoenix — Notificación de rutina',
-                message: 'Hay una rutina que requiere tu atención.',
+                subject: 'Phoenix — Notificación de servicio',
+                message: 'Hay un servicio que requiere tu atención.',
             },
         },
     };

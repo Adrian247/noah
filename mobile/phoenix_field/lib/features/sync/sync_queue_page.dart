@@ -99,7 +99,7 @@ class _SyncQueuePageState extends ConsumerState<SyncQueuePage> {
                       (row) => Card(
                         margin: const EdgeInsets.only(bottom: 8),
                         child: ListTile(
-                          title: Text('${row.fieldKey} · rutina #${row.routineId}'),
+                          title: Text('${row.fieldKey} · servicio #${row.routineId}'),
                           subtitle: Text(row.localPath),
                           trailing: _statusChip(row.status),
                         ),

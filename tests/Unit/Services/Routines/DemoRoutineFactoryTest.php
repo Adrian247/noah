@@ -16,8 +16,8 @@ class DemoRoutineFactoryTest extends TestCase
     {
         $this->seed();
 
-        $company = Company::query()->firstOrFail();
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
+        $company = Company::query()->where('name', 'Sandbox')->firstOrFail();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->firstOrFail();
 
         $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
         $responses = $routine->latestExecution?->responses ?? [];

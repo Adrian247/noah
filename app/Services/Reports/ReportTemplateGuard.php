@@ -32,7 +32,7 @@ class ReportTemplateGuard
         $extra = $routineTypes->count() > 4 ? ' y otros' : '';
 
         return [
-            "Hay tipos de rutina enlazados a este reporte ({$sample}{$extra}). Quita el reporte en Tipos de rutina antes de eliminar la plantilla.",
+            "Hay tipos de servicio enlazados a este reporte ({$sample}{$extra}). Quita el reporte en Tipos de servicio antes de eliminar la plantilla.",
         ];
     }
 

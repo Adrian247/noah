@@ -21,7 +21,7 @@ class InvoiceDraftServiceTest extends TestCase
         config(['phoenix.billing.labor_rate_per_hour' => 0, 'phoenix.billing.tax_rate' => 0.16]);
         $this->seed();
 
-        $technician = User::query()->where('email', 'misael.palos@mein-company.com')->firstOrFail();
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->firstOrFail();
         $routine = $this->demoRoutine($technician);
         $execution = $routine->latestExecution ?? $routine->executions()->create([
             'performed_by' => $technician->id,

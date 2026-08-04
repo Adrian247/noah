@@ -9,7 +9,7 @@ Motor: [workflow-engine.md](../architecture/workflow-engine.md).
 - Versión publicada de un flujo asociado a RoutineType o global por empresa.
 - Grafo: nodos (estado, tarea, gateway) y aristas (condiciones).
 - `definition.meta`: `template` + `options` (facturación, doble revisión, PDF/borrador).
-- Ciclo de vida: `draft` → `published` (solo publicados asignables a tipos de rutina).
+- Ciclo de vida: `draft` → `published` (solo publicados asignables a tipos de servicio).
 
 ### WorkflowInstance
 

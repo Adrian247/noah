@@ -26,6 +26,7 @@ class RolePermissionTemplateService
                 PhoenixPermission::CatalogSuppliersManage->value,
                 PhoenixPermission::InventoryView->value,
                 PhoenixPermission::InventoryManage->value,
+                PhoenixPermission::AssetsView->value,
                 PhoenixPermission::IntegrationsView->value,
                 PhoenixPermission::InsightsUse->value,
             ],

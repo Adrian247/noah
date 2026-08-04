@@ -52,12 +52,52 @@ class FormDesignerApiTest extends TestCase
             'status' => 'draft',
             'version' => 2,
         ]);
+
+        // Segunda publicación: la v1 queda archivada; solo v2 publicada + v3 borrador.
+        $this->withToken($token)
+            ->withHeader('X-Company-Id', (string) $company->id)
+            ->putJson("/api/v1/design/forms/{$formId}/schema", [
+                'schema' => [
+                    'sections' => [
+                        ['title' => 'B', 'fields' => [['key' => 'b', 'type' => 'text', 'label' => 'B']]],
+                    ],
+                ],
+            ])
+            ->assertOk();
+
+        $this->withToken($token)
+            ->withHeader('X-Company-Id', (string) $company->id)
+            ->postJson("/api/v1/design/forms/{$formId}/publish")
+            ->assertOk();
+
+        $this->assertDatabaseHas('form_versions', [
+            'form_definition_id' => $formId,
+            'status' => 'archived',
+            'version' => 1,
+        ]);
+        $this->assertDatabaseHas('form_versions', [
+            'form_definition_id' => $formId,
+            'status' => 'published',
+            'version' => 2,
+        ]);
+        $this->assertDatabaseHas('form_versions', [
+            'form_definition_id' => $formId,
+            'status' => 'draft',
+            'version' => 3,
+        ]);
+        $this->assertSame(
+            1,
+            \App\Models\FormVersion::query()
+                ->where('form_definition_id', $formId)
+                ->where('status', 'published')
+                ->count(),
+        );
     }
 
     public function test_technician_cannot_create_form(): void
     {
         $this->seed();
-        $user = User::query()->where('email', 'misael.palos@mein-company.com')->first();
+        $user = User::query()->where('email', 'technician@sandbox-demo.com')->first();
         $company = Company::query()->first();
         $token = $user->createToken('test')->plainTextToken;
 

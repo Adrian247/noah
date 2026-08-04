@@ -50,7 +50,7 @@ String routineStatusHint(String status) {
     case 'draft':
       return 'Borrador sin asignar';
     default:
-      return 'Estado del flujo de la rutina';
+      return 'Estado del flujo del servicio';
   }
 }
 
@@ -186,7 +186,7 @@ class RoutineStatusChip extends StatelessWidget {
   }
 }
 
-/// Banner destacado para el detalle de la rutina.
+/// Banner destacado para el detalle del servicio.
 class RoutineStatusBanner extends StatelessWidget {
   const RoutineStatusBanner({
     super.key,

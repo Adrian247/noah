@@ -29,7 +29,7 @@ flowchart TB
   subgraph platform [Phoenix - plataforma]
     Core[Core: identidad, empresas, seguridad]
     Catalog[Catálogos y activos]
-    Ops[Operación: rutinas y mantenimientos]
+    Ops[Operación: servicios y mantenimientos]
     Money[Facturación]
     Engines[Motores: formularios, reportes, workflow]
     AI[AI Gateway]
@@ -58,7 +58,7 @@ El **centro** no es solo “mantenimiento”: es **Core + motores configurables*
 | **Dynamic Reports** | ¿Cómo se presenta al cliente? | Árbol de componentes → PDF |
 | **Workflow** | ¿Qué pasos siguen? | Estados, aprobaciones, IA, factura, notificaciones |
 
-Un **tipo de rutina** enlaza: formulario + plantilla de reporte + workflow + (opcional) prompt de IA + reglas de facturación.
+Un **tipo de servicio** enlaza: formulario + plantilla de reporte + workflow + (opcional) prompt de IA + reglas de facturación.
 
 ## Flujo de valor principal
 
@@ -70,11 +70,11 @@ sequenceDiagram
   participant S as Supervisor
   participant F as Facturación
 
-  A->>N: Publica tipo de rutina (form + reporte + flujo)
-  T->>T: Ejecuta rutina (local si móvil)
+  A->>N: Publica tipo de servicio (form + reporte + flujo)
+  T->>T: Ejecuta servicio (local si móvil)
   T->>N: Sincroniza evidencias y respuestas
   N->>N: Workflow: IA corrige redacción
-  S->>N: Valida rutina
+  S->>N: Valida servicio
   N->>N: Genera PDF desde plantilla
   F->>N: Emite factura según reglas
 ```
@@ -83,7 +83,7 @@ sequenceDiagram
 
 - **Equipo / activo**: jerarquía empresa → sitio → activo; vínculo a catálogo de modelos o familias.
 - **Insumos**: refacciones y consumibles; stock y costo unitario (inventory).
-- **Costo de mantenimiento**: insumos consumidos + mano de obra (tiempos de rutina) + reglas configurables; no mezclar con XML fiscal.
+- **Costo de mantenimiento**: insumos consumidos + mano de obra (tiempos de servicio) + reglas configurables; no mezclar con XML fiscal.
 
 ## Reportes dinámicos
 

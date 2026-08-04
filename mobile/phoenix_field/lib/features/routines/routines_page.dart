@@ -105,7 +105,7 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_todayOnly ? 'Rutinas de hoy' : 'Todas las rutinas'),
+        title: Text(_todayOnly ? 'Servicios de hoy' : 'Todos los servicios'),
         actions: [
           IconButton(
             onPressed: _syncing ? null : _refresh,
@@ -276,12 +276,12 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
 
   String _emptyMessage() {
     if (_todayOnly && _statusFilter == _StatusFilter.actionable) {
-      return 'No hay rutinas por hacer hoy. Prueba «En curso», «Todos» o sincroniza.';
+      return 'No hay servicios por hacer hoy. Prueba «En curso», «Todos» o sincroniza.';
     }
     if (_todayOnly) {
-      return 'No hay rutinas en este filtro para hoy.';
+      return 'No hay servicios en este filtro para hoy.';
     }
-    return 'No hay rutinas en este filtro. Desliza para sincronizar.';
+    return 'No hay servicios en este filtro. Desliza para sincronizar.';
   }
 
   Map<String, dynamic> _decodePayload(String payloadJson) {
@@ -306,7 +306,7 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
     if (type != null) {
       return type;
     }
-    return 'Rutina #${map['id'] ?? fallbackId}';
+    return 'Servicio #${map['id'] ?? fallbackId}';
   }
 
   String _formatScheduled(String iso) {

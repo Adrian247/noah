@@ -32,7 +32,7 @@ MD;
 
     public function test_literal_backslash_n_and_bold_on_cover_style_body(): void
     {
-        $text = 'Activo: **MEIN-L200-01**\\n\\nRutina de mantenimiento documentada.';
+        $text = 'Activo: **MEIN-L200-01**\\n\\nServicio de mantenimiento documentado.';
 
         $html = ReportMarkdown::toHtml($text);
 

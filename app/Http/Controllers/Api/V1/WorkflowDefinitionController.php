@@ -272,13 +272,13 @@ class WorkflowDefinitionController extends Controller
 
         if ($workflowDefinition->routineTypes()->exists()) {
             throw ValidationException::withMessages([
-                'workflow' => ['No se puede eliminar: está asignado a uno o más tipos de rutina. Quita la asignación antes.'],
+                'workflow' => ['No se puede eliminar: está asignado a uno o más tipos de servicio. Quita la asignación antes.'],
             ]);
         }
 
         if ($workflowDefinition->instances()->exists()) {
             throw ValidationException::withMessages([
-                'workflow' => ['No se puede eliminar: hay rutinas que ejecutaron este workflow.'],
+                'workflow' => ['No se puede eliminar: hay servicios que ejecutaron este workflow.'],
             ]);
         }
 

@@ -32,14 +32,14 @@ final class TenantDemoProfile
         return new self(
             companyName: 'Mein Company',
             companyLegalName: 'Mein Company S.A. de C.V.',
-            siteName: 'Centro de servicio Mein',
-            clientCode: 'MEIN-CLI-001',
-            clientTradeName: 'Mina Velardeña',
-            clientLegalName: 'Mina Velardeña S.A. de C.V.',
-            catalogCode: 'MEIN-L200-2018',
-            catalogName: 'Mitsubishi L200 2018 — Mein',
-            assetTag: 'MEIN-L200-01',
-            assetSerial: 'MEINBJNKB40JH000001',
+            siteName: '',
+            clientCode: 'MEIN-INTERNO',
+            clientTradeName: 'Interno',
+            clientLegalName: 'Trabajos internos Mein Company',
+            catalogCode: '',
+            catalogName: '',
+            assetTag: '',
+            assetSerial: '',
             staff: [
                 ['email' => 'emilio.sanchez@mein-company.com', 'name' => 'Emilio Sánchez', 'role' => MembershipRole::Administrator],
                 ['email' => 'misael.palos@mein-company.com', 'name' => 'Misael Palos', 'role' => MembershipRole::Technician],
@@ -60,27 +60,53 @@ final class TenantDemoProfile
         return $this->companyName === 'Sandbox';
     }
 
+    public function isVirginTenant(): bool
+    {
+        return ! $this->isSandbox();
+    }
+
     /**
-     * Tenant virgen para pruebas de onboarding en la plataforma (sin catálogos, rutinas ni activos demo).
+     * Tenant demo con playground operativo (catálogos, rutina demo).
      */
     public static function sandbox(): self
     {
         return new self(
             companyName: 'Sandbox',
             companyLegalName: 'Empresa sandbox Phoenix S.A. de C.V.',
-            siteName: '',
-            clientCode: '',
-            clientTradeName: '',
-            clientLegalName: '',
-            catalogCode: '',
-            catalogName: '',
-            assetTag: '',
-            assetSerial: '',
+            siteName: 'Sitio demo Sandbox',
+            clientCode: 'SANDBOX-CLI-001',
+            clientTradeName: 'Cliente demo',
+            clientLegalName: 'Cliente demo Sandbox S.A. de C.V.',
+            catalogCode: 'SBX-L200-2018',
+            catalogName: 'Mitsubishi L200 2018 — Sandbox',
+            assetTag: 'SBX-L200-01',
+            assetSerial: 'SBXBJNKB40JH000001',
             staff: [
                 [
                     'email' => DemoAccounts::DEFAULT_LOGIN_EMAIL,
                     'name' => 'Administrador Sandbox',
                     'role' => MembershipRole::Administrator,
+                ],
+                [
+                    'email' => 'technician@sandbox-demo.com',
+                    'name' => 'Técnico Sandbox',
+                    'role' => MembershipRole::Technician,
+                ],
+                [
+                    'email' => 'supervisor@sandbox-demo.com',
+                    'name' => 'Supervisor Sandbox',
+                    'role' => MembershipRole::Supervisor,
+                ],
+                [
+                    'email' => 'billing@sandbox-demo.com',
+                    'name' => 'Facturación Sandbox',
+                    'role' => MembershipRole::Billing,
+                ],
+                [
+                    'email' => 'cliente.portal@sandbox-demo.com',
+                    'name' => 'Cliente portal Sandbox',
+                    'role' => MembershipRole::Client,
+                    'portal_client' => true,
                 ],
             ],
         );
@@ -91,14 +117,14 @@ final class TenantDemoProfile
         return new self(
             companyName: 'Dom-G',
             companyLegalName: 'Dom-G Servicios Industriales S.A. de C.V.',
-            siteName: 'Planta Dom-G',
-            clientCode: 'DOMG-CLI-001',
-            clientTradeName: 'Grupo México',
-            clientLegalName: 'Grupo México, S.A.B. de C.V.',
-            catalogCode: 'DOMG-L200-2019',
-            catalogName: 'Mitsubishi L200 2019 — Dom-G',
-            assetTag: 'DOMG-L200-01',
-            assetSerial: 'DOMGBJNKB40JH000002',
+            siteName: '',
+            clientCode: 'DOMG-INTERNO',
+            clientTradeName: 'Interno',
+            clientLegalName: 'Trabajos internos Dom-G',
+            catalogCode: '',
+            catalogName: '',
+            assetTag: '',
+            assetSerial: '',
             staff: [
                 ['email' => 'gilberto-dominguez@dom-g.com', 'name' => 'Gilberto Domínguez', 'role' => MembershipRole::Administrator],
                 ['email' => 'technician@dom-g.com', 'name' => 'Técnico Dom-G', 'role' => MembershipRole::Technician],

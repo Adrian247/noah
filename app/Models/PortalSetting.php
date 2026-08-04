@@ -43,9 +43,9 @@ class PortalSetting extends Model
             'hero_image_url' => 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=1600&q=80',
             'hero_image_alt' => 'Trabajador industrial con equipo de protección en planta',
             'service_title' => 'Gestión técnica clara para operaciones industriales',
-            'service_description' => 'Phoenix centraliza rutinas en campo, validación técnica, evidencias, facturación y un asistente operativo con grounding en datos reales, en una sola plataforma para operaciones industriales.',
+            'service_description' => 'Phoenix centraliza servicios en campo, validación técnica, evidencias, facturación y un asistente operativo con grounding en datos reales, en una sola plataforma para operaciones industriales.',
             'service_highlights' => [
-                'Rutinas y validación en tiempo real',
+                'Servicios y validación en tiempo real',
                 'Formularios, reportes y workflows configurables',
                 'Asistente IA con datos verificados de tu empresa',
                 'Trazabilidad y auditoría por organización',

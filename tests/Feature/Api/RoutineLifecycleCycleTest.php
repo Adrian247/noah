@@ -47,8 +47,8 @@ class RoutineLifecycleCycleTest extends TestCase
         Mail::fake();
 
         $company = $this->meinCompany();
-        $technician = $this->meinUser('misael.palos@mein-company.com');
-        $supervisor = $this->meinUser('claudio.rodriguez@mein-company.com');
+        $technician = $this->meinUser('technician@sandbox-demo.com');
+        $supervisor = $this->meinUser('supervisor@sandbox-demo.com');
         $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
 
         $this->withToken($technician->createToken('tech')->plainTextToken)
@@ -95,10 +95,10 @@ class RoutineLifecycleCycleTest extends TestCase
         Mail::fake();
 
         $company = $this->meinCompany();
-        $technician = $this->meinUser('misael.palos@mein-company.com');
-        $supervisor = $this->meinUser('claudio.rodriguez@mein-company.com');
-        $billing = $this->meinUser('elena.sanchez@mein-company.com');
-        $portalUser = $this->meinUser('cliente.portal@mein-company.com');
+        $technician = $this->meinUser('technician@sandbox-demo.com');
+        $supervisor = $this->meinUser('supervisor@sandbox-demo.com');
+        $billing = $this->meinUser('billing@sandbox-demo.com');
+        $portalUser = $this->meinUser('cliente.portal@sandbox-demo.com');
         $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
 
         $this->submitAndValidate($routine->id, $company, $technician, $supervisor);
@@ -126,9 +126,9 @@ class RoutineLifecycleCycleTest extends TestCase
         Mail::fake();
 
         $company = $this->meinCompany();
-        $technician = $this->meinUser('misael.palos@mein-company.com');
-        $supervisor = $this->meinUser('claudio.rodriguez@mein-company.com');
-        $billing = $this->meinUser('elena.sanchez@mein-company.com');
+        $technician = $this->meinUser('technician@sandbox-demo.com');
+        $supervisor = $this->meinUser('supervisor@sandbox-demo.com');
+        $billing = $this->meinUser('billing@sandbox-demo.com');
         $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
 
         $client = Client::query()->where('company_id', $company->id)->firstOrFail();
@@ -153,9 +153,9 @@ class RoutineLifecycleCycleTest extends TestCase
         Mail::fake();
 
         $company = $this->meinCompany();
-        $technician = $this->meinUser('misael.palos@mein-company.com');
-        $supervisor = $this->meinUser('claudio.rodriguez@mein-company.com');
-        $billing = $this->meinUser('elena.sanchez@mein-company.com');
+        $technician = $this->meinUser('technician@sandbox-demo.com');
+        $supervisor = $this->meinUser('supervisor@sandbox-demo.com');
+        $billing = $this->meinUser('billing@sandbox-demo.com');
         $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
         $correlationId = $routine->workflowInstance?->correlation_id;
         $this->assertNotNull($correlationId);

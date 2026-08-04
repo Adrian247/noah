@@ -39,7 +39,7 @@ const validatingId = ref<number | null>(null);
 const canValidate = computed(() => can('routines.validate'));
 
 const columns = computed((): TableColumnDef[] => [
-    { id: 'routine', label: 'Rutina', cellClass: 'py-3' },
+    { id: 'routine', label: 'Servicio', cellClass: 'py-3' },
     { id: 'asset', label: 'Activo' },
     { id: 'technician', label: 'Técnico' },
     { id: 'submitted', label: 'Enviada' },
@@ -77,7 +77,7 @@ function formatSubmittedAt(value?: string | null) {
 
 async function quickValidate(row: Routine) {
     const accepted = await confirm(
-        `¿Validar la rutina #${row.id} (${row.routine_type?.name ?? 'sin tipo'})? Se generará reporte y borrador de factura.`,
+        `¿Validar el servicio #${row.id} (${row.routine_type?.name ?? 'sin tipo'})? Se generará reporte y borrador de factura.`,
         { title: 'Validar ejecución', confirmLabel: 'Validar' },
     );
     if (!accepted) {
@@ -87,7 +87,7 @@ async function quickValidate(row: Routine) {
     validatingId.value = row.id;
     try {
         await api(`/routines/${row.id}/validate`, { method: 'POST' });
-        toast.success(`Rutina #${row.id} validada.`);
+        toast.success(`Servicio #${row.id} validado.`);
         await load();
     } catch (e) {
         toast.error((e as Error).message);
@@ -114,7 +114,7 @@ onMounted(() => {
         />
 
         <p v-if="!canValidate" class="text-portal-muted text-sm">
-            No tienes permiso para validar rutinas.
+            No tienes permiso para validar servicios.
         </p>
 
         <template v-else>
@@ -123,7 +123,7 @@ onMounted(() => {
                 v-else-if="!routines.length"
                 class="portal-form-panel text-portal-muted p-6 text-sm"
             >
-                No hay rutinas pendientes de validación. Las nuevas aparecerán aquí cuando un técnico
+                No hay servicios pendientes de validación. Los nuevos aparecerán aquí cuando un técnico
                 envíe una ejecución desde Phoenix Campo.
             </div>
             <ConfigurableDataTable
@@ -136,7 +136,7 @@ onMounted(() => {
             >
                 <template #routine="{ row }">
                     <p class="text-portal-heading font-medium">
-                        {{ (row as Routine).routine_type?.name ?? 'Rutina' }}
+                        {{ (row as Routine).routine_type?.name ?? 'Servicio' }}
                     </p>
                     <p class="text-portal-muted text-xs">#{{ (row as Routine).id }}</p>
                     <StatusBadge class="mt-1" status="pending_validation" />

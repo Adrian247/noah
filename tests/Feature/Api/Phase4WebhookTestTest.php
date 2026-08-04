@@ -26,7 +26,7 @@ class Phase4WebhookTestTest extends TestCase
     public function test_webhook_test_endpoint_delivers_sample_payload(): void
     {
         $company = $this->meinCompany();
-        $admin = $this->meinUser('emilio.sanchez@mein-company.com');
+        $admin = $this->meinUser('admin@sandbox-demo.com');
         Sanctum::actingAs($admin);
 
         $subscription = WebhookSubscription::query()->create([
@@ -53,7 +53,7 @@ class Phase4WebhookTestTest extends TestCase
     public function test_webhook_test_formats_slack_incoming_payload(): void
     {
         $company = $this->meinCompany();
-        $admin = $this->meinUser('emilio.sanchez@mein-company.com');
+        $admin = $this->meinUser('admin@sandbox-demo.com');
         Sanctum::actingAs($admin);
 
         $subscription = WebhookSubscription::query()->create([

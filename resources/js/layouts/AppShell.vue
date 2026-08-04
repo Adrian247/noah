@@ -75,19 +75,17 @@ const navGroups = computed(() => {
             label: 'Operación',
             items: filterNavItems([
                 { to: '/app/dashboard', label: 'Inicio', icon: 'home', moduleId: 'dashboard' },
-                { to: '/app/routines', label: 'Rutinas', icon: 'clipboard-list', moduleId: 'routines', tourAnchor: 'nav-routines' },
+                { to: '/app/routines', label: 'Servicios', icon: 'clipboard-list', moduleId: 'routines', tourAnchor: 'nav-routines' },
                 { to: '/app/inventory', label: 'Inventario', icon: 'archive', moduleId: 'inventory', tourAnchor: 'nav-inventory' },
-                { to: '/app/assets', label: 'Activos', icon: 'cube', moduleId: 'assets', tourAnchor: 'nav-assets' },
-                { to: '/app/predictive', label: 'Predictivo', icon: 'activity', moduleId: 'assets', tourAnchor: 'nav-predictive' },
+                { to: '/app/predictive', label: 'Predictivo', icon: 'activity', moduleId: 'predictive', tourAnchor: 'nav-predictive' },
             ]),
         },
         {
             label: 'Catálogos',
             items: filterNavItems([
-                { to: '/app/catalog/items', label: 'Equipos', icon: 'factory', moduleId: 'catalog_items', tourAnchor: 'nav-catalog-items' },
+                { to: '/app/catalog/items', label: 'Artículos', icon: 'boxes', moduleId: 'catalog_items', tourAnchor: 'nav-catalog-items' },
                 { to: '/app/catalog/suppliers', label: 'Proveedores', icon: 'truck', moduleId: 'catalog_suppliers', tourAnchor: 'nav-catalog-suppliers' },
                 { to: '/app/catalog/clients', label: 'Clientes', icon: 'briefcase', moduleId: 'clients', tourAnchor: 'nav-clients' },
-                { to: '/app/sites', label: 'Sitios', icon: 'map-pin', moduleId: 'sites', tourAnchor: 'nav-sites' },
             ]),
         },
         {
@@ -115,7 +113,7 @@ const navGroups = computed(() => {
             label: 'Plataforma avanzada',
             items: filterNavItems([
                 {
-                    to: '/app/integrations',
+                    to: '/app/integrations/webhooks',
                     label: 'Integraciones',
                     icon: 'workflow',
                     moduleId: 'integrations',
@@ -144,6 +142,12 @@ const navGroups = computed(() => {
             label: 'Plataforma',
             items: [
                 {
+                    to: '/app/platform/catalog/system-articles',
+                    label: 'Artículos de sistema',
+                    icon: 'library',
+                    tourAnchor: 'nav-platform-system-articles',
+                },
+                {
                     to: '/app/platform/tenants',
                     label: 'Clientes de plataforma',
                     icon: 'buildings',
@@ -151,7 +155,7 @@ const navGroups = computed(() => {
                 },
                 {
                     to: '/app/platform/predictive',
-                    label: 'Algoritmo predictivo',
+                    label: 'Algoritmos predictivos',
                     icon: 'cpu',
                     tourAnchor: 'nav-platform-predictive',
                 },

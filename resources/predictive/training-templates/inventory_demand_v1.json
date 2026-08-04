@@ -1,0 +1,24 @@
+{
+    "contract": "phoenix.predictive.training/v1",
+    "kind": "inventory_demand_v1",
+    "records": [
+        {
+            "client_code": "SANDBOX-CLI-001",
+            "catalog_item_code": "SBX-L200-2018",
+            "requested_at": "2026-02-10",
+            "quantity": 2
+        },
+        {
+            "client_code": "SANDBOX-CLI-001",
+            "catalog_item_code": "SBX-L200-2018",
+            "requested_at": "2026-03-01",
+            "quantity": 1
+        },
+        {
+            "client_code": "SANDBOX-CLI-002",
+            "catalog_item_code": "FILTRO-HX-01",
+            "requested_at": "2026-03-12",
+            "quantity": 4
+        }
+    ]
+}

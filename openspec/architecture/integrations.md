@@ -8,8 +8,8 @@
 
 | Evento | Cuándo se dispara |
 |--------|-------------------|
-| `routine.validated` | Supervisor valida rutina |
-| `routine.rejected` | Supervisor rechaza rutina |
+| `routine.validated` | Supervisor valida servicio |
+| `routine.rejected` | Supervisor rechaza servicio |
 | `invoice.issued` | Emisión de factura |
 | `inventory.low_stock` | Movimiento deja insumo bajo mínimo |
 | `*` | Todos los eventos (suscripción comodín) |

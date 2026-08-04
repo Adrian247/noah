@@ -19,7 +19,7 @@ stateDiagram-v2
 
 ```mermaid
 flowchart LR
-  subgraph pantalla [Detalle rutina - UI]
+  subgraph pantalla [Detalle servicio - UI]
     GAL[Galería evidencias]
     TXT[Original vs texto IA]
     CST[Costos insumos tiempos]
