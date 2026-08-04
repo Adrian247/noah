@@ -30,13 +30,16 @@ type Routine = {
     assignee?: { name: string } | null;
 };
 
-type Site = { id: number; name: string };
-type Asset = { id: number; tag: string; site_id: number };
+type Site = { id: number; name: string; client_id?: number | null };
+type InventoryItem = {
+    id: number;
+    tag: string;
+    site_id: number;
+    catalog_item?: { name?: string } | null;
+};
 type Client = { id: number; trade_name?: string; legal_name?: string; code?: string };
 type RoutineType = { id: number; name: string; service_category?: string };
 type UserRow = { id: number; name: string; email: string };
-
-const SERVICE_LINE_LABELS = SERVICE_CATEGORY_LABELS;
 
 const route = useRoute();
 const router = useRouter();
@@ -47,6 +50,8 @@ const { canWriteModule } = useModuleAccess();
 const routines = ref<Routine[]>([]);
 const loading = ref(true);
 const statusFilter = ref((route.query.status as string) ?? '');
+const createLoading = ref(false);
+const clientContextLoading = ref(false);
 
 function openRoutine(id: number) {
     void router.push(`/app/routines/${id}`);
@@ -54,14 +59,14 @@ function openRoutine(id: number) {
 
 const showCreate = ref(false);
 const sites = ref<Site[]>([]);
-const assets = ref<Asset[]>([]);
+const inventory = ref<InventoryItem[]>([]);
 const clients = ref<Client[]>([]);
 const routineTypes = ref<RoutineType[]>([]);
 const technicians = ref<UserRow[]>([]);
 const createForm = ref({
+    client_id: '',
     site_id: '',
     asset_id: '',
-    client_id: '',
     routine_type_id: '',
     assigned_to: '',
     scheduled_at: '',
@@ -70,14 +75,17 @@ const createForm = ref({
 const canCreate = computed(() => canWriteModule('routines'));
 const isAdmin = computed(() => company.current?.role === 'administrator');
 
-const selectedType = computed(() =>
-    routineTypes.value.find((t) => String(t.id) === createForm.value.routine_type_id) ?? null,
+const selectedType = computed(
+    () => routineTypes.value.find((t) => String(t.id) === createForm.value.routine_type_id) ?? null,
 );
-const selectedCategory = computed(() => selectedType.value?.service_category ?? 'maintenance');
+const selectedCategory = computed(() => {
+    const raw = selectedType.value?.service_category;
+    if (raw && typeof raw === 'object' && 'value' in (raw as object)) {
+        return String((raw as { value: string }).value);
+    }
+    return typeof raw === 'string' && raw !== '' ? raw : 'maintenance';
+});
 const requiresAsset = computed(() => selectedCategory.value === 'maintenance');
-const requiresClient = computed(
-    () => selectedCategory.value === 'manufacturing' || selectedCategory.value === 'installation',
-);
 
 const routineTableColumns = computed((): TableColumnDef[] => [
     { id: 'routine', label: 'Servicio', cellClass: 'py-3' },
@@ -96,36 +104,74 @@ const statusChips = [
     { value: 'validated', label: 'Validadas' },
 ];
 
-const siteOptions = computed(() =>
-    sites.value.map((s) => ({ value: String(s.id), label: s.name })),
-);
-const assetOptions = computed(() => [
-    { value: '', label: requiresAsset.value ? 'Selecciona…' : 'Sin artículo (opcional)' },
-    ...filteredAssets.value.map((a) => ({ value: String(a.id), label: a.tag })),
-]);
 const clientOptions = computed(() => [
-    { value: '', label: requiresClient.value ? 'Selecciona…' : 'Sin cliente (opcional)' },
+    { value: '', label: 'Selecciona cliente…' },
     ...clients.value.map((c) => ({
         value: String(c.id),
         label: c.trade_name || c.legal_name || c.code || `Cliente #${c.id}`,
     })),
 ]);
-const routineTypeOptions = computed(() =>
-    routineTypes.value.map((t) => ({
-        value: String(t.id),
-        label: `${t.name} · ${SERVICE_CATEGORY_LABELS[t.service_category ?? 'maintenance'] ?? 'Mantenimiento'}`,
-    })),
+
+const siteOptions = computed(() => [
+    {
+        value: '',
+        label: !createForm.value.client_id
+            ? 'Selecciona un cliente primero…'
+            : sites.value.length
+              ? 'Selecciona sitio…'
+              : 'Sin sitios para este cliente',
+    },
+    ...sites.value.map((s) => ({ value: String(s.id), label: s.name })),
+]);
+
+const filteredInventory = computed(() =>
+    createForm.value.site_id
+        ? inventory.value.filter((a) => String(a.site_id) === createForm.value.site_id)
+        : inventory.value,
 );
+
+const assetOptions = computed(() => [
+    {
+        value: '',
+        label: !createForm.value.client_id
+            ? 'Selecciona un cliente primero…'
+            : !createForm.value.site_id
+              ? 'Selecciona un sitio primero…'
+              : requiresAsset.value
+                ? filteredInventory.value.length
+                    ? 'Selecciona artículo…'
+                    : 'Sin artículos en este sitio'
+                : filteredInventory.value.length
+                  ? 'Sin artículo (opcional)'
+                  : 'Sin artículos (opcional)',
+    },
+    ...filteredInventory.value.map((a) => ({
+        value: String(a.id),
+        label: a.catalog_item?.name ? `${a.tag} · ${a.catalog_item.name}` : a.tag,
+    })),
+]);
+
+const routineTypeOptions = computed(() => [
+    {
+        value: '',
+        label: routineTypes.value.length ? 'Selecciona tipo…' : 'Sin tipos de servicio activos',
+    },
+    ...routineTypes.value.map((t) => {
+        const category =
+            typeof t.service_category === 'string' && t.service_category !== ''
+                ? t.service_category
+                : 'maintenance';
+        return {
+            value: String(t.id),
+            label: `${t.name} · ${SERVICE_CATEGORY_LABELS[category] ?? 'Mantenimiento'}`,
+        };
+    }),
+]);
+
 const technicianOptions = computed(() => [
     { value: '', label: 'Sin asignar' },
     ...technicians.value.map((u) => ({ value: String(u.id), label: `${u.name} (${u.email})` })),
 ]);
-
-const filteredAssets = computed(() =>
-    createForm.value.site_id
-        ? assets.value.filter((a) => String(a.site_id) === createForm.value.site_id)
-        : assets.value,
-);
 
 async function load() {
     loading.value = true;
@@ -143,52 +189,134 @@ async function load() {
 }
 
 async function loadCreateData() {
-    const [s, a, t, c] = await Promise.all([
-        api<{ data: Site[] }>('/sites'),
-        api<{ data: Asset[] }>('/assets'),
-        api<{ data: RoutineType[] }>('/routine-types'),
-        api<{ data: Client[] }>('/clients'),
-    ]);
-    sites.value = s.data;
-    assets.value = a.data;
-    routineTypes.value = t.data;
-    clients.value = c.data;
-    if (company.current?.role === 'administrator') {
-        try {
-            const u = await api<{ data: UserRow[] }>('/company/users');
-            technicians.value = u.data.filter((x) => x.email.includes('tecnico') || true);
-        } catch {
-            technicians.value = [];
+    createLoading.value = true;
+    try {
+        const [clientsRes, typesRes] = await Promise.all([
+            api<{ data: Client[] }>('/clients'),
+            api<{ data: RoutineType[] }>('/routine-types'),
+        ]);
+        clients.value = clientsRes.data ?? [];
+        routineTypes.value = typesRes.data ?? [];
+
+        if (company.current?.role === 'administrator') {
+            try {
+                const u = await api<{ data: UserRow[] }>('/company/users');
+                technicians.value = u.data ?? [];
+            } catch {
+                technicians.value = [];
+            }
         }
-    }
-    if (sites.value[0]) {
-        createForm.value.site_id = String(sites.value[0].id);
-    }
-    if (routineTypes.value[0]) {
-        createForm.value.routine_type_id = String(routineTypes.value[0].id);
+    } catch (e) {
+        toast.error((e as Error).message || 'No se pudieron cargar datos para crear el servicio.');
+        clients.value = [];
+        routineTypes.value = [];
+    } finally {
+        createLoading.value = false;
     }
 }
 
-function openCreate() {
+async function loadClientContext(clientId: string) {
+    sites.value = [];
+    inventory.value = [];
+    if (!clientId) {
+        return;
+    }
+    clientContextLoading.value = true;
+    try {
+        const [sitesRes, invRes] = await Promise.all([
+            api<{ data: Site[] }>(`/clients/${clientId}/sites`),
+            api<{ data: InventoryItem[] }>(`/clients/${clientId}/inventory`),
+        ]);
+        sites.value = sitesRes.data ?? [];
+        inventory.value = invRes.data ?? [];
+    } catch (e) {
+        toast.error((e as Error).message || 'No se pudieron cargar sitios/inventario del cliente.');
+        sites.value = [];
+        inventory.value = [];
+    } finally {
+        clientContextLoading.value = false;
+    }
+}
+
+function resetCreateForm() {
     createForm.value = {
-        site_id: sites.value[0] ? String(sites.value[0].id) : '',
-        asset_id: '',
         client_id: '',
+        site_id: '',
+        asset_id: '',
         routine_type_id: routineTypes.value[0] ? String(routineTypes.value[0].id) : '',
         assigned_to: '',
         scheduled_at: '',
     };
-    showCreate.value = true;
+    sites.value = [];
+    inventory.value = [];
 }
 
+async function openCreate() {
+    resetCreateForm();
+    showCreate.value = true;
+    if (!clients.value.length || !routineTypes.value.length) {
+        await loadCreateData();
+        if (!createForm.value.routine_type_id && routineTypes.value[0]) {
+            createForm.value.routine_type_id = String(routineTypes.value[0].id);
+        }
+    }
+}
+
+watch(
+    () => createForm.value.client_id,
+    async (clientId, prev) => {
+        if (!showCreate.value || clientId === prev) {
+            return;
+        }
+        createForm.value.site_id = '';
+        createForm.value.asset_id = '';
+        await loadClientContext(clientId);
+    },
+);
+
+watch(
+    () => createForm.value.site_id,
+    (siteId) => {
+        if (!showCreate.value) {
+            return;
+        }
+        if (
+            createForm.value.asset_id &&
+            !filteredInventory.value.some((a) => String(a.id) === createForm.value.asset_id)
+        ) {
+            createForm.value.asset_id = '';
+        }
+        if (!siteId) {
+            createForm.value.asset_id = '';
+        }
+    },
+);
+
 async function createRoutine() {
+    if (!createForm.value.client_id) {
+        toast.error('Selecciona un cliente.');
+        return;
+    }
+    if (!createForm.value.site_id) {
+        toast.error('Selecciona un sitio del cliente.');
+        return;
+    }
+    if (!createForm.value.routine_type_id) {
+        toast.error('Selecciona un tipo de servicio.');
+        return;
+    }
+    if (requiresAsset.value && !createForm.value.asset_id) {
+        toast.error('Los servicios de mantenimiento requieren un artículo del inventario.');
+        return;
+    }
+
     try {
         await api('/routines', {
             method: 'POST',
             body: JSON.stringify({
                 site_id: Number(createForm.value.site_id),
                 asset_id: createForm.value.asset_id ? Number(createForm.value.asset_id) : null,
-                client_id: createForm.value.client_id ? Number(createForm.value.client_id) : null,
+                client_id: Number(createForm.value.client_id),
                 routine_type_id: Number(createForm.value.routine_type_id),
                 assigned_to: createForm.value.assigned_to
                     ? Number(createForm.value.assigned_to)
@@ -373,31 +501,34 @@ onMounted(async () => {
             @close="showCreate = false"
         >
             <form id="routine-create-form" class="space-y-4" @submit.prevent="createRoutine">
+                <p v-if="createLoading" class="text-portal-muted text-sm">Cargando catálogos…</p>
+                <MaterialSelect
+                    v-model="createForm.client_id"
+                    label="Cliente *"
+                    :options="clientOptions"
+                    :disabled="createLoading"
+                    required
+                />
                 <MaterialSelect
                     v-model="createForm.site_id"
-                    label="Sitio"
+                    label="Sitio *"
                     :options="siteOptions"
+                    :disabled="!createForm.client_id || clientContextLoading"
                     required
                 />
                 <MaterialSelect
-                    v-model="createForm.routine_type_id"
-                    label="Tipo de servicio"
-                    :options="routineTypeOptions"
-                    required
-                />
-                <MaterialSelect
-                    v-if="requiresAsset || !requiresClient"
                     v-model="createForm.asset_id"
                     :label="requiresAsset ? 'Artículo inventario *' : 'Artículo inventario (opcional)'"
                     :options="assetOptions"
+                    :disabled="!createForm.client_id || !createForm.site_id || clientContextLoading"
                     :required="requiresAsset"
                 />
                 <MaterialSelect
-                    v-if="requiresClient || selectedCategory === 'maintenance'"
-                    v-model="createForm.client_id"
-                    :label="requiresClient ? 'Cliente *' : 'Cliente (opcional)'"
-                    :options="clientOptions"
-                    :required="requiresClient"
+                    v-model="createForm.routine_type_id"
+                    label="Tipo de servicio *"
+                    :options="routineTypeOptions"
+                    :disabled="createLoading || !routineTypes.length"
+                    required
                 />
                 <MaterialSelect
                     v-if="technicians.length"
@@ -410,6 +541,20 @@ onMounted(async () => {
                     label="Programada (opcional)"
                     type="datetime-local"
                 />
+                <p
+                    v-if="!createLoading && !clients.length"
+                    class="text-amber-600 dark:text-amber-300 text-xs"
+                >
+                    No hay clientes en esta empresa. Créalos en Catálogo → Clientes.
+                </p>
+                <p
+                    v-if="!createLoading && !routineTypes.length"
+                    class="text-amber-600 dark:text-amber-300 text-xs"
+                >
+                    No hay tipos de servicio activos. Configúralos en Diseño → Tipos de servicio
+                    (en Sandbox usa
+                    <code class="text-[11px]">admin@sandbox-demo.com</code>).
+                </p>
             </form>
             <template #footer>
                 <button

@@ -43,7 +43,8 @@ export type NavIconName =
     | 'upload'
     | 'search'
     | 'filter'
-    | 'wrench';
+    | 'wrench'
+    | 'assistant';
 
 const props = withDefaults(
     defineProps<{
@@ -252,6 +253,16 @@ const sizeClass = computed(() => (props.size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'));
             <path
                 d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"
             />
+        </template>
+        <template v-else-if="name === 'assistant'">
+            <!-- Robot / bot -->
+            <rect x="7" y="9" width="10" height="8" rx="2" />
+            <path d="M12 9V6.5" />
+            <circle cx="12" cy="5.5" r="1" fill="currentColor" stroke="none" />
+            <path d="M5.5 12H7M17 12h1.5" />
+            <circle cx="10" cy="12.5" r="0.85" fill="currentColor" stroke="none" />
+            <circle cx="14" cy="12.5" r="0.85" fill="currentColor" stroke="none" />
+            <path d="M10 15.2h4" />
         </template>
     </svg>
 </template>

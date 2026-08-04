@@ -162,6 +162,18 @@ const submitActionLabel = computed(() =>
 const approveActionLabel = computed(() => workflowActionLabel('approved', 'Validar'));
 const rejectActionLabel = computed(() => workflowActionLabel('rejected', 'Rechazar'));
 
+const readyReports = computed(() =>
+    (routine.value?.generated_reports ?? []).filter((x) => x.status === 'ready'),
+);
+/** Un solo PDF de descarga: el más reciente (evita botones duplicados si hubo reintentos). */
+const primaryReadyReport = computed(() => {
+    const list = readyReports.value;
+    if (!list.length) {
+        return null;
+    }
+    return [...list].sort((a, b) => b.id - a.id)[0] ?? null;
+});
+
 function needsReportPoll(): boolean {
     return (
         routine.value?.generated_reports?.some((x) => ['queued', 'processing'].includes(x.status)) ??
@@ -853,11 +865,10 @@ async function deleteRoutine() {
                 {{ rejectActionLabel }}
             </AppButton>
             <AppButton
-                v-for="r in routine.generated_reports?.filter((x) => x.status === 'ready')"
-                :key="r.id"
+                v-if="primaryReadyReport"
                 type="button"
                 variant="secondary"
-                @click="downloadReport(r.id)"
+                @click="downloadReport(primaryReadyReport.id)"
             >
                 Descargar PDF
             </AppButton>

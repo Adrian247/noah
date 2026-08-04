@@ -398,7 +398,7 @@ function removeLine(index: number) {
     editLines.value.splice(index, 1);
 }
 
-async function saveDraft() {
+async function saveDraft(options: { quiet?: boolean } = {}) {
     if (!invoice.value || !canEdit.value) {
         return;
     }
@@ -423,9 +423,12 @@ async function saveDraft() {
         });
         invoice.value = res.data;
         editLines.value = res.data.lines.map(lineImport);
-        toast.success('Prefactura guardada.');
+        if (!options.quiet) {
+            toast.success('Prefactura guardada.');
+        }
     } catch (e) {
         toast.error((e as Error).message);
+        throw e;
     } finally {
         saving.value = false;
     }
@@ -437,7 +440,8 @@ async function issueInvoice() {
     }
     issuing.value = true;
     try {
-        await saveDraft();
+        // Persistir borrador sin toast: el usuario pulsó emitir, no «guardar prefactura».
+        await saveDraft({ quiet: true });
         const res = await api<{ data: Invoice }>(`/billing/invoices/${invoice.value!.id}/issue`, {
             method: 'POST',
             body: JSON.stringify({
@@ -842,7 +846,7 @@ onMounted(load);
                         Al emitir se timbrará con {{ fiscalProviderLabel }} y se sustituirá el CFDI manual adjunto.
                     </AlertBanner>
                     <div class="flex flex-wrap gap-2 pt-2">
-                        <AppButton type="button" :disabled="saving" @click="saveDraft">
+                        <AppButton type="button" :disabled="saving" @click="saveDraft()">
                             {{ saving ? 'Guardando…' : 'Guardar prefactura' }}
                         </AppButton>
                         <AppButton

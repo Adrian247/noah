@@ -516,7 +516,10 @@ class PhoenixDemoSeeder extends Seeder
 
         $site = Site::query()->updateOrCreate(
             ['company_id' => $company->id, 'name' => $profile->siteName],
-            ['address' => 'Av. Reforma 2500, CDMX']
+            [
+                'address' => 'Av. Reforma 2500, CDMX',
+                'client_id' => $demoClient->id,
+            ]
         );
 
         $admin = null;
@@ -748,8 +751,11 @@ class PhoenixDemoSeeder extends Seeder
         $asset = Asset::query()->updateOrCreate(
             ['company_id' => $company->id, 'tag' => $profile->assetTag],
             [
+                'client_id' => $demoClient->id,
                 'site_id' => $site->id,
                 'catalog_item_id' => $catalog->id,
+                'base_catalog_item_id' => $catalog->id,
+                'sync_mode' => 'linked',
                 'serial_number' => $profile->assetSerial,
                 'location_label' => 'Bahía 3 — recepción',
             ]

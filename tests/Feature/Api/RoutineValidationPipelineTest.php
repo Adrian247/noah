@@ -3,7 +3,6 @@
 namespace Tests\Feature\Api;
 
 use App\Enums\RoutineStatus;
-use App\Models\Company;
 use App\Models\GeneratedReport;
 use App\Models\Invoice;
 use App\Services\Routines\DemoRoutineFactory;
@@ -21,13 +20,18 @@ class RoutineValidationPipelineTest extends TestCase
     public function test_validate_creates_report_and_invoice_draft(): void
     {
         $this->seed();
-        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->first();
-        $supervisor = User::query()->where('email', 'supervisor@sandbox-demo.com')->first();
-        $company = Company::query()->first();
-        $routine = app(DemoRoutineFactory::class)->createForCompany($company->id, $technician);
+        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->firstOrFail();
+        $supervisor = User::query()->where('email', 'supervisor@sandbox-demo.com')->firstOrFail();
+        $companyId = (int) $technician->memberships()
+            ->where('is_active', true)
+            ->orderBy('company_id')
+            ->value('company_id');
+        $this->assertGreaterThan(0, $companyId);
+
+        $routine = app(DemoRoutineFactory::class)->createForCompany($companyId, $technician);
 
         $this->withToken($technician->createToken('t')->plainTextToken)
-            ->withHeader('X-Company-Id', (string) $company->id)
+            ->withHeader('X-Company-Id', (string) $companyId)
             ->postJson("/api/v1/routines/{$routine->id}/executions", [
                 'technician_comments' => 'cambio de filtro y limpieza',
                 'duration_minutes' => 120,
@@ -36,14 +40,14 @@ class RoutineValidationPipelineTest extends TestCase
             ->assertCreated();
 
         Sanctum::actingAs($supervisor);
-        $response = $this->withHeader('X-Company-Id', (string) $company->id)
+        $response = $this->withHeader('X-Company-Id', (string) $companyId)
             ->postJson("/api/v1/routines/{$routine->id}/validate");
 
         $response->assertOk();
 
         $routine->refresh();
         $this->assertSame(RoutineStatus::PendingBilling, $routine->status);
-        $this->assertTrue(GeneratedReport::query()->where('routine_id', $routine->id)->exists());
-        $this->assertTrue(Invoice::query()->where('routine_id', $routine->id)->where('status', 'draft')->exists());
+        $this->assertSame(1, GeneratedReport::query()->where('routine_id', $routine->id)->count());
+        $this->assertSame(1, Invoice::query()->where('routine_id', $routine->id)->where('status', 'draft')->count());
     }
 }

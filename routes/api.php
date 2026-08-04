@@ -315,18 +315,19 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/inventory/supplies/{supplyItem}/movements', [InventoryMovementController::class, 'store'])
                 ->middleware('company.module:inventory,write');
 
+            // Inventario de cliente (antes módulo assets); permisos vía clients.
             Route::get('/assets', [AssetController::class, 'index'])
-                ->middleware('company.module:assets,read');
+                ->middleware('company.module:clients,read');
             Route::post('/assets', [AssetController::class, 'store'])
-                ->middleware('company.module:assets,write');
+                ->middleware('company.module:clients,write');
             Route::put('/assets/{asset}', [AssetController::class, 'update'])
-                ->middleware('company.module:assets,write');
+                ->middleware('company.module:clients,write');
             Route::delete('/assets/{asset}', [AssetController::class, 'destroy'])
-                ->middleware('company.module:assets,write');
+                ->middleware('company.module:clients,write');
             Route::get('/assets/{asset}/client-assignments', [AssetClientAssignmentController::class, 'index'])
-                ->middleware('company.module:assets,read');
+                ->middleware('company.module:clients,read');
             Route::post('/assets/{asset}/client-assignments', [AssetClientAssignmentController::class, 'store'])
-                ->middleware('company.module:assets,write');
+                ->middleware('company.module:clients,write');
 
             Route::prefix('predictive')->middleware('company.module:predictive,read')->group(function (): void {
                 Route::get('/predictions', [PredictiveMaintenanceController::class, 'predictions']);

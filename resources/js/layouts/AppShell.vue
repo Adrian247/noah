@@ -511,17 +511,19 @@ async function onAvatarSelected(event: Event) {
             </main>
         </div>
         <PhoenixAssistantPanel v-if="showAssistant" :open="assistantOpen" @close="assistantOpen = false" />
-        <button
-            v-if="showAssistant"
-            type="button"
-            class="phoenix-assistant-fab"
-            data-tour="assistant-fab"
-            aria-label="Abrir asistente Phoenix"
-            :aria-expanded="assistantOpen"
-            @click="assistantOpen = !assistantOpen"
-        >
-            <span class="phoenix-assistant-fab__icon" aria-hidden="true">✦</span>
-            <span class="phoenix-assistant-fab__label">Asistente</span>
-        </button>
+        <Transition name="phoenix-assistant-fab">
+            <button
+                v-if="showAssistant && !assistantOpen"
+                type="button"
+                class="phoenix-assistant-fab"
+                data-tour="assistant-fab"
+                aria-label="Abrir asistente Phoenix"
+                title="Asistente Phoenix"
+                :aria-expanded="assistantOpen"
+                @click="assistantOpen = true"
+            >
+                <NavIcon name="assistant" class="phoenix-assistant-fab__icon" />
+            </button>
+        </Transition>
     </div>
 </template>

@@ -20,6 +20,17 @@ class ReportGenerationService
     {
         $routine->load(['routineType.reportTemplateVersion']);
 
+        $existing = GeneratedReport::query()
+            ->where('routine_id', $routine->id)
+            ->where('routine_execution_id', $execution->id)
+            ->whereIn('status', ['queued', 'processing', 'ready'])
+            ->orderByDesc('id')
+            ->first();
+
+        if ($existing !== null) {
+            return $existing;
+        }
+
         $templateVersion = $routine->routineType?->reportTemplateVersion;
 
         $report = GeneratedReport::query()->create([

@@ -3,6 +3,7 @@
 namespace App\Services\Routines;
 
 use App\Enums\ServiceCategory;
+use App\Models\Asset;
 use App\Models\RoutineType;
 use Illuminate\Validation\ValidationException;
 
@@ -27,6 +28,26 @@ final class RoutineSubjectRules
         $clientId = isset($data['client_id']) && $data['client_id'] !== '' && $data['client_id'] !== null
             ? (int) $data['client_id']
             : null;
+
+        if ($assetId !== null) {
+            $asset = Asset::query()->find($assetId);
+            if ($asset === null) {
+                throw ValidationException::withMessages([
+                    'asset_id' => ['El artículo de inventario no existe.'],
+                ]);
+            }
+            if ($asset->client_id === null) {
+                throw ValidationException::withMessages([
+                    'asset_id' => ['El artículo no pertenece al inventario de un cliente.'],
+                ]);
+            }
+            if ($clientId !== null && $clientId !== (int) $asset->client_id) {
+                throw ValidationException::withMessages([
+                    'client_id' => ['El cliente no coincide con el inventario del artículo seleccionado.'],
+                ]);
+            }
+            $clientId = (int) $asset->client_id;
+        }
 
         if ($category->requiresClientArticle() && $assetId === null) {
             throw ValidationException::withMessages([

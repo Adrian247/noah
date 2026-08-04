@@ -111,6 +111,7 @@ class AiGateway
 
         $preferDashboard = $this->dashboardBuilder->wantsDashboard($question);
         $llmFailed = false;
+        $llmFailureHint = null;
 
         if ($this->laravelAssistant->isAvailable()) {
             try {
@@ -148,6 +149,7 @@ class AiGateway
                 ];
             } catch (\Throwable $e) {
                 $llmFailed = true;
+                $llmFailureHint = $this->describeLlmFailure($e);
                 $this->logInvocation(
                     $companyId,
                     $userId,
@@ -174,10 +176,27 @@ class AiGateway
         );
 
         if ($llmFailed && is_string($local['answer'] ?? null)) {
-            $local['answer'] = "El proveedor LLM no respondió; usé datos locales verificados.\n\n".$local['answer'];
+            $prefix = $llmFailureHint
+                ?? 'El proveedor LLM no respondió; usé datos locales verificados.';
+            $local['answer'] = $prefix."\n\n".$local['answer'];
         }
 
         return $local;
+    }
+
+    private function describeLlmFailure(\Throwable $e): string
+    {
+        $message = $e->getMessage();
+        $haystack = strtolower($message.' '.($e->getPrevious()?->getMessage() ?? ''));
+
+        if (str_contains($haystack, '429') || str_contains($haystack, 'exceeded your current quota') || str_contains($haystack, 'resource_exhausted')) {
+            return 'Google Gemini rechazó la petición por cuota/límite (HTTP 429). Revisá billing/cuota en Google AI Studio o cambiá el proveedor en Configuración → Asistente IA. Mientras tanto usé datos locales verificados.';
+        }
+        if (str_contains($haystack, '401') || str_contains($haystack, '403') || str_contains($haystack, 'api key') || str_contains($haystack, 'unauthenticated') || str_contains($haystack, 'permission')) {
+            return 'El proveedor LLM rechazó la API key o permisos. Revisá GEMINI_API_KEY / OPENAI_API_KEY y Configuración → Asistente IA. Usé datos locales verificados.';
+        }
+
+        return 'El proveedor LLM no respondió; usé datos locales verificados.';
     }
 
     /**

@@ -75,4 +75,28 @@ class RoutineServiceLineApiTest extends TestCase
             ->assertStatus(422)
             ->assertJsonValidationErrors(['asset_id']);
     }
+
+    public function test_maintenance_service_inherits_client_from_inventory_asset(): void
+    {
+        $type = RoutineType::withoutGlobalScope('company')
+            ->where('company_id', $this->companyId)
+            ->where('service_category', ServiceCategory::Maintenance)
+            ->firstOrFail();
+
+        $asset = \App\Models\Asset::withoutGlobalScope('company')
+            ->where('company_id', $this->companyId)
+            ->whereNotNull('client_id')
+            ->firstOrFail();
+
+        $this->withHeader('X-Company-Id', (string) $this->companyId)
+            ->postJson('/api/v1/routines', [
+                'site_id' => $asset->site_id,
+                'routine_type_id' => $type->id,
+                'asset_id' => $asset->id,
+                'client_id' => $asset->client_id,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.asset_id', $asset->id)
+            ->assertJsonPath('data.client_id', $asset->client_id);
+    }
 }
