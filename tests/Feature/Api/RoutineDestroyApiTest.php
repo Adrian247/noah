@@ -3,66 +3,47 @@
 namespace Tests\Feature\Api;
 
 use App\Enums\InvoiceStatus;
-use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\Routine;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Tests\Support\CreatesDemoRoutine;
 use Tests\TestCase;
 
 class RoutineDestroyApiTest extends TestCase
 {
+    use CreatesDemoRoutine;
     use RefreshDatabase;
-
-    private function createRoutineViaApi(string $adminToken, int $companyId): int
-    {
-        $technician = User::query()->where('email', 'technician@sandbox-demo.com')->firstOrFail();
-
-        $response = $this->withToken($adminToken)
-            ->withHeader('X-Company-Id', (string) $companyId)
-            ->postJson('/api/v1/routines', [
-                'site_id' => \App\Models\Site::query()->where('company_id', $companyId)->value('id'),
-                'asset_id' => \App\Models\Asset::query()->where('company_id', $companyId)->value('id'),
-                'routine_type_id' => \App\Models\RoutineType::query()->where('company_id', $companyId)->value('id'),
-                'assigned_to' => $technician->id,
-            ])
-            ->assertCreated();
-
-        return (int) $response->json('data.id');
-    }
 
     public function test_administrator_can_delete_routine(): void
     {
         $this->seed();
 
-        $admin = User::query()->where('email', 'admin@pyro-systems.com')->firstOrFail();
-        $company = Company::query()->firstOrFail();
-        $token = $admin->createToken('test')->plainTextToken;
-        $routineId = $this->createRoutineViaApi($token, $company->id);
+        $admin = User::query()->where('email', 'admin@sandbox-demo.com')->firstOrFail();
+        $companyId = (int) $admin->memberships()->where('is_active', true)->orderBy('company_id')->value('company_id');
+        $routine = $this->demoRoutine();
 
-        $this->withToken($token)
-            ->withHeader('X-Company-Id', (string) $company->id)
-            ->deleteJson('/api/v1/routines/'.$routineId)
+        $this->withToken($admin->createToken('test')->plainTextToken)
+            ->withHeader('X-Company-Id', (string) $companyId)
+            ->deleteJson('/api/v1/routines/'.$routine->id)
             ->assertNoContent();
 
-        $this->assertNull(Routine::query()->withoutGlobalScopes()->find($routineId));
+        $this->assertNull(Routine::query()->withoutGlobalScopes()->find($routine->id));
     }
 
     public function test_technician_cannot_delete_routine(): void
     {
         $this->seed();
 
-        $admin = User::query()->where('email', 'admin@pyro-systems.com')->firstOrFail();
         $technician = User::query()->where('email', 'technician@sandbox-demo.com')->firstOrFail();
-        $company = Company::query()->firstOrFail();
-        $adminToken = $admin->createToken('test')->plainTextToken;
-        $routineId = $this->createRoutineViaApi($adminToken, $company->id);
+        $companyId = (int) $technician->memberships()->where('is_active', true)->orderBy('company_id')->value('company_id');
+        $routine = $this->demoRoutine($technician);
 
         Sanctum::actingAs($technician);
 
-        $this->withHeader('X-Company-Id', (string) $company->id)
-            ->deleteJson('/api/v1/routines/'.$routineId)
+        $this->withHeader('X-Company-Id', (string) $companyId)
+            ->deleteJson('/api/v1/routines/'.$routine->id)
             ->assertForbidden();
     }
 
@@ -70,14 +51,13 @@ class RoutineDestroyApiTest extends TestCase
     {
         $this->seed();
 
-        $admin = User::query()->where('email', 'admin@pyro-systems.com')->firstOrFail();
-        $company = Company::query()->firstOrFail();
-        $token = $admin->createToken('test')->plainTextToken;
-        $routineId = $this->createRoutineViaApi($token, $company->id);
+        $admin = User::query()->where('email', 'admin@sandbox-demo.com')->firstOrFail();
+        $companyId = (int) $admin->memberships()->where('is_active', true)->orderBy('company_id')->value('company_id');
+        $routine = $this->demoRoutine();
 
         Invoice::query()->create([
-            'company_id' => $company->id,
-            'routine_id' => $routineId,
+            'company_id' => $companyId,
+            'routine_id' => $routine->id,
             'status' => InvoiceStatus::Issued,
             'currency' => 'MXN',
             'subtotal' => 100,
@@ -85,12 +65,12 @@ class RoutineDestroyApiTest extends TestCase
             'total' => 116,
         ]);
 
-        $this->withToken($token)
-            ->withHeader('X-Company-Id', (string) $company->id)
-            ->deleteJson('/api/v1/routines/'.$routineId)
+        $this->withToken($admin->createToken('test')->plainTextToken)
+            ->withHeader('X-Company-Id', (string) $companyId)
+            ->deleteJson('/api/v1/routines/'.$routine->id)
             ->assertStatus(422)
-            ->assertJsonPath('message', 'No se puede eliminar: el servicio tiene una factura emitida.');
+            ->assertJsonPath('message', 'No se puede eliminar un servicio facturado.');
 
-        $this->assertNotNull(Routine::query()->withoutGlobalScopes()->find($routineId));
+        $this->assertNotNull(Routine::query()->withoutGlobalScopes()->find($routine->id));
     }
 }

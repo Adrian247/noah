@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { api } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import AppButton from '@/components/ui/AppButton.vue';
@@ -36,6 +37,7 @@ type AutomationRule = {
 
 const { canWriteModule } = useModuleAccess();
 const toast = useToast();
+const confirm = useConfirm();
 const canWrite = computed(() => canWriteModule('integrations'));
 
 const loading = ref(true);
@@ -162,6 +164,14 @@ async function saveRule() {
 }
 
 async function deleteRule(row: AutomationRule) {
+    const accepted = await confirm(`¿Eliminar la regla «${row.name}»? Esta acción no se puede deshacer.`, {
+        title: 'Eliminar regla de automatización',
+        confirmLabel: 'Eliminar',
+        danger: true,
+    });
+    if (!accepted) {
+        return;
+    }
     try {
         await api(`/automation/rules/${row.id}`, { method: 'DELETE' });
         toast.success('Regla eliminada.');

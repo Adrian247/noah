@@ -187,7 +187,7 @@ class DynamicFormValidator {
     final items = DynamicFormRenderer.photoItems(value);
     final required = field['required'] == true;
     final allowMultiple = field['allow_multiple'] == true;
-    final maxImages = allowMultiple ? (field['max_images'] as int? ?? 4) : 1;
+    final maxImages = allowMultiple ? (_asInt(field['max_images']) ?? 4) : 1;
     final captionEnabled = field['caption_enabled'] == true;
     final captionRequired = field['caption_required'] == true && captionEnabled;
 

@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { api } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
 import ReadOnlyNotice from '@/components/ui/ReadOnlyNotice.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
@@ -31,6 +32,7 @@ type WorkflowTemplate = {
 
 const { canWriteModule } = useModuleAccess();
 const toast = useToast();
+const confirm = useConfirm();
 const canWrite = computed(() => canWriteModule('design_workflows'));
 
 const items = ref<Workflow[]>([]);
@@ -120,7 +122,11 @@ async function deleteWorkflow(w: Workflow) {
         toast.warning(blocked);
         return;
     }
-    if (!window.confirm(`¿Eliminar el workflow «${w.name}»? Esta acción no se puede deshacer.`)) {
+    const accepted = await confirm(
+        `¿Eliminar el workflow «${w.name}»? Esta acción no se puede deshacer.`,
+        { title: 'Eliminar workflow', confirmLabel: 'Eliminar', danger: true },
+    );
+    if (!accepted) {
         return;
     }
     deletingId.value = w.id;

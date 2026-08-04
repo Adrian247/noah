@@ -5,10 +5,13 @@ import { useTableColumns } from '@/lib/tableColumns';
 import { exportTableToExcel, parseExcelFile } from '@/lib/tableExcel';
 import { rowMatchesSearch } from '@/lib/tableSearch';
 import { TABLE_PAGE_SIZE_OPTIONS, useTablePagination } from '@/lib/tablePagination';
+import { useToast } from '@/composables/useToast';
 import TableColumnsPicker from '@/components/ui/TableColumnsPicker.vue';
 import TableSearchPopover from '@/components/ui/TableSearchPopover.vue';
 import TableFiltersPopover from '@/components/ui/TableFiltersPopover.vue';
 import IconActionButton from '@/components/ui/IconActionButton.vue';
+
+const toast = useToast();
 
 const props = withDefaults(
     defineProps<{
@@ -157,7 +160,7 @@ async function onImportFile(event: Event) {
         const parsed = await parseExcelFile(file);
         emit('importRows', parsed.rows);
     } catch (e) {
-        window.alert((e as Error).message);
+        toast.error((e as Error).message);
     } finally {
         importing.value = false;
     }

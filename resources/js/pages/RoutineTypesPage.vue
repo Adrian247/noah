@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { api } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
 import ReadOnlyNotice from '@/components/ui/ReadOnlyNotice.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
@@ -52,6 +53,7 @@ const SERVICE_CATEGORY_OPTIONS = [
 
 const { canWriteModule } = useModuleAccess();
 const toast = useToast();
+const confirm = useConfirm();
 const canWrite = computed(() => canWriteModule('design_routine_types'));
 const canLinkForm = computed(
     () => canWriteModule('design_forms') || canWriteModule('design_routine_types'),
@@ -232,7 +234,12 @@ async function toggleActive(type: RoutineType) {
 }
 
 async function deleteType(type: RoutineType) {
-    if (!window.confirm(`¿Eliminar el tipo «${type.name}»?`)) {
+    const accepted = await confirm(`¿Eliminar el tipo «${type.name}»? Esta acción no se puede deshacer.`, {
+        title: 'Eliminar tipo de servicio',
+        confirmLabel: 'Eliminar',
+        danger: true,
+    });
+    if (!accepted) {
         return;
     }
     try {

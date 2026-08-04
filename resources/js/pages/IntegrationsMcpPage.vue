@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { api } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import AppButton from '@/components/ui/AppButton.vue';
@@ -48,6 +49,7 @@ type ConnectionInfo = {
 
 const { canWriteModule } = useModuleAccess();
 const toast = useToast();
+const confirm = useConfirm();
 const canWrite = computed(() => canWriteModule('integrations'));
 
 const loading = ref(true);
@@ -150,6 +152,13 @@ async function createToken() {
 }
 
 async function revokeToken(row: McpToken) {
+    const accepted = await confirm(
+        `¿Revocar el token «${row.label}»? Las integraciones que lo usen dejarán de autenticarse.`,
+        { title: 'Revocar token MCP', confirmLabel: 'Revocar', danger: true },
+    );
+    if (!accepted) {
+        return;
+    }
     try {
         await api(`/integrations/mcp/tokens/${row.id}`, { method: 'DELETE' });
         toast.success('Token revocado.');

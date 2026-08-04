@@ -28,6 +28,7 @@ type Routine = {
     site?: { name: string };
     routine_type?: { name: string; service_category?: string } | null;
     assignee?: { name: string } | null;
+    invoice?: { id: number; status: string } | null;
 };
 
 type Site = { id: number; name: string; client_id?: number | null };
@@ -335,7 +336,17 @@ async function createRoutine() {
 const creatingDemo = ref(false);
 const deletingId = ref<number | null>(null);
 
+const ROUTINE_BILLED_DELETE_MSG = 'No se puede eliminar un servicio facturado.';
+
+function isBilledRoutine(r: Routine): boolean {
+    return r.invoice?.status === 'issued';
+}
+
 async function deleteRoutine(r: Routine) {
+    if (isBilledRoutine(r)) {
+        toast.error(ROUTINE_BILLED_DELETE_MSG);
+        return;
+    }
     const accepted = await confirm(
         `¿Eliminar el servicio #${r.id} (${r.routine_type?.name ?? 'Servicio'})? Esta acción no se puede deshacer.`,
         { title: 'Eliminar servicio', confirmLabel: 'Eliminar', danger: true },
@@ -480,15 +491,21 @@ onMounted(async () => {
                     <IconActionButton
                         v-if="isAdmin"
                         icon="trash"
-                        label="Eliminar servicio"
+                        :label="
+                            isBilledRoutine(row as Routine)
+                                ? ROUTINE_BILLED_DELETE_MSG
+                                : 'Eliminar servicio'
+                        "
                         variant="danger"
-                        :disabled="deletingId === (row as Routine).id"
-                        @click="deleteRoutine(row as Routine)"
+                        :disabled="
+                            deletingId === (row as Routine).id || isBilledRoutine(row as Routine)
+                        "
+                        @click.stop="deleteRoutine(row as Routine)"
                     />
                     <IconActionButton
                         icon="chevron-right"
                         label="Abrir servicio"
-                        @click="openRoutine((row as Routine).id)"
+                        @click.stop="openRoutine((row as Routine).id)"
                     />
                 </div>
             </template>

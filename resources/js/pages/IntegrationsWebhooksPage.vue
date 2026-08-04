@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { api } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import AppButton from '@/components/ui/AppButton.vue';
@@ -35,6 +36,7 @@ type Webhook = {
 
 const { canWriteModule } = useModuleAccess();
 const toast = useToast();
+const confirm = useConfirm();
 const canWrite = computed(() => canWriteModule('integrations'));
 
 const loading = ref(true);
@@ -135,6 +137,14 @@ async function saveWebhook() {
 }
 
 async function deleteWebhook(row: Webhook) {
+    const accepted = await confirm(`¿Eliminar el webhook «${row.name}»? Esta acción no se puede deshacer.`, {
+        title: 'Eliminar webhook',
+        confirmLabel: 'Eliminar',
+        danger: true,
+    });
+    if (!accepted) {
+        return;
+    }
     try {
         await api(`/integrations/webhooks/${row.id}`, { method: 'DELETE' });
         toast.success('Webhook eliminado.');

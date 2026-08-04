@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\InvoiceStatus;
 use App\Enums\MembershipRole;
 use App\Enums\RoutineStatus;
 use App\Http\Controllers\Controller;
@@ -22,7 +23,15 @@ class RoutineController extends Controller
     public function index(Request $request): JsonResponse
     {
         $routines = Routine::query()
-            ->with(['asset', 'client', 'site', 'routineType', 'assignee', 'latestExecution'])
+            ->with([
+                'asset',
+                'client',
+                'site',
+                'routineType',
+                'assignee',
+                'latestExecution',
+                'invoice:id,routine_id,status',
+            ])
             ->when(
                 $request->query('status'),
                 fn ($q, $status) => $q->where('status', $status)
@@ -135,7 +144,7 @@ class RoutineController extends Controller
 
         if ($routine->invoice !== null && $routine->invoice->status === InvoiceStatus::Issued) {
             return response()->json([
-                'message' => 'No se puede eliminar: el servicio tiene una factura emitida.',
+                'message' => 'No se puede eliminar un servicio facturado.',
             ], 422);
         }
 

@@ -36,6 +36,19 @@ const labelFloated = computed(
         Boolean(props.placeholder?.trim()) ||
         nativePickerTypes.has(props.type ?? 'text'),
 );
+
+function onNativeInput(raw: string) {
+    if (props.type === 'number') {
+        if (raw.trim() === '') {
+            emit('update:modelValue', '');
+            return;
+        }
+        const n = Number(raw);
+        emit('update:modelValue', Number.isFinite(n) ? n : raw);
+        return;
+    }
+    emit('update:modelValue', raw);
+}
 </script>
 
 <template>
@@ -74,7 +87,7 @@ const labelFloated = computed(
             :readonly="readonly"
             :name="name"
             :value="modelValue"
-            @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+            @input="onNativeInput(($event.target as HTMLInputElement).value)"
             @focus="emit('focus', $event)"
         />
         <span class="material-field__line" aria-hidden="true" />

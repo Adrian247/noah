@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { api } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionSubnav from '@/components/ui/SectionSubnav.vue';
@@ -31,6 +32,7 @@ type Client = {
 const router = useRouter();
 const { canWriteModule, isVisible } = useModuleAccess();
 const toast = useToast();
+const confirm = useConfirm();
 const canEdit = computed(() => canWriteModule('clients'));
 
 const clientTableColumns = computed((): TableColumnDef[] => {
@@ -226,7 +228,15 @@ async function save() {
 }
 
 async function deactivate(c: Client) {
-    if (!canEdit.value || !confirm(`¿Desactivar a ${c.legal_name}?`)) {
+    if (!canEdit.value) {
+        return;
+    }
+    const accepted = await confirm(`¿Desactivar a ${c.legal_name}? Podrás reactivarlo después desde administración.`, {
+        title: 'Desactivar cliente',
+        confirmLabel: 'Desactivar',
+        danger: true,
+    });
+    if (!accepted) {
         return;
     }
     try {

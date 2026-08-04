@@ -706,11 +706,11 @@ async function deleteTemplate() {
     if (!tpl.value) {
         return;
     }
-    if (
-        !window.confirm(
-            `¿Eliminar la plantilla «${tpl.value.name}»? Se borrarán todas sus versiones. Esta acción no se puede deshacer.`,
-        )
-    ) {
+    const accepted = await confirm(
+        `¿Eliminar la plantilla «${tpl.value.name}»? Se borrarán todas sus versiones. Esta acción no se puede deshacer.`,
+        { title: 'Eliminar plantilla', confirmLabel: 'Eliminar', danger: true },
+    );
+    if (!accepted) {
         return;
     }
     deletingTemplate.value = true;
@@ -817,6 +817,14 @@ async function onCoverImagePicked(ev: Event) {
 }
 
 async function removeCoverImage() {
+    const accepted = await confirm('¿Quitar la imagen de portada de esta plantilla?', {
+        title: 'Quitar imagen de portada',
+        confirmLabel: 'Quitar',
+        danger: true,
+    });
+    if (!accepted) {
+        return;
+    }
     coverImageUploading.value = true;
     try {
         await api(`/design/reports/${route.params.id}/cover-image`, { method: 'DELETE' });

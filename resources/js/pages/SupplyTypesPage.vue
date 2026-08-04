@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
 import { api } from '@/api/client';
 import ReadOnlyNotice from '@/components/ui/ReadOnlyNotice.vue';
@@ -29,6 +30,7 @@ type SupplyType = {
 
 const { canWriteModule } = useModuleAccess();
 const toast = useToast();
+const confirm = useConfirm();
 const canWrite = computed(() => canWriteModule('inventory'));
 
 const supplyTypeTableColumns = computed((): TableColumnDef[] => {
@@ -139,7 +141,12 @@ async function save() {
 }
 
 async function remove(id: number) {
-    if (!window.confirm('¿Eliminar este tipo de insumo?')) {
+    const accepted = await confirm('¿Eliminar este tipo de insumo? Esta acción no se puede deshacer.', {
+        title: 'Eliminar tipo de insumo',
+        confirmLabel: 'Eliminar',
+        danger: true,
+    });
+    if (!accepted) {
         return;
     }
     try {

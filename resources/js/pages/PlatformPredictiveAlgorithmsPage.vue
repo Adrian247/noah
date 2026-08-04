@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { api, getCompanyId, getToken } from '@/api/client';
 import { useToast } from '@/composables/useToast';
+import { useConfirm } from '@/composables/useConfirm';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import AppButton from '@/components/ui/AppButton.vue';
 import AppModal from '@/components/ui/AppModal.vue';
@@ -100,6 +101,7 @@ type CorpusInfo = {
 };
 
 const toast = useToast();
+const confirm = useConfirm();
 const loading = ref(true);
 const training = ref(false);
 const versions = ref<AlgorithmVersion[]>([]);
@@ -334,6 +336,13 @@ async function onFileSelected(event: Event) {
 }
 
 async function deleteDoc(row: TrainingDoc) {
+    const accepted = await confirm(
+        `¿Eliminar el documento «${row.name}»? Esta acción no se puede deshacer.`,
+        { title: 'Eliminar documento de entrenamiento', confirmLabel: 'Eliminar', danger: true },
+    );
+    if (!accepted) {
+        return;
+    }
     try {
         await api(`/platform/predictive/training-documents/${row.id}`, { method: 'DELETE' });
         toast.success('Documento eliminado.');

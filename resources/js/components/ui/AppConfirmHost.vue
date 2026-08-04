@@ -14,9 +14,11 @@ const { request } = storeToRefs(confirmStore);
         :open="!!request"
         :title="request.title"
         size="sm"
+        :tone="request.danger ? 'danger' : 'default'"
+        confirm
         @close="confirmStore.cancel()"
     >
-        <p class="text-portal-muted text-sm leading-relaxed">{{ request.message }}</p>
+        <p class="app-confirm__message">{{ request.message }}</p>
         <template #footer>
             <AppButton type="button" variant="secondary" @click="confirmStore.cancel()">
                 {{ request.cancelLabel }}

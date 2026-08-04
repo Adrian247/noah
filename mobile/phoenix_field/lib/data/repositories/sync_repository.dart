@@ -77,10 +77,26 @@ class SyncRepository {
       return [];
     }
     final decoded = jsonDecode(row.payloadJson);
-    if (decoded is List) {
-      return decoded.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    if (decoded is! List) {
+      return [];
     }
-    return [];
+    return decoded
+        .whereType<Map>()
+        .map((e) {
+          final map = Map<String, dynamic>.from(e);
+          final id = map['id'];
+          if (id is num) {
+            map['id'] = id.toInt();
+          } else if (id is String) {
+            final parsed = int.tryParse(id);
+            if (parsed != null) {
+              map['id'] = parsed;
+            }
+          }
+          return map;
+        })
+        .where((e) => e['id'] is int)
+        .toList();
   }
 
   Future<ExecutionDraft?> getDraft(int routineId) {

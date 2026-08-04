@@ -135,6 +135,8 @@ const canValidateRejectByRole = computed(() => {
 });
 const isAdmin = computed(() => companyStore.current?.role === 'administrator');
 const deletingRoutine = ref(false);
+const ROUTINE_BILLED_DELETE_MSG = 'No se puede eliminar un servicio facturado.';
+const isBilled = computed(() => routine.value?.invoice?.status === 'issued');
 const isPendingValidation = computed(() => routine.value?.status === 'pending_validation');
 const showRejectionNotice = computed(
     () =>
@@ -510,6 +512,10 @@ async function deleteRoutine() {
     if (!routine.value) {
         return;
     }
+    if (isBilled.value) {
+        toast.error(ROUTINE_BILLED_DELETE_MSG);
+        return;
+    }
     const accepted = await confirm(
         `¿Eliminar el servicio #${routine.value.id}? Esta acción no se puede deshacer.`,
         { title: 'Eliminar servicio', confirmLabel: 'Eliminar', danger: true },
@@ -547,9 +553,9 @@ async function deleteRoutine() {
             <IconActionButton
                 v-if="isAdmin"
                 icon="trash"
-                label="Eliminar servicio"
+                :label="isBilled ? ROUTINE_BILLED_DELETE_MSG : 'Eliminar servicio'"
                 variant="danger"
-                :disabled="deletingRoutine"
+                :disabled="deletingRoutine || isBilled"
                 @click="deleteRoutine"
             />
         </div>
@@ -887,9 +893,12 @@ async function deleteRoutine() {
             Error al generar PDF: {{ r.error_message ?? 'desconocido' }}
         </p>
         <p v-if="routine.invoice" class="text-portal-heading text-sm">
-            Factura borrador #{{ routine.invoice.id }} — {{ routine.invoice.status }} — ${{
-                routine.invoice.total
-            }}
+            Factura
+            {{ routine.invoice.status === 'issued' ? 'emitida' : 'borrador' }}
+            #{{ routine.invoice.id }} — ${{ routine.invoice.total }}
+        </p>
+        <p v-if="isBilled" class="portal-msg-warning text-sm">
+            {{ ROUTINE_BILLED_DELETE_MSG }}
         </p>
     </div>
 </template>

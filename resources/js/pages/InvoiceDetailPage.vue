@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute, RouterLink } from 'vue-router';
 import { api, getCompanyId, getToken } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
 import GlassCard from '@/components/ui/GlassCard.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
@@ -77,6 +78,7 @@ type Invoice = {
 
 const route = useRoute();
 const toast = useToast();
+const confirm = useConfirm();
 const { canWriteModule } = useModuleAccess();
 const canWriteBilling = computed(() => canWriteModule('billing'));
 const canEdit = computed(() => canWriteBilling.value);
@@ -279,7 +281,12 @@ async function removeEvidence(row: InvoiceEvidenceRow) {
     if (!invoice.value || !canEdit.value) {
         return;
     }
-    if (!window.confirm(`¿Quitar «${row.original_name}»?`)) {
+    const accepted = await confirm(`¿Quitar «${row.original_name}» de las evidencias?`, {
+        title: 'Quitar evidencia',
+        confirmLabel: 'Quitar',
+        danger: true,
+    });
+    if (!accepted) {
         return;
     }
     try {

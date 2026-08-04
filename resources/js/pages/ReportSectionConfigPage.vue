@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { api } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
@@ -21,6 +22,7 @@ type SectionRow = {
 
 const { canWriteModule } = useModuleAccess();
 const toast = useToast();
+const confirm = useConfirm();
 const canWrite = computed(() => canWriteModule('design_reports'));
 
 const sections = ref<SectionRow[]>([]);
@@ -108,7 +110,11 @@ async function createSection() {
 }
 
 async function removeSection(id: number) {
-    if (!window.confirm('¿Eliminar esta sección? Los reportes que la referencien mostrarán un aviso.')) {
+    const accepted = await confirm(
+        '¿Eliminar esta sección? Los reportes que la referencien mostrarán un aviso.',
+        { title: 'Eliminar sección', confirmLabel: 'Eliminar', danger: true },
+    );
+    if (!accepted) {
         return;
     }
     await api(`/design/reports/section-templates/${id}`, { method: 'DELETE' });

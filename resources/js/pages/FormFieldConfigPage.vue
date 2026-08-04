@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { api } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
@@ -18,6 +19,7 @@ type FormSettings = { max_image_size_kb: number; allowed_image_mimes: string[] }
 
 const { canWriteModule } = useModuleAccess();
 const toast = useToast();
+const confirm = useConfirm();
 const canWrite = computed(() => canWriteModule('design_forms'));
 
 const catalogs = ref<Catalog[]>([]);
@@ -190,7 +192,11 @@ async function createCatalog() {
 }
 
 async function removeCatalog(id: number) {
-    if (!window.confirm('¿Eliminar catálogo? Los campos que lo usen dejarán de validar opciones.')) {
+    const accepted = await confirm(
+        '¿Eliminar catálogo? Los campos que lo usen dejarán de validar opciones.',
+        { title: 'Eliminar catálogo de opciones', confirmLabel: 'Eliminar', danger: true },
+    );
+    if (!accepted) {
         return;
     }
     await api(`/design/forms/option-catalogs/${id}`, { method: 'DELETE' });

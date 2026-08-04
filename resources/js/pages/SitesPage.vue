@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { api } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
 import ReadOnlyNotice from '@/components/ui/ReadOnlyNotice.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
@@ -16,6 +17,7 @@ type Site = { id: number; name: string; address?: string | null };
 
 const { canWriteModule } = useModuleAccess();
 const toast = useToast();
+const confirm = useConfirm();
 const canWrite = computed(() => canWriteModule('sites'));
 
 const siteTableColumns = computed((): TableColumnDef[] => {
@@ -93,7 +95,12 @@ async function save() {
 }
 
 async function remove(id: number) {
-    if (!window.confirm('¿Eliminar sitio?')) {
+    const accepted = await confirm('¿Eliminar este sitio? Esta acción no se puede deshacer.', {
+        title: 'Eliminar sitio',
+        confirmLabel: 'Eliminar',
+        danger: true,
+    });
+    if (!accepted) {
         return;
     }
     try {

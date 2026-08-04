@@ -240,13 +240,14 @@ class _RoutineDetailPageState extends ConsumerState<RoutineDetailPage> {
 
   Map<String, dynamic>? get _schema {
     final formVersion = _routine?['routine_type']?['form_version'];
-    if (formVersion is Map<String, dynamic>) {
-      final schema = formVersion['schema'];
-      if (schema is Map<String, dynamic>) {
-        return schema;
-      }
+    if (formVersion is! Map) {
+      return null;
     }
-    return null;
+    final schema = formVersion['schema'];
+    if (schema is! Map) {
+      return null;
+    }
+    return Map<String, dynamic>.from(schema);
   }
 
   Future<void> _submit() async {

@@ -48,6 +48,17 @@ use Illuminate\Database\Seeder;
 
 class PhoenixDemoSeeder extends Seeder
 {
+    /**
+     * Playground Sandbox para la suite: en Docker APP_ENV suele ser `local` aunque corra PHPUnit,
+     * así que no usamos environment('testing'). Detectamos el runner de PHPUnit directamente.
+     */
+    public static function shouldSeedSandboxPlayground(): bool
+    {
+        return defined('PHPUNIT_COMPOSER_INSTALL')
+            || defined('__PHPUNIT_PHAR__')
+            || (bool) env('PHOENIX_SEED_SANDBOX_PLAYGROUND', false);
+    }
+
     public function run(): void
     {
         $tenantPassword = DemoAccounts::tenantPassword();
@@ -67,14 +78,18 @@ class PhoenixDemoSeeder extends Seeder
         foreach ([TenantDemoProfile::mein(), TenantDemoProfile::domG()] as $profile) {
             $companies[] = $this->seedVirginTenant($profile, $tenantPassword);
         }
-        // Playground operativo + rutina demo solo en Sandbox.
-        $companies[] = $this->seedDemonstrationTenant(TenantDemoProfile::sandbox(), $tenantPassword);
+        // Sandbox: virgen en runtime normal (solo usuarios + cliente). Bajo PHPUnit se siembra
+        // el playground operativo para DemoRoutineFactory y pruebas de flujo.
+        $sandboxProfile = TenantDemoProfile::sandbox();
+        $companies[] = self::shouldSeedSandboxPlayground()
+            ? $this->seedDemonstrationTenant($sandboxProfile, $tenantPassword)
+            : $this->seedVirginTenant($sandboxProfile, $tenantPassword);
 
         // OEM global primero: Artículos de sistema reutiliza Epiroc/Sandvik verificados.
         OemCatalog::sync();
         $this->seedPlatformCatalogCompany();
 
-        // Catálogos predictivos: OEM global → solo Sandbox (Mein/Dom-G quedan vírgenes).
+        // Baselines predicativos globales. El enlace a tenant solo aplica al playground (testing).
         $algorithm = PredictiveAlgorithmVersion::query()->updateOrCreate(
             ['semver' => '1.0.0'],
             [
@@ -127,6 +142,10 @@ class PhoenixDemoSeeder extends Seeder
         );
         foreach ($companies as $company) {
             if ($company->name !== TenantDemoProfile::sandbox()->companyName) {
+                continue;
+            }
+            // Solo el playground de pruebas automatizadas enlaza predictivo / OEM al tenant.
+            if (! self::shouldSeedSandboxPlayground()) {
                 continue;
             }
 
@@ -203,11 +222,13 @@ class PhoenixDemoSeeder extends Seeder
 
         app(CompanyAuthorizationService::class)->ensureCompanyRoles($company);
 
+        $staffUserIds = [];
         foreach ($profile->staff as $staffRow) {
             $user = User::query()->updateOrCreate(
                 ['email' => $staffRow['email']],
                 ['name' => $staffRow['name'], 'password' => $password],
             );
+            $staffUserIds[] = $user->id;
 
             CompanyMembership::query()->updateOrCreate(
                 ['company_id' => $company->id, 'user_id' => $user->id],
@@ -218,6 +239,12 @@ class PhoenixDemoSeeder extends Seeder
                 ],
             );
         }
+
+        // Quitar membresías huérfanas (cuentas viejas de demos anteriores).
+        CompanyMembership::query()
+            ->where('company_id', $company->id)
+            ->whereNotIn('user_id', $staffUserIds)
+            ->delete();
 
         app(WorkflowRuntime::class)->seedDefinitionForCompany($company->id);
 
@@ -241,8 +268,9 @@ class PhoenixDemoSeeder extends Seeder
     }
 
     /**
-     * Elimina datos operativos de un tenant (rutinas demo, catálogos, sitios, etc.),
-     * conservando empresa, usuarios/membresías y clientes en $keepClientCodes.
+     * Elimina datos operativos de un tenant (rutinas, catálogos, predictivo, integraciones, etc.),
+     * conservando empresa, roles Spatie, usuarios/membresías y clientes en $keepClientCodes.
+     * El workflow estándar se vuelve a sembrar después del purge.
      *
      * @param  list<string>  $keepClientCodes
      */
@@ -250,7 +278,27 @@ class PhoenixDemoSeeder extends Seeder
     {
         $companyId = (int) $company->id;
         $db = \Illuminate\Support\Facades\DB::connection();
+        $schema = $db->getSchemaBuilder();
 
+        // Predictivo / confiabilidad (orden por FKs).
+        foreach ([
+            'failure_predictions',
+            'equipment_component_replacements',
+            'equipment_measurements',
+            'equipment_failures',
+            'equipment_events',
+            'equipment_shift_logs',
+            'equipment_work_orders',
+            'failure_modes',
+        ] as $table) {
+            if ($schema->hasTable($table)) {
+                $db->table($table)->where('company_id', $companyId)->delete();
+            }
+        }
+
+        if ($schema->hasTable('invoice_evidences')) {
+            $db->table('invoice_evidences')->where('company_id', $companyId)->delete();
+        }
         $invoiceIds = $db->table('invoices')->where('company_id', $companyId)->pluck('id');
         if ($invoiceIds->isNotEmpty()) {
             $db->table('invoice_lines')->whereIn('invoice_id', $invoiceIds)->delete();
@@ -263,7 +311,14 @@ class PhoenixDemoSeeder extends Seeder
         if ($routineIds->isNotEmpty()) {
             $executionIds = $db->table('routine_executions')->whereIn('routine_id', $routineIds)->pluck('id');
             if ($executionIds->isNotEmpty()) {
+                if ($schema->hasTable('execution_evidences')) {
+                    $db->table('execution_evidences')->whereIn('routine_execution_id', $executionIds)->delete();
+                }
                 $db->table('routine_consumptions')->whereIn('routine_execution_id', $executionIds)->delete();
+            }
+            $instanceIds = $db->table('workflow_instances')->whereIn('routine_id', $routineIds)->pluck('id');
+            if ($instanceIds->isNotEmpty() && $schema->hasTable('workflow_transitions')) {
+                $db->table('workflow_transitions')->whereIn('workflow_instance_id', $instanceIds)->delete();
             }
             $db->table('routine_executions')->whereIn('routine_id', $routineIds)->delete();
             $db->table('workflow_instances')->whereIn('routine_id', $routineIds)->delete();
@@ -284,7 +339,7 @@ class PhoenixDemoSeeder extends Seeder
             $db->table('report_template_versions')->whereIn('report_template_id', $reportIds)->delete();
         }
         $db->table('report_templates')->where('company_id', $companyId)->delete();
-        if ($db->getSchemaBuilder()->hasTable('report_section_templates')) {
+        if ($schema->hasTable('report_section_templates')) {
             $db->table('report_section_templates')->where('company_id', $companyId)->delete();
         }
 
@@ -294,6 +349,26 @@ class PhoenixDemoSeeder extends Seeder
         }
         $db->table('form_definitions')->where('company_id', $companyId)->delete();
         $db->table('form_option_catalogs')->where('company_id', $companyId)->delete();
+
+        // Definiciones de workflow: se regeneran tras el purge.
+        if ($schema->hasTable('workflow_definitions')) {
+            $db->table('workflow_definitions')->where('company_id', $companyId)->delete();
+        }
+
+        foreach ([
+            'automation_rules',
+            'webhook_subscriptions',
+            'dashboard_preferences',
+            'device_push_tokens',
+            'sync_events',
+            'ai_invocations',
+            'audit_entries',
+            'catalog_import_logs',
+        ] as $table) {
+            if ($schema->hasTable($table) && $schema->hasColumn($table, 'company_id')) {
+                $db->table($table)->where('company_id', $companyId)->delete();
+            }
+        }
 
         $clientsQuery = $db->table('clients')->where('company_id', $companyId);
         if ($keepClientCodes !== []) {
@@ -336,9 +411,11 @@ class PhoenixDemoSeeder extends Seeder
             [
                 'legal_name' => $profile->companyLegalName,
                 'currency' => 'MXN',
+                'timezone' => 'America/Mexico_City',
                 'is_active' => true,
                 'form_max_image_size_kb' => 2048,
                 'form_allowed_image_mimes' => ['image/jpeg', 'image/png', 'image/webp'],
+                'fiscal_provider' => config('phoenix.billing.fiscal.default_provider', 'sandbox'),
             ]
         );
 

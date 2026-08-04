@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import AppButton from '@/components/ui/AppButton.vue';
@@ -30,6 +31,7 @@ const canWrite = computed(() => canWriteModule('design_workflows'));
 const workflow = ref<Workflow | null>(null);
 const definition = ref<WorkflowDefinition | null>(null);
 const toast = useToast();
+const confirm = useConfirm();
 const saving = ref(false);
 const publishing = ref(false);
 const deleting = ref(false);
@@ -108,7 +110,11 @@ async function deleteWorkflow() {
         toast.warning('Este workflow está asignado a tipos de servicio. Quita la asignación antes de eliminarlo.');
         return;
     }
-    if (!window.confirm(`¿Eliminar el workflow «${workflow.value.name}»? Esta acción no se puede deshacer.`)) {
+    const accepted = await confirm(
+        `¿Eliminar el workflow «${workflow.value.name}»? Esta acción no se puede deshacer.`,
+        { title: 'Eliminar workflow', confirmLabel: 'Eliminar', danger: true },
+    );
+    if (!accepted) {
         return;
     }
     deleting.value = true;

@@ -4,9 +4,11 @@
 
 | Email | Empresa | Contraseña |
 |-------|---------|------------|
-| **`admin@sandbox-demo.com`** | **Sandbox** (playground operativo) | **`pyro.2026$`** |
+| **`admin@sandbox-demo.com`** | **Sandbox** | **`pyro.2026$`** |
 
-Incluye catálogos, sitio, artículo L200, inventario demo y **servicio demo**. Ideal para recorrer el flujo completo.
+Los tres tenants demo arrancan **vírgenes** en local: usuarios/contraseñas, roles, cliente base y workflow. Sin catálogos, sitios, artículos ni servicios.
+
+> Bajo PHPUnit el seeder carga el playground operativo en Sandbox para las pruebas automatizadas (`DemoRoutineFactory`, flujos de lifecycle, etc.). Forzar playground en otro entorno: `PHOENIX_SEED_SANDBOX_PLAYGROUND=true`.
 
 ## Contraseña unificada (fase de pruebas)
 
@@ -46,7 +48,9 @@ Solo usuarios/contraseñas y cliente **Interno** (`DOMG-INTERNO`). Sin catálogo
 | `luis-olvera@dom-g.com` | Facturación |
 | `cliente.portal@dom-g.com` | Portal (Interno) |
 
-## Sandbox (playground + servicio demo)
+## Sandbox (tenant virgen en local)
+
+Misma política que Mein/Dom-G: usuarios + cliente `SANDBOX-CLI-001` + workflow base.
 
 | Email | Rol |
 |-------|-----|
@@ -54,7 +58,7 @@ Solo usuarios/contraseñas y cliente **Interno** (`DOMG-INTERNO`). Sin catálogo
 | `technician@sandbox-demo.com` | Técnico |
 | `supervisor@sandbox-demo.com` | Supervisión |
 | `billing@sandbox-demo.com` | Facturación |
-| `cliente.portal@sandbox-demo.com` | Portal (Cliente demo) |
+| `cliente.portal@sandbox-demo.com` | Portal |
 
 Ritual: `docker compose exec app php artisan phoenix:refresh-demo`
 

@@ -137,9 +137,10 @@ class _SectionCard extends StatelessWidget {
             Text(title, style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 12),
             for (final field in fields)
-              if (field is Map<String, dynamic>) _FieldWidget(
+              if (field is Map)
+                _FieldWidget(
                 routineId: routineId,
-                field: field,
+                field: Map<String, dynamic>.from(field),
                 catalogs: catalogs,
                 value: values[field['key']],
                 onChanged: onChanged,
@@ -179,7 +180,7 @@ class _FieldWidget extends StatelessWidget {
 
     if (type == 'photo') {
       final allowMultiple = field['allow_multiple'] == true;
-      final maxImages = allowMultiple ? (field['max_images'] as int? ?? 4) : 1;
+      final maxImages = allowMultiple ? _maxImages(field['max_images']) : 1;
       return PhotoFieldWidget(
         routineId: routineId,
         fieldKey: key,
@@ -412,4 +413,19 @@ class _FieldWidget extends StatelessWidget {
     }
     return [];
   }
+}
+
+int _maxImages(dynamic value) {
+  if (value is int) {
+    return value < 1 ? 1 : value;
+  }
+  if (value is num) {
+    final asInt = value.toInt();
+    return asInt < 1 ? 1 : asInt;
+  }
+  final parsed = int.tryParse(value?.toString() ?? '');
+  if (parsed == null || parsed < 1) {
+    return 4;
+  }
+  return parsed;
 }

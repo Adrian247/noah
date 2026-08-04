@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { api, getToken, getCompanyId } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
 import ReadOnlyNotice from '@/components/ui/ReadOnlyNotice.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
@@ -22,6 +23,7 @@ type ReportRow = {
 
 const { canWriteModule, state } = useModuleAccess();
 const toast = useToast();
+const confirm = useConfirm();
 const canWrite = computed(() => canWriteModule('design_reports'));
 const canReadSettings = computed(() => state('design_reports').read);
 
@@ -136,11 +138,11 @@ function openCreate() {
 }
 
 async function removeReport(row: ReportRow) {
-    if (
-        !window.confirm(
-            `¿Eliminar la plantilla «${row.name}»? Se borrarán todas sus versiones. Esta acción no se puede deshacer.`,
-        )
-    ) {
+    const accepted = await confirm(
+        `¿Eliminar la plantilla «${row.name}»? Se borrarán todas sus versiones. Esta acción no se puede deshacer.`,
+        { title: 'Eliminar plantilla', confirmLabel: 'Eliminar', danger: true },
+    );
+    if (!accepted) {
         return;
     }
     deletingId.value = row.id;

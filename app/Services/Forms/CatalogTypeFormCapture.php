@@ -26,7 +26,7 @@ class CatalogTypeFormCapture
         return $this->buildPayload(
             $type->defaultFormDefinition,
             $designSettings,
-            'Asigna un formulario de uso Insumo en Catálogos → Tipos de insumo.',
+            'Asigna un formulario de uso Insumo en Inventario → Tipos de artículo.',
         );
     }
 

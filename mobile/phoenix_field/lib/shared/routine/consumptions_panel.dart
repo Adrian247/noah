@@ -21,9 +21,9 @@ class ConsumptionLine {
       };
 
   static ConsumptionLine? fromMap(Map<String, dynamic> map) {
-    final supplyId = map['supply_item_id'];
+    final supplyId = _asInt(map['supply_item_id']);
     final quantity = map['quantity'];
-    if (supplyId is! int && supplyId is! num) {
+    if (supplyId == null) {
       return null;
     }
     final parsedQty = quantity is num ? quantity.toDouble() : double.tryParse('$quantity');
@@ -32,12 +32,22 @@ class ConsumptionLine {
     }
 
     return ConsumptionLine(
-      supplyItemId: supplyId is int ? supplyId : supplyId.toInt(),
+      supplyItemId: supplyId,
       quantity: parsedQty,
       usageType: map['usage_type']?.toString() ?? 'out',
       unitCost: (map['unit_cost'] as num?)?.toDouble() ?? 0,
     );
   }
+}
+
+int? _asInt(dynamic value) {
+  if (value is int) {
+    return value;
+  }
+  if (value is num) {
+    return value.toInt();
+  }
+  return int.tryParse(value?.toString() ?? '');
 }
 
 class ConsumptionsPanel extends StatelessWidget {
@@ -70,8 +80,8 @@ class ConsumptionsPanel extends StatelessWidget {
       return;
     }
     final first = supplies.first;
-    final id = first['id'];
-    if (id is! int) {
+    final id = _asInt(first['id']);
+    if (id == null) {
       return;
     }
     final cost = (first['standard_cost'] as num?)?.toDouble() ?? 0;
@@ -98,7 +108,7 @@ class ConsumptionsPanel extends StatelessWidget {
 
   String _supplyLabel(int supplyItemId) {
     for (final supply in supplies) {
-      if (supply['id'] == supplyItemId) {
+      if (_asInt(supply['id']) == supplyItemId) {
         final sku = supply['sku']?.toString();
         final name = supply['name']?.toString() ?? 'Insumo';
         final unit = supply['unit']?.toString();
@@ -128,9 +138,10 @@ class ConsumptionsPanel extends StatelessWidget {
             ),
             if (supplies.isEmpty) ...[
               const SizedBox(height: 12),
-              const Text(
-                'Sin insumos en caché. Sincroniza para cargar el catálogo.',
-                style: TextStyle(color: Colors.amber),
+              Text(
+                'No hay insumos activos en el inventario de la empresa. '
+                'Créalos en Inventario (web) y sincroniza de nuevo.',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ],
             for (var i = 0; i < lines.length; i++) ...[
@@ -180,16 +191,34 @@ class _ConsumptionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final options = <DropdownMenuItem<int>>[
+      for (final supply in supplies)
+        if (_asInt(supply['id']) != null)
+          DropdownMenuItem<int>(
+            value: _asInt(supply['id']),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.sizeOf(context).width - 72,
+              ),
+              child: Text(
+                _itemLabel(supply),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         DropdownButtonFormField<int>(
-          value: line.supplyItemId,
+          value: options.any((o) => o.value == line.supplyItemId) ? line.supplyItemId : null,
           isExpanded: true,
           decoration: const InputDecoration(labelText: 'Insumo'),
           selectedItemBuilder: (context) => [
             for (final supply in supplies)
-              if (supply['id'] is int)
+              if (_asInt(supply['id']) != null)
                 Text(
                   _itemLabel(supply),
                   maxLines: 1,
@@ -197,45 +226,29 @@ class _ConsumptionRow extends StatelessWidget {
                   softWrap: false,
                 ),
           ],
-          items: [
-            for (final supply in supplies)
-              if (supply['id'] is int)
-                DropdownMenuItem<int>(
-                  value: supply['id'] as int,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.sizeOf(context).width - 72,
-                    ),
-                    child: Text(
-                      _itemLabel(supply),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-          ],
+          items: options,
           onChanged: !enabled
               ? null
               : (id) {
-            if (id == null) {
-              return;
-            }
-            Map<String, dynamic>? selected;
-            for (final supply in supplies) {
-              if (supply['id'] == id) {
-                selected = supply;
-                break;
-              }
-            }
-            onChanged(
-              ConsumptionLine(
-                supplyItemId: id,
-                quantity: line.quantity,
-                usageType: line.usageType,
-                unitCost: (selected?['standard_cost'] as num?)?.toDouble() ?? line.unitCost,
-              ),
-            );
-          },
+                  if (id == null) {
+                    return;
+                  }
+                  Map<String, dynamic>? selected;
+                  for (final supply in supplies) {
+                    if (_asInt(supply['id']) == id) {
+                      selected = supply;
+                      break;
+                    }
+                  }
+                  onChanged(
+                    ConsumptionLine(
+                      supplyItemId: id,
+                      quantity: line.quantity,
+                      usageType: line.usageType,
+                      unitCost: (selected?['standard_cost'] as num?)?.toDouble() ?? line.unitCost,
+                    ),
+                  );
+                },
         ),
         const SizedBox(height: 8),
         Row(

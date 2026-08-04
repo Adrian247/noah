@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { api } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
 import { useCatalogTypeFormCapture } from '@/composables/useCatalogTypeFormCapture';
 import ReadOnlyNotice from '@/components/ui/ReadOnlyNotice.vue';
@@ -57,6 +58,7 @@ type FormSchema = {
 
 const { canWriteModule } = useModuleAccess();
 const toast = useToast();
+const confirm = useConfirm();
 const canWrite = computed(() => canWriteModule('inventory'));
 
 const { capture, loadForType, reset: resetCapture } = useCatalogTypeFormCapture(
@@ -415,7 +417,12 @@ async function save() {
 }
 
 async function remove(row: SupplyItem) {
-    if (!window.confirm(`¿Eliminar ${row.name}?`)) {
+    const accepted = await confirm(`¿Eliminar «${row.name}»? Esta acción no se puede deshacer.`, {
+        title: 'Eliminar insumo',
+        confirmLabel: 'Eliminar',
+        danger: true,
+    });
+    if (!accepted) {
         return;
     }
     try {

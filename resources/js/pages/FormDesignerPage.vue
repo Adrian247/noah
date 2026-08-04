@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from '@/api/client';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { useConfirm } from '@/composables/useConfirm';
 import { useToast } from '@/composables/useToast';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
@@ -68,6 +69,7 @@ const route = useRoute();
 const router = useRouter();
 const { canWriteModule } = useModuleAccess();
 const toast = useToast();
+const confirm = useConfirm();
 const canWrite = computed(() => canWriteModule('design_forms'));
 
 const form = ref<FormDef | null>(null);
@@ -85,19 +87,19 @@ function isDirty(): boolean {
     return initialSnapshot.value !== '' && schemaSnapshot() !== initialSnapshot.value;
 }
 
-function confirmLeaveCatalogSettings(): boolean {
-    if (!isDirty()) {
-        return true;
-    }
-
-    return window.confirm(
-        'Tienes cambios sin guardar en este formulario. Si sales ahora se perderán. ¿Continuar?',
-    );
-}
-
-function goToCatalogSettings() {
-    if (!confirmLeaveCatalogSettings()) {
-        return;
+async function goToCatalogSettings() {
+    if (isDirty()) {
+        const accepted = await confirm(
+            'Tienes cambios sin guardar en este formulario. Si sales ahora se perderán.',
+            {
+                title: 'Cambios sin guardar',
+                confirmLabel: 'Salir sin guardar',
+                danger: true,
+            },
+        );
+        if (!accepted) {
+            return;
+        }
     }
     void router.push('/app/design/forms/settings');
 }

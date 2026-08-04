@@ -82,5 +82,32 @@ void main() {
 
       expect(missing, isEmpty);
     });
+
+    test('accepts photo fields when max_images is a string', () {
+      final photoSchema = {
+        'sections': [
+          {
+            'fields': [
+              {
+                'key': 'evidencias',
+                'type': 'photo',
+                'label': 'Evidencias',
+                'required': true,
+                'allow_multiple': true,
+                'max_images': '4',
+              },
+            ],
+          },
+        ],
+      };
+
+      final missing = DynamicFormRenderer.validateRequired(photoSchema, {
+        'evidencias': [
+          {'path': 'local:abc', 'caption': 'ok'},
+        ],
+      });
+
+      expect(missing, isEmpty);
+    });
   });
 }

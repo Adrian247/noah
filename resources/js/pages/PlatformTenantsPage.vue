@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { api, getToken } from '@/api/client';
 import { useToast } from '@/composables/useToast';
+import { useConfirm } from '@/composables/useConfirm';
 import type { CompanyOption } from '@/stores/auth';
 import { useAuthStore } from '@/stores/auth';
 import { useCompanyStore } from '@/stores/company';
@@ -42,6 +43,7 @@ type TenantCreated = TenantRow & {
 };
 
 const toast = useToast();
+const confirm = useConfirm();
 const router = useRouter();
 const auth = useAuthStore();
 const companyStore = useCompanyStore();
@@ -491,6 +493,20 @@ async function addUser() {
 const togglingId = ref<number | null>(null);
 
 async function toggleTenantActive(tenant: TenantRow) {
+    const willDeactivate = tenant.is_active;
+    const accepted = await confirm(
+        willDeactivate
+            ? `¿Desactivar «${tenant.name}»? Los usuarios de ese workspace no podrán iniciar sesión.`
+            : `¿Activar «${tenant.name}»? El workspace volverá a estar disponible.`,
+        {
+            title: willDeactivate ? 'Desactivar cliente' : 'Activar cliente',
+            confirmLabel: willDeactivate ? 'Desactivar' : 'Activar',
+            danger: willDeactivate,
+        },
+    );
+    if (!accepted) {
+        return;
+    }
     togglingId.value = tenant.id;
     try {
         await api(`/platform/tenants/${tenant.id}`, {

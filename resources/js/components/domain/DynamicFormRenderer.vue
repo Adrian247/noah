@@ -163,7 +163,7 @@ function removePhoto(field: FormField, index: number) {
 }
 
 function maxPhotos(field: FormField): number {
-    return field.allow_multiple ? Math.max(1, field.max_images ?? 4) : 1;
+    return field.allow_multiple ? Math.max(1, Number(field.max_images) || 4) : 1;
 }
 
 function fieldSpansFullWidth(field: FormField): boolean {
