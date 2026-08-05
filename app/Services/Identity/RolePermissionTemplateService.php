@@ -23,6 +23,7 @@ class RolePermissionTemplateService
                 PhoenixPermission::RoutinesAssign->value,
                 PhoenixPermission::RoutinesValidate->value,
                 PhoenixPermission::CostsView->value,
+                PhoenixPermission::ClientsView->value,
                 PhoenixPermission::CatalogSuppliersManage->value,
                 PhoenixPermission::InventoryView->value,
                 PhoenixPermission::InventoryManage->value,

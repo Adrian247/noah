@@ -41,8 +41,12 @@ class InventoryStockService
             $newBalance = (float) $locked->quantity_on_hand + $delta;
 
             if ($newBalance < 0) {
+                $available = (float) $locked->quantity_on_hand;
+                $label = trim(($locked->sku ? "{$locked->sku} — " : '').($locked->name ?? 'insumo'));
                 throw ValidationException::withMessages([
-                    'quantity' => ['Stock insuficiente para este movimiento.'],
+                    'quantity' => [
+                        "Stock insuficiente de «{$label}». Disponible: {$available}, solicitado: ".abs($qty).'.',
+                    ],
                 ]);
             }
 

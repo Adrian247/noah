@@ -7,3 +7,7 @@ Proyecto greenfield: plataforma de gestión técnica (catálogos, mantenimiento,
 **Demo local (credenciales y ritual):** [docs/DEMO_ENV.md](docs/DEMO_ENV.md)
 
 No asumir integración con otros productos salvo lo documentado en `openspec/`.
+
+## Asistente — sin cuestionarios
+
+**NUNCA** usar la herramienta `AskQuestion` (bloqueada por hook en `.cursor/hooks.json`). Decidir e implementar. Detalle: `.cursor/rules/no-ask-question.mdc`.

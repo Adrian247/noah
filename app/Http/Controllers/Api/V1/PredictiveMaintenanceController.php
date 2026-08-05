@@ -73,7 +73,10 @@ class PredictiveMaintenanceController extends Controller
 
         if (in_array($category, ['manufacturing', 'fabrication'], true)) {
             return response()->json([
-                'data' => $this->demandEngine->predictManufacturing($this->companyId(), $filters),
+                'data' => $this->algorithms->attachPublishedModel(
+                    $this->demandEngine->predictManufacturing($this->companyId(), $filters),
+                    PredictiveAlgorithmKind::Manufacturing,
+                ),
             ]);
         }
 
@@ -87,7 +90,7 @@ class PredictiveMaintenanceController extends Controller
             $limit = max(1, min(100, (int) ($filters['limit'] ?? 20)));
 
             return response()->json([
-                'data' => [
+                'data' => $this->algorithms->attachPublishedModel([
                     'as_of' => $manufacturing['as_of'] ?? $installation['as_of'] ?? null,
                     'horizon_days' => $filters['horizon_days'] ?? 30,
                     'kind' => 'client_demand_merged_v1',
@@ -98,12 +101,15 @@ class PredictiveMaintenanceController extends Controller
                         $manufacturing['notes'] ?? [],
                         $installation['notes'] ?? [],
                     ))),
-                ],
+                ], PredictiveAlgorithmKind::Manufacturing),
             ]);
         }
 
         return response()->json([
-            'data' => $this->demand->predict($this->companyId(), $filters),
+            'data' => $this->algorithms->attachPublishedModel(
+                $this->demand->predict($this->companyId(), $filters),
+                PredictiveAlgorithmKind::Manufacturing,
+            ),
         ]);
     }
 
@@ -119,7 +125,10 @@ class PredictiveMaintenanceController extends Controller
         $filters['calibration'] = $this->algorithms->publishedCalibration(PredictiveAlgorithmKind::Inventory);
 
         return response()->json([
-            'data' => $this->demandEngine->predictInventory($this->companyId(), $filters),
+            'data' => $this->algorithms->attachPublishedModel(
+                $this->demandEngine->predictInventory($this->companyId(), $filters),
+                PredictiveAlgorithmKind::Inventory,
+            ),
         ]);
     }
 

@@ -32,13 +32,13 @@ class PhoenixModuleCatalog
             [
                 'id' => 'routines',
                 'label' => 'Servicios',
-                'nav_routes' => ['/app/routines'],
+                'nav_routes' => ['/app/services'],
                 'read' => ['routines.execute', 'routines.assign', 'routines.validate', 'costs.view'],
                 'write' => ['routines.assign', 'routines.validate'],
             ],
             [
                 'id' => 'predictive',
-                'label' => 'Mantenimiento predictivo',
+                'label' => 'Predictivo',
                 'nav_routes' => ['/app/predictive'],
                 'read' => ['assets.view', 'assets.manage'],
                 'write' => ['assets.manage'],
@@ -82,12 +82,16 @@ class PhoenixModuleCatalog
             [
                 'id' => 'design_routine_types',
                 'label' => 'Tipos de servicio',
-                'nav_routes' => ['/app/routines/types'],
+                'nav_routes' => ['/app/services/types'],
                 'read' => [
                     'design.forms.view',
                     'design.forms',
                     'design.reports.view',
                     'design.reports',
+                    // Asignación/validación/ejecución necesitan listar tipos sin editar diseño.
+                    'routines.assign',
+                    'routines.validate',
+                    'routines.execute',
                 ],
                 'write' => ['design.forms', 'design.reports'],
             ],

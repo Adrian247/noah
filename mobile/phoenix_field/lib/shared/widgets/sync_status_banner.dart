@@ -33,7 +33,13 @@ class SyncStatusBanner extends ConsumerWidget {
             if (errorEvents > 0) {
               bg = Colors.red.withValues(alpha: 0.2);
               icon = Icons.error_outline;
-              message = 'Sync con errores ($errorEvents). Revisa la cola.';
+              final errorMessages = outbox
+                  .where((e) => e.status == 'error' && (e.errorMessage?.trim().isNotEmpty ?? false))
+                  .map((e) => e.errorMessage!.trim())
+                  .toList();
+              message = errorMessages.isNotEmpty
+                  ? 'Sync con errores: ${errorMessages.first}'
+                  : 'Sync con errores ($errorEvents). Revisa la cola.';
             } else {
               bg = Colors.amber.withValues(alpha: 0.18);
               icon = Icons.cloud_upload_outlined;

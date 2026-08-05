@@ -133,6 +133,29 @@ const activeCorpusKind = computed(
     () => corpus.value?.kinds.find((k) => k.kind === kind.value) ?? null,
 );
 
+const filteredVersions = computed(() => {
+    const legacy = kind.value === 'maintenance_hazard_v2' ? ['hazard_routines_v1', 'maintenance'] : [];
+    return versions.value.filter(
+        (v) => v.kind === kind.value || legacy.includes(v.kind),
+    );
+});
+
+const publishedByKind = computed(() => {
+    const map = new Map<string, AlgorithmVersion>();
+    for (const v of versions.value) {
+        if (v.status !== 'published') continue;
+        const existing = map.get(v.kind);
+        if (!existing || (v.published_at ?? '') > (existing.published_at ?? '')) {
+            map.set(v.kind, v);
+        }
+    }
+    return schemas.value.map((s) => ({
+        kind: s.kind,
+        label: s.label,
+        version: map.get(s.kind) ?? null,
+    }));
+});
+
 function volumeBadgeClass(level: string): string {
     if (level === 'strong') return 'border-[color:var(--portal-border)] bg-[color:color-mix(in_srgb,var(--portal-success,#22c55e)_18%,transparent)] text-portal-heading';
     if (level === 'adequate') return 'border-[color:var(--portal-border)] bg-[color:color-mix(in_srgb,var(--portal-accent,#38bdf8)_16%,transparent)] text-portal-heading';
@@ -360,8 +383,31 @@ onMounted(load);
     <div class="portal-page">
         <PageHeader
             title="Algoritmos predictivos"
-            subtitle="Entrena (solo root) con historial de servicios de empresas con opt-in y documentos opcionales. Valida precisión con regresión."
+            subtitle="Tres familias independientes (mantenimiento, manufactura e inventario). Entrena y publica por familia; la regresión valida precisión."
         />
+
+        <section
+            v-if="publishedByKind.length"
+            class="mb-6 grid gap-3 sm:grid-cols-3"
+        >
+            <button
+                v-for="item in publishedByKind"
+                :key="item.kind"
+                type="button"
+                class="rounded-xl border border-[color:var(--portal-border)] bg-[color:var(--portal-surface)] p-3 text-left transition hover:border-amber-500/40"
+                :class="item.kind === kind ? 'ring-1 ring-amber-500/40' : ''"
+                @click="kind = item.kind"
+            >
+                <p class="text-portal-heading text-sm font-medium">{{ item.label }}</p>
+                <p class="text-portal-muted mt-1 text-xs">
+                    Publicada:
+                    <template v-if="item.version">
+                        <span class="font-mono text-portal-heading">v{{ item.version.semver }}</span>
+                    </template>
+                    <template v-else>ninguna</template>
+                </p>
+            </button>
+        </section>
 
         <section
             v-if="corpus"
@@ -571,10 +617,10 @@ onMounted(load);
         <ConfigurableDataTable
             table-id="platform-predictive-algorithms"
             :columns="columns"
-            :rows="versions"
+            :rows="filteredVersions"
             row-key="id"
             :show-export="false"
-            empty-text="Aún no hay versiones. Entrena la primera."
+            empty-text="Aún no hay versiones de esta familia. Entrena la primera."
         >
             <template #semver="{ row }">
                 <span class="font-mono font-semibold text-portal-heading">v{{ (row as AlgorithmVersion).semver }}</span>

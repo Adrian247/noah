@@ -15,6 +15,7 @@ use App\Support\CurrentCompany;
 use App\Support\InventoryTaxonomy;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
 class MobileSyncService
@@ -79,6 +80,12 @@ class MobileSyncService
                     ]);
                 });
                 $accepted[] = $eventId;
+            } catch (ValidationException $e) {
+                $reason = collect($e->errors())->flatten()->filter()->implode(' ');
+                $rejected[] = [
+                    'event_id' => $eventId,
+                    'reason' => $reason !== '' ? $reason : $e->getMessage(),
+                ];
             } catch (\Throwable $e) {
                 $rejected[] = ['event_id' => $eventId, 'reason' => $e->getMessage()];
             }
@@ -97,7 +104,8 @@ class MobileSyncService
             ->whereIn('status', ['assigned', 'pending_validation'])
             ->with([
                 'asset.catalogItem',
-                'site',
+                'client',
+                'site.client',
                 'routineType.formVersion',
                 'latestExecution',
             ])

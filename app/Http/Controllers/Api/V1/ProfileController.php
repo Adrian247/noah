@@ -66,6 +66,7 @@ class ProfileController extends Controller
             'email' => $user->email,
             'avatar_url' => self::avatarUrl($user),
             'is_platform_admin' => PlatformAdmin::isPlatformAdmin($user),
+            'last_login_at' => $user->last_login_at?->toIso8601String(),
         ];
     }
 

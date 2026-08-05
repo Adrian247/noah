@@ -27,6 +27,8 @@ type Client = {
     billing_email?: string | null;
     billing_address?: string | null;
     is_active: boolean;
+    portal_login_email?: string | null;
+    portal_password_hint?: string | null;
 };
 
 const router = useRouter();
@@ -201,7 +203,7 @@ async function save() {
         legal_name: form.value.legal_name,
         trade_name: form.value.trade_name || null,
         tax_id: form.value.tax_id || null,
-        billing_email: form.value.billing_email || null,
+        billing_email: form.value.billing_email.trim(),
         billing_address: form.value.billing_address || null,
         is_active: form.value.is_active,
     };
@@ -411,7 +413,11 @@ onMounted(load);
                     <MaterialField v-model="form.code" label="Código" />
                     <MaterialField v-model="form.tax_id" label="RFC / ID fiscal" />
                 </div>
-                <MaterialField v-model="form.billing_email" label="Correo facturación" type="email" />
+                <MaterialField v-model="form.billing_email" label="Correo facturación / portal" type="email" required />
+                <p class="text-portal-muted -mt-2 text-xs">
+                    Obligatorio: habilita el acceso al portal del cliente. Contraseña temporal de todas las cuentas:
+                    <span class="text-portal-heading font-mono">pyro.2026$</span>
+                </p>
                 <MaterialField v-model="form.billing_address" label="Dirección fiscal" multiline :rows="2" />
                 <label v-if="editingId" class="text-portal-muted flex items-center gap-2 text-sm">
                     <input v-model="form.is_active" type="checkbox" />

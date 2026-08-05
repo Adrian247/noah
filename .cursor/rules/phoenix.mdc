@@ -13,3 +13,4 @@ alwaysApply: true
 - **Ritual demo (obligatorio al cerrar tareas):** si tocaste seeders, usuarios demo, permisos o login → ejecutar `docker compose exec app php artisan phoenix:refresh-demo` y **decir al usuario** las credenciales (`docs/DEMO_ENV.md`). Cuenta por defecto: `admin@sandbox-demo.com` / `pyro.2026$`; todas las demo comparten la misma contraseña.
 - Atajo solo contraseñas: `phoenix:ensure-demo --reset-credentials`.
 - **UI / temas:** al tocar estilos, popovers, tablas o formularios, validar contraste y legibilidad en **tema oscuro y claro** (`data-theme`); usar tokens `--portal-*` y patrones de `app.css` (p. ej. tooltips, pickers), no colores fijos solo para un tema.
+- **PROHIBIDO AskQuestion:** nunca llames `AskQuestion`. Hay hook que la deniega (`.cursor/hooks.json`). Decide e implementa. Regla: `.cursor/rules/no-ask-question.mdc`.

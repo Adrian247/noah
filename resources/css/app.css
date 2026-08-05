@@ -1385,6 +1385,19 @@
         @apply border border-white/15 bg-white/5 text-slate-200 hover:bg-white/10;
     }
 
+    .app-button-ghost {
+        @apply text-amber-300/95 hover:bg-white/5;
+    }
+
+    .portal-skeleton {
+        @apply animate-pulse rounded-md;
+        background: color-mix(in srgb, var(--portal-muted) 22%, transparent);
+    }
+
+    .portal-skeleton-row {
+        @apply flex items-center gap-3 px-3 py-3;
+    }
+
     .portal-list-panel {
         border: 1px solid rgb(255 255 255 / 0.1);
         background: rgb(10 12 18 / 0.35);
@@ -1716,6 +1729,12 @@
         font-weight: 600;
         letter-spacing: 0.06em;
         text-transform: uppercase;
+        color: rgb(148 163 184);
+    }
+
+    .sidebar-session-menu__meta {
+        font-size: 0.6875rem;
+        line-height: 1.4;
         color: rgb(148 163 184);
     }
 
@@ -2339,11 +2358,11 @@
     }
 
     .app-toast-host--from-right .app-toast--playing .app-toast__shell {
-        animation: app-toast-shell-unfold-h 0.52s 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation: app-toast-shell-unfold-h 0.4s 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
 
     .app-toast-host--from-right .app-toast--playing .app-toast__content {
-        animation: app-toast-text-from-right 0.4s 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation: app-toast-text-from-right 0.32s 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
 
     .app-toast-host--from-right .app-toast-leave-active {
@@ -2363,11 +2382,11 @@
     }
 
     .app-toast-host--from-left .app-toast--playing .app-toast__shell {
-        animation: app-toast-shell-unfold-h 0.52s 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation: app-toast-shell-unfold-h 0.4s 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
 
     .app-toast-host--from-left .app-toast--playing .app-toast__content {
-        animation: app-toast-text-from-left 0.4s 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation: app-toast-text-from-left 0.32s 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
 
     .app-toast-host--from-left .app-toast-leave-active {
@@ -2387,11 +2406,11 @@
     }
 
     .app-toast-host--from-top .app-toast--playing .app-toast__shell {
-        animation: app-toast-shell-unfold-v 0.52s 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation: app-toast-shell-unfold-v 0.4s 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
 
     .app-toast-host--from-top .app-toast--playing .app-toast__content {
-        animation: app-toast-text-from-right 0.4s 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation: app-toast-text-from-right 0.32s 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
 
     .app-toast-host--from-top .app-toast-leave-active {
@@ -4162,6 +4181,10 @@
 
 [data-theme='light'] .app-button-secondary {
     @apply border-slate-300 bg-white text-slate-800 hover:bg-slate-50;
+}
+
+[data-theme='light'] .app-button-ghost {
+    @apply text-amber-700 hover:bg-slate-100;
 }
 
 [data-theme='light'] .app-modal-overlay {

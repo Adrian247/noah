@@ -9,6 +9,7 @@ import 'package:phoenix_field/data/repositories/sync_repository.dart';
 import 'package:phoenix_field/shared/dynamic_form/dynamic_form_renderer.dart';
 import 'package:phoenix_field/shared/dynamic_form/dynamic_form_validator.dart';
 import 'package:phoenix_field/shared/routine/consumptions_panel.dart';
+import 'package:phoenix_field/shared/routine/routine_context.dart';
 import 'package:phoenix_field/shared/routine/routine_status_labels.dart';
 import 'package:phoenix_field/shared/widgets/routine_timer.dart';
 import 'package:phoenix_field/shared/widgets/signature_capture_dialog.dart';
@@ -343,21 +344,7 @@ class _RoutineDetailPageState extends ConsumerState<RoutineDetailPage> {
       );
     }
 
-    final asset = _routine!['asset']?['tag']?.toString();
-    final client = _routine!['client']?['trade_name']?.toString() ??
-        _routine!['client']?['legal_name']?.toString();
-    final site = _routine!['site']?['name']?.toString() ?? '—';
-    final type = _routine!['routine_type']?['name']?.toString() ?? 'Servicio';
-    final serviceCategory = _routine!['routine_type']?['service_category']?.toString() ?? _routine!['routine_type']?['service_line']?.toString();
-    final serviceLineLabel = switch (serviceCategory) {
-      'manufacturing' || 'fabrication' => 'Fabricación',
-      'installation' || 'supply' => 'Instalación',
-      'maintenance' => 'Mantenimiento',
-      _ => null,
-    };
-    final subject = (asset != null && asset.isNotEmpty)
-        ? asset
-        : (client != null && client.isNotEmpty ? client : '—');
+    final ctx = RoutineContext.fromPayload(_routine!, fallbackId: widget.routineId);
     final status = _routine!['status']?.toString() ?? '';
     final canSubmit = routineCanSubmitFromField(status);
     final rejectionReason = _rejectionReason(_routine!);
@@ -369,6 +356,7 @@ class _RoutineDetailPageState extends ConsumerState<RoutineDetailPage> {
             _responses,
             catalogs: _catalogs,
           );
+    final scheduled = _routine!['scheduled_at']?.toString();
 
     return Scaffold(
       appBar: AppBar(
@@ -395,22 +383,59 @@ class _RoutineDetailPageState extends ConsumerState<RoutineDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(type, style: Theme.of(context).textTheme.titleMedium),
-                  if (serviceLineLabel != null) ...[
+                  Text(ctx.typeName, style: Theme.of(context).textTheme.titleMedium),
+                  if (scheduled != null && scheduled.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
-                      serviceLineLabel,
-                      style: Theme.of(context).textTheme.bodySmall,
+                      'Programada: ${_formatScheduled(scheduled)}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.72),
+                          ),
                     ),
                   ],
-                  const SizedBox(height: 8),
-                  Text(asset != null && asset.isNotEmpty ? 'Artículo: $asset' : 'Sujeto: $subject'),
-                  if (client != null &&
-                      client.isNotEmpty &&
-                      asset != null &&
-                      asset.isNotEmpty)
-                    Text('Cliente: $client'),
-                  Text('Sitio: $site'),
+                  const SizedBox(height: 12),
+                  ...ctx.detailRows.map(
+                    (row) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            _iconForLabel(row.label),
+                            size: 18,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.55),
+                          ),
+                          const SizedBox(width: 10),
+                          SizedBox(
+                            width: 88,
+                            child: Text(
+                              row.label,
+                              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.62),
+                                  ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              row.value,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -506,6 +531,30 @@ class _RoutineDetailPageState extends ConsumerState<RoutineDetailPage> {
         ],
       ),
     );
+  }
+
+  String _formatScheduled(String iso) {
+    final parsed = DateTime.tryParse(iso);
+    if (parsed == null) {
+      return iso;
+    }
+    final local = parsed.toLocal();
+    final two = (int n) => n.toString().padLeft(2, '0');
+    return '${two(local.day)}/${two(local.month)}/${local.year} ${two(local.hour)}:${two(local.minute)}';
+  }
+
+  IconData _iconForLabel(String label) {
+    return switch (label) {
+      'Línea' => Icons.category_outlined,
+      'Cliente' => Icons.business_outlined,
+      'Sitio' => Icons.place_outlined,
+      'Dirección' => Icons.map_outlined,
+      'Ubicación' => Icons.my_location_outlined,
+      'Activo / tag' => Icons.qr_code_2_outlined,
+      'Serie' => Icons.tag_outlined,
+      'Artículo' => Icons.inventory_2_outlined,
+      _ => Icons.info_outline,
+    };
   }
 
   String? _rejectionReason(Map<String, dynamic> routine) {

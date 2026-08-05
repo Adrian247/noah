@@ -19,9 +19,9 @@ export const inventorySectionNav: SectionSubnavItem[] = [
 export const catalogSuppliesSectionNav: SectionSubnavItem[] = inventorySectionNav;
 
 export const routinesSectionNav: SectionSubnavItem[] = [
-    { to: '/app/routines', label: 'Servicios', moduleId: 'routines' },
+    { to: '/app/services', label: 'Servicios', moduleId: 'routines' },
     { to: '/app/validation', label: 'Validación', moduleId: 'routines', permission: 'routines.validate' },
-    { to: '/app/routines/types', label: 'Tipos de servicio', moduleId: 'design_routine_types' },
+    { to: '/app/services/types', label: 'Tipos de servicio', moduleId: 'design_routine_types' },
 ];
 
 export const clientsSectionNav: SectionSubnavItem[] = [

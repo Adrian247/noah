@@ -50,6 +50,17 @@ final class TenantDemoProfile
         );
     }
 
+    public function portalClientEmail(): ?string
+    {
+        foreach ($this->staff as $staffRow) {
+            if (! empty($staffRow['portal_client'])) {
+                return $staffRow['email'];
+            }
+        }
+
+        return null;
+    }
+
     public function isDomG(): bool
     {
         return $this->companyName === 'Dom-G';

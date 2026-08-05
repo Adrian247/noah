@@ -79,4 +79,36 @@ class MobileSyncApiTest extends TestCase
                 ],
             ]);
     }
+
+    public function test_sync_pull_includes_site_client_and_asset_location(): void
+    {
+        $this->seed();
+        $technician = $this->meinUser('technician@sandbox-demo.com');
+        $company = $this->meinCompany();
+        $routine = $this->demoRoutine($technician);
+        $routine->loadMissing(['asset', 'client', 'site']);
+
+        Sanctum::actingAs($technician);
+
+        $response = $this->withHeader('X-Company-Id', (string) $company->id)
+            ->postJson('/api/v1/sync', [
+                'device_id' => 'test-device-context',
+                'events' => [],
+                'pull' => true,
+            ])
+            ->assertOk();
+
+        $pulled = collect($response->json('data.pull.routines'))
+            ->firstWhere('id', $routine->id);
+
+        $this->assertIsArray($pulled);
+        $this->assertArrayHasKey('site', $pulled);
+        $this->assertArrayHasKey('client', $pulled);
+        $this->assertSame($routine->site?->name, $pulled['site']['name'] ?? null);
+        if ($routine->asset !== null) {
+            $this->assertSame($routine->asset->tag, $pulled['asset']['tag'] ?? null);
+            $this->assertArrayHasKey('location_label', $pulled['asset']);
+            $this->assertArrayHasKey('serial_number', $pulled['asset']);
+        }
+    }
 }

@@ -14,7 +14,7 @@ import { useSystemEnterStore } from '@/stores/systemEnter';
 import { postLoginRoute } from '@/lib/sessionCompany';
 
 /** Tiempo mínimo del overlay de entrada (loader + animación). */
-const LOGIN_ENTER_MIN_MS = 2600;
+const LOGIN_ENTER_MIN_MS = 1200;
 
 type PortalContent = {
     service_title?: string | null;
@@ -73,8 +73,7 @@ async function loadDemoHealth() {
             demo?: { accounts_ready: boolean; password: string };
         }>('/health');
         if (res.demo && !res.demo.accounts_ready) {
-            demoHint.value =
-                'No hay cuentas demo. Reparando… vuelve a intentar en unos segundos o ejecuta: docker compose exec app php artisan phoenix:refresh-demo';
+            demoHint.value = 'Cuentas demo no listas. Reintentando…';
             window.setTimeout(() => void loadDemoHealth(), 2500);
         } else {
             demoHint.value = null;
@@ -174,7 +173,7 @@ onMounted(() => {
                             type="password"
                             name="phoenix-password"
                             required
-                            placeholder="pyro.2026$"
+                            placeholder="Contraseña"
                             autocomplete="off"
                             :readonly="passwordReadonly"
                             @focus="onPasswordFocus"
@@ -185,12 +184,10 @@ onMounted(() => {
                                 <p v-if="auth.error" class="text-sm text-red-400">
                                     {{ auth.error }}
                                     <span class="mt-1 block text-xs text-slate-500">
-                                        Demo local:
-                                        <span class="font-mono">admin@sandbox-demo.com</span>
+                                        Demo:
+                                        <span class="font-mono">{{ DEMO_EMAIL }}</span>
                                         /
-                                        <span class="font-mono">pyro.2026$</span>
-                                        — si falla:
-                                        <span class="font-mono">docker compose exec app php artisan phoenix:refresh-demo</span>
+                                        <span class="font-mono">{{ DEMO_PASSWORD }}</span>
                                     </span>
                                 </p>
                             </div>

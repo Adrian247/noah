@@ -31,6 +31,7 @@ export type AuthUser = {
     email: string;
     avatar_url?: string | null;
     is_platform_admin?: boolean;
+    last_login_at?: string | null;
 };
 
 export const useAuthStore = defineStore('auth', () => {

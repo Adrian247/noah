@@ -31,28 +31,31 @@ regresión del motor**, no se cargan en cada predicción ni son la fuente operat
 
 ## Configuración del cliente (administrador de empresa)
 
-En **Configuración → Mantenimiento predictivo**:
+En **Configuración → Predictivo**:
 
 1. **Permitir a Phoenix recopilar información de servicios para entrenamiento** — opt-in
-   legal. Phoenix usa el historial de servicios solo dentro de la plataforma para mejorar el
-   algoritmo; no se vende ni se expone fuera de la aplicación, salvo obligación legal.
-2. **Versión del algoritmo de mantenimiento** — solo versiones **publicadas** por el administrador
-   de sistema.
+   legal. Phoenix usa el historial de servicios solo dentro de la plataforma para mejorar los
+   algoritmos; no se vende ni se expone fuera de la aplicación, salvo obligación legal.
+2. **Algoritmos activos** — tres familias:
+   - **Mantenimiento** — puedes fijar una versión publicada o dejar la más reciente automática.
+   - **Manufactura** e **Inventario** — siempre usan la versión publicada más reciente de
+     plataforma (no se fijan por empresa).
 
 ## Entrenamiento (administrador de sistema)
 
 En **Plataforma → Algoritmos predictivos** (`/app/platform/predictive`):
 
-1. Lee la guía en pantalla: documento ≠ regresión.
-2. Descarga la **plantilla JSON o CSV** del algoritmo (botones en la UI) o usa los archivos en
+1. Elige la **familia** (mantenimiento / manufactura / inventario).
+2. Lee la guía en pantalla: documento ≠ regresión.
+3. Descarga la **plantilla JSON o CSV** del algoritmo (botones en la UI) o usa los archivos en
    [`resources/predictive/training-templates/`](../resources/predictive/training-templates/).
-3. Sustituye códigos de ejemplo por tags/clientes/artículos reales y súbela (opcional).
-4. Entrenar genera una versión **draft** con semver, calibración y **reporte de regresión**
+4. Sustituye códigos de ejemplo por tags/clientes/artículos reales y súbela (opcional).
+5. Entrenar genera una versión **draft** con semver, calibración y **reporte de regresión**
    (AUC / filas) vía backtest sobre empresas con opt-in.
-5. **Publicar** hace la versión usable (mantenimiento seleccionable por empresas;
+6. **Publicar** hace la versión usable (mantenimiento seleccionable por empresas;
    manufactura/inventario aplican calibración publicada automáticamente).
-6. **Archivar** la retira; el botón **Regresión** re-corre el backtest sin subir archivo.
-7. Auditoría: `predictive.algorithm_*`, `predictive.company_settings_updated`,
+7. **Archivar** la retira; el botón **Regresión** re-corre el backtest sin subir archivo.
+8. Auditoría: `predictive.algorithm_*`, `predictive.company_settings_updated`,
    `predictive.training_document_*`.
 
 ### Formatos de documentos

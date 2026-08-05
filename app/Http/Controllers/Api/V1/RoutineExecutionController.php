@@ -102,7 +102,11 @@ class RoutineExecutionController extends Controller
             return response()->json(['message' => 'No execution to validate.'], 422);
         }
 
-        $workflow->onApproved($routine, $request->user(), $audit);
+        try {
+            $workflow->onApproved($routine, $request->user(), $audit);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         $audit->fromRequest($request, 'routine.validated', Routine::class, $routine->id);
 
@@ -127,7 +131,11 @@ class RoutineExecutionController extends Controller
 
         $validated = $request->validate(['reason' => ['required', 'string', 'max:1000']]);
 
-        $workflow->onRejected($routine, $request->user(), $validated['reason'], $audit);
+        try {
+            $workflow->onRejected($routine, $request->user(), $validated['reason'], $audit);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         $execution = $routine->latestExecution;
         if ($execution !== null) {

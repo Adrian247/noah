@@ -40,8 +40,8 @@ class PortalSetting extends Model
     public static function defaultAttributes(): array
     {
         return [
-            'hero_image_url' => 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=1600&q=80',
-            'hero_image_alt' => 'Trabajador industrial con equipo de protección en planta',
+            'hero_image_url' => null,
+            'hero_image_alt' => null,
             'service_title' => 'Gestión técnica clara para operaciones industriales',
             'service_description' => 'Phoenix centraliza servicios en campo, validación técnica, evidencias, facturación y un asistente operativo con grounding en datos reales, en una sola plataforma para operaciones industriales.',
             'service_highlights' => [
@@ -64,8 +64,6 @@ class PortalSetting extends Model
     public function toPortalPayload(): array
     {
         return [
-            'hero_image_url' => $this->hero_image_url,
-            'hero_image_alt' => $this->hero_image_alt,
             'service_title' => $this->service_title,
             'service_description' => $this->service_description,
             'service_highlights' => $this->service_highlights ?? [],

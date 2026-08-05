@@ -169,4 +169,46 @@ class PredictiveAlgorithmsV2ApiTest extends TestCase
             PredictiveAlgorithmVersion::query()->findOrFail($id)->notes,
         );
     }
+
+    public function test_company_settings_exposes_all_algorithm_families(): void
+    {
+        $admin = User::query()->where('email', 'admin@sandbox-demo.com')->firstOrFail();
+        $company = Company::query()->where('name', 'Sandbox')->firstOrFail();
+        Sanctum::actingAs($admin);
+
+        PredictiveAlgorithmVersion::query()->create([
+            'semver' => '9.9.1',
+            'status' => PredictiveAlgorithmVersion::STATUS_PUBLISHED,
+            'kind' => PredictiveAlgorithmKind::Manufacturing->value,
+            'notes' => 'mfg published',
+            'calibration' => ['alpha' => 1],
+            'published_at' => now(),
+            'created_by' => $this->root->id,
+        ]);
+
+        $res = $this->withHeader('X-Company-Id', (string) $company->id)
+            ->getJson('/api/v1/predictive/settings')
+            ->assertOk()
+            ->assertJsonStructure([
+                'data' => [
+                    'algorithms' => [
+                        ['kind', 'kind_label', 'selectable', 'selection_mode', 'active_version'],
+                    ],
+                    'available_versions',
+                ],
+            ]);
+
+        $kinds = collect($res->json('data.algorithms'))->pluck('kind')->all();
+        $this->assertSame([
+            PredictiveAlgorithmKind::Maintenance->value,
+            PredictiveAlgorithmKind::Manufacturing->value,
+            PredictiveAlgorithmKind::Inventory->value,
+        ], $kinds);
+
+        $mfg = collect($res->json('data.algorithms'))
+            ->firstWhere('kind', PredictiveAlgorithmKind::Manufacturing->value);
+        $this->assertFalse($mfg['selectable']);
+        $this->assertSame('auto', $mfg['selection_mode']);
+        $this->assertSame('9.9.1', $mfg['active_version']['semver']);
+    }
 }

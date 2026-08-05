@@ -41,10 +41,23 @@ class _RoutineTimerState extends State<RoutineTimer> {
     super.dispose();
   }
 
+  /// Minutos facturables: redondeo hacia arriba (1–60 s → 1 min).
+  int _billableMinutes(Duration d) {
+    if (d.inSeconds <= 0) {
+      return 0;
+    }
+    return (d.inSeconds + 59) ~/ 60;
+  }
+
+  void _emitMinutes() {
+    widget.onMinutesChanged(_billableMinutes(_elapsed));
+  }
+
   void _toggle() {
     if (_running) {
       _timer?.cancel();
       setState(() => _running = false);
+      _emitMinutes();
       return;
     }
     _start();
@@ -56,9 +69,10 @@ class _RoutineTimerState extends State<RoutineTimer> {
     }
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() => _elapsed += const Duration(seconds: 1));
-      widget.onMinutesChanged(_elapsed.inMinutes);
+      _emitMinutes();
     });
     setState(() => _running = true);
+    _emitMinutes();
   }
 
   void _reset() {

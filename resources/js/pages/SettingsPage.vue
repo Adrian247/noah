@@ -151,6 +151,9 @@ watch(
         <section v-if="isAdmin" id="predictivo">
             <GlassCard padding="lg" class="space-y-4">
                 <h2 class="text-portal-heading text-base font-semibold">Predictivo</h2>
+                <p class="text-portal-muted text-sm">
+                    Opt-in de entrenamiento y versión activa por familia de algoritmo.
+                </p>
                 <CompanyPredictiveSettingsForm />
             </GlassCard>
         </section>

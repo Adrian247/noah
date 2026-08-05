@@ -64,7 +64,7 @@ export const TOUR_STEP_DEFS: TourStepDef[] = [
     {
         id: '10-routines',
         moduleId: 'routines',
-        route: '/app/routines',
+        route: '/app/services',
         target: '[data-tour="page-routines"]',
         padding: 10,
         spotlight: 'panel',
@@ -120,7 +120,7 @@ export const TOUR_STEP_DEFS: TourStepDef[] = [
     {
         id: '20-routine-types',
         moduleId: 'design_routine_types',
-        route: '/app/routines/types',
+        route: '/app/services/types',
         target: '[data-tour="page-routine-types"]',
         padding: 10,
         spotlight: 'panel',

@@ -75,7 +75,7 @@ const navGroups = computed(() => {
             label: 'Operación',
             items: filterNavItems([
                 { to: '/app/dashboard', label: 'Inicio', icon: 'home', moduleId: 'dashboard' },
-                { to: '/app/routines', label: 'Servicios', icon: 'clipboard-list', moduleId: 'routines', tourAnchor: 'nav-routines' },
+                { to: '/app/services', label: 'Servicios', icon: 'clipboard-list', moduleId: 'routines', tourAnchor: 'nav-routines' },
                 { to: '/app/inventory', label: 'Inventario', icon: 'archive', moduleId: 'inventory', tourAnchor: 'nav-inventory' },
                 { to: '/app/predictive', label: 'Predictivo', icon: 'activity', moduleId: 'predictive', tourAnchor: 'nav-predictive' },
             ]),
@@ -213,14 +213,6 @@ function toggleSessionMenu() {
     avatarMenuOpen.value = !avatarMenuOpen.value;
 }
 
-watch(avatarMenuOpen, async (open) => {
-    if (!open) {
-        return;
-    }
-    await nextTick();
-    requestAnimationFrame(() => updateSessionMenuPosition());
-});
-
 function onSessionMenuReposition() {
     if (avatarMenuOpen.value) {
         updateSessionMenuPosition();
@@ -238,12 +230,49 @@ function isActive(path: string, match: 'exact' | 'prefix' = 'prefix') {
     return route.path === path || route.path.startsWith(`${path}/`);
 }
 
+function formatLastAccess(iso?: string | null): string {
+    if (!iso) {
+        return 'Sin registro';
+    }
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) {
+        return 'Sin registro';
+    }
+    return date.toLocaleString('es-MX', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+}
+
+const lastAccessLabel = computed(() => formatLastAccess(auth.user?.last_login_at));
+
+watch(avatarMenuOpen, async (open) => {
+    if (!open) {
+        return;
+    }
+    try {
+        await auth.fetchMe();
+    } catch {
+        // ignore; show last known value
+    }
+    await nextTick();
+    requestAnimationFrame(() => updateSessionMenuPosition());
+});
+
 onMounted(async () => {
     document.addEventListener('click', onDocumentClick);
     window.addEventListener('resize', onSessionMenuReposition);
     const ok = await auth.ensureSession();
     if (!ok) {
         return;
+    }
+    try {
+        await auth.fetchMe();
+    } catch {
+        // keep existing session payload
     }
     company.hydrate(auth.companies);
 });
@@ -461,14 +490,21 @@ async function onAvatarSelected(event: Event) {
                         >
                             {{ avatarUploading ? 'Subiendo…' : 'Cambiar foto' }}
                         </button>
-                        <RouterLink
-                            v-if="auth.user?.is_platform_admin"
-                            to="/app/platform/tenants"
-                            class="sidebar-session-menu__link"
-                            @click="avatarMenuOpen = false"
+                        <div
+                            v-if="auth.companies.length > 1"
+                            class="sidebar-session-menu__workspace mb-2 border-t border-white/10 pt-2"
                         >
-                            Gestionar clientes de plataforma
-                        </RouterLink>
+                            <p class="sidebar-session-menu__heading">Empresa activa</p>
+                            <select
+                                class="sidebar-workspace-select field-input w-full text-xs"
+                                :value="company.current?.id"
+                                @change="onCompanyChange"
+                            >
+                                <option v-for="c in auth.companies" :key="c.id" :value="c.id">
+                                    {{ companyOptionLabel(c) }}
+                                </option>
+                            </select>
+                        </div>
                         <button
                             type="button"
                             class="sidebar-session-menu__logout w-full rounded-lg px-3 py-2 text-left text-sm font-medium"
@@ -477,24 +513,15 @@ async function onAvatarSelected(event: Event) {
                             Cerrar sesión
                         </button>
                         <p v-if="avatarError" class="mt-2 text-xs text-red-400">{{ avatarError }}</p>
-                        <p class="mt-2 text-[10px] text-slate-500">JPG, PNG o WebP · máx. 2 MB</p>
+                        <p class="sidebar-session-menu__meta mt-2">
+                            Último acceso: {{ lastAccessLabel }}
+                        </p>
                     </div>
                 </Teleport>
-                <label v-if="auth.companies.length > 1 && !collapsed" class="sidebar-workspace-label" data-tour="sidebar-workspace">
-                    <span class="sidebar-workspace-label__text">Empresa activa</span>
-                    <select
-                        class="sidebar-workspace-select field-input w-full text-xs"
-                        :value="company.current?.id"
-                        @change="onCompanyChange"
-                    >
-                        <option v-for="c in auth.companies" :key="c.id" :value="c.id">
-                            {{ companyOptionLabel(c) }}
-                        </option>
-                    </select>
-                </label>
                 <p
-                    v-else-if="!collapsed"
+                    v-if="!collapsed"
                     class="sidebar-company-footer truncate text-xs text-slate-400"
+                    data-tour="sidebar-workspace"
                     :title="companyName"
                 >
                     {{ companyName }}

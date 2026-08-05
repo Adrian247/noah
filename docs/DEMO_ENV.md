@@ -14,6 +14,8 @@ Los tres tenants demo arrancan **vírgenes** en local: usuarios/contraseñas, ro
 
 Todas las cuentas demo: **`pyro.2026$`**
 
+También aplica a las **cuentas del portal de cliente** asociadas a cada cliente de catálogo (`billing_email` = login). Al crear/editar un cliente activo se provisiona o actualiza esa cuenta con la misma contraseña.
+
 Variables: `PHOENIX_DEMO_PASSWORD`, `PHOENIX_DEMO_ROOT_PASSWORD` (ambas default `pyro.2026$`).
 
 ## Root (plataforma)

@@ -392,7 +392,7 @@ class PhoenixDemoSeeder extends Seeder
                 'legal_name' => $profile->clientLegalName,
                 'trade_name' => $profile->clientTradeName,
                 'tax_id' => null,
-                'billing_email' => null,
+                'billing_email' => $profile->portalClientEmail(),
                 'is_active' => true,
             ]
         );
@@ -584,7 +584,7 @@ class PhoenixDemoSeeder extends Seeder
                 'legal_name' => $profile->clientLegalName,
                 'trade_name' => $profile->clientTradeName,
                 'tax_id' => 'APE850101ABC',
-                'billing_email' => 'facturacion@clientepremium.example',
+                'billing_email' => $profile->portalClientEmail() ?? 'facturacion@clientepremium.example',
                 'is_active' => true,
             ]
         );
@@ -1342,7 +1342,7 @@ class PhoenixDemoSeeder extends Seeder
                     'legal_name' => $row['legal_name'],
                     'trade_name' => $row['trade_name'],
                     'tax_id' => null,
-                    'billing_email' => null,
+                    'billing_email' => $profile->portalClientEmail(),
                     'is_active' => true,
                 ]
             );

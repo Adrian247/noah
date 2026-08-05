@@ -28,7 +28,7 @@ class WorkflowStepMail extends Mailable
     {
         $this->routine->loadMissing(['asset', 'routineType']);
 
-        $url = rtrim(config('app.url'), '/').'/app/routines/'.$this->routine->id;
+        $url = rtrim(config('app.url'), '/').'/app/services/'.$this->routine->id;
         $bodyText = trim(html_entity_decode(strip_tags($this->mailMessage), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
 
         return new Content(

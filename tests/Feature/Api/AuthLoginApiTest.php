@@ -19,8 +19,12 @@ class AuthLoginApiTest extends TestCase
             'device_name' => 'test',
         ])
             ->assertOk()
-            ->assertJsonStructure(['token', 'user' => ['id', 'email'], 'companies'])
+            ->assertJsonStructure(['token', 'user' => ['id', 'email', 'last_login_at'], 'companies'])
             ->assertJsonPath('user.email', 'admin@sandbox-demo.com');
+
+        $this->assertNotNull(
+            \App\Models\User::query()->where('email', 'admin@sandbox-demo.com')->value('last_login_at'),
+        );
     }
 
     public function test_health_reports_demo_accounts_in_local(): void

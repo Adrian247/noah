@@ -5,6 +5,7 @@ import { api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { useCompanyStore } from '@/stores/company';
 import { useModuleAccess } from '@/composables/useModuleAccess';
+import { usePermissions } from '@/composables/usePermissions';
 import { useProductTour } from '@/composables/useProductTour';
 import { useToast } from '@/composables/useToast';
 import { useSystemEnterStore } from '@/stores/systemEnter';
@@ -17,6 +18,7 @@ import NavIcon, { type NavIconName } from '@/components/ui/NavIcon.vue';
 import DashboardStatCard from '@/components/dashboard/DashboardStatCard.vue';
 
 const { hasCompleted, start } = useProductTour();
+const { can } = usePermissions();
 const toast = useToast();
 const showTourInvite = ref(false);
 
@@ -237,7 +239,7 @@ const pipelineTotal = computed(() =>
 const quickLinks = computed(() => {
     const all: QuickLink[] = [
         {
-            to: '/app/routines',
+            to: '/app/services',
             label: 'Servicios',
             description: 'Asignar, ejecutar y validar',
             icon: 'clipboard-list',
@@ -285,13 +287,6 @@ const quickLinks = computed(() => {
             icon: 'shield',
             moduleId: 'audit',
         },
-        {
-            to: '/app/catalog/clients',
-            label: 'Clientes',
-            description: 'Cartera y portales',
-            icon: 'briefcase',
-            moduleId: 'clients',
-        },
     ];
     return all.filter((l) => isVisible(l.moduleId));
 });
@@ -318,7 +313,7 @@ const designTiles = computed(() => {
         { label: 'Formularios', value: d.forms, to: '/app/design/forms', moduleId: 'design_forms' },
         { label: 'Reportes', value: d.reports, to: '/app/design/reports', moduleId: 'design_reports' },
         { label: 'Workflows', value: d.workflows, to: '/app/design/workflows', moduleId: 'design_workflows' },
-        { label: 'Tipos de servicio', value: d.routine_types, to: '/app/routines/types', moduleId: 'design_routine_types' },
+        { label: 'Tipos de servicio', value: d.routine_types, to: '/app/services/types', moduleId: 'design_routine_types' },
     ].filter((t) => isVisible(t.moduleId));
 });
 
@@ -377,44 +372,55 @@ watch(
     { immediate: true },
 );
 
-const primaryKpis = computed(() => [
-    {
-        key: 'pending',
-        label: 'Pendientes de validación',
-        value: summary.value?.routines_pending_validation ?? '—',
-        to: '/app/validation',
-        icon: 'shield' as NavIconName,
-        tone: 'amber' as const,
-        hint: 'Requieren tu revisión',
-    },
-    {
-        key: 'assigned',
-        label: 'Servicios asignados',
-        value: summary.value?.routines_assigned ?? '—',
-        to: '/app/routines?status=assigned',
-        icon: 'clipboard-list' as NavIconName,
-        tone: 'sky' as const,
-        hint: 'En cola de ejecución',
-    },
-    {
-        key: 'validated',
-        label: 'Validadas',
-        value: summary.value?.routines_validated ?? '—',
-        to: '/app/routines?status=validated',
-        icon: 'chart-bar' as NavIconName,
-        tone: 'emerald' as const,
-        hint: 'Listas para cierre',
-    },
-    {
-        key: 'invoices',
-        label: 'Facturas borrador',
-        value: summary.value?.invoices_draft ?? '—',
-        to: '/app/billing',
-        icon: 'receipt' as NavIconName,
-        tone: 'violet' as const,
-        hint: 'Pendientes de emisión',
-    },
-]);
+const primaryKpis = computed(() => {
+    const canValidate = can('routines.validate');
+    const kpis = [
+        {
+            key: 'pending',
+            label: 'Pendientes de validación',
+            value: summary.value?.routines_pending_validation ?? '—',
+            // Técnicos no tienen cola de validación: llevan a sus servicios filtrados.
+            to: canValidate ? '/app/validation' : '/app/services?status=pending_validation',
+            icon: 'shield' as NavIconName,
+            tone: 'amber' as const,
+            hint: canValidate ? 'Requieren tu revisión' : 'Enviadas, en revisión',
+        },
+        {
+            key: 'assigned',
+            label: 'Servicios asignados',
+            value: summary.value?.routines_assigned ?? '—',
+            to: '/app/services?status=assigned',
+            icon: 'clipboard-list' as NavIconName,
+            tone: 'sky' as const,
+            hint: 'En cola de ejecución',
+        },
+        {
+            key: 'validated',
+            label: 'Validadas',
+            value: summary.value?.routines_validated ?? '—',
+            to: '/app/services?status=validated',
+            icon: 'chart-bar' as NavIconName,
+            tone: 'emerald' as const,
+            hint: 'Listas para cierre',
+        },
+        {
+            key: 'invoices',
+            label: 'Facturas borrador',
+            value: summary.value?.invoices_draft ?? '—',
+            to: '/app/billing',
+            icon: 'receipt' as NavIconName,
+            tone: 'violet' as const,
+            hint: 'Pendientes de emisión',
+        },
+    ];
+
+    return kpis.filter((k) => {
+        if (k.key === 'invoices') {
+            return isVisible('billing');
+        }
+        return true;
+    });
+});
 </script>
 
 <template>
@@ -469,7 +475,7 @@ const primaryKpis = computed(() => [
                         <h2 class="dashboard-panel__title">Flujo de servicios</h2>
                         <p class="dashboard-panel__desc">{{ pipelineTotal }} en el ciclo operativo</p>
                     </div>
-                    <RouterLink to="/app/routines" class="dashboard-panel__link">Ver todas</RouterLink>
+                    <RouterLink to="/app/services" class="dashboard-panel__link">Ver todas</RouterLink>
                 </div>
                 <div class="dashboard-pipeline-bar" role="img" :aria-label="`Distribución de ${pipelineTotal} servicios`">
                     <div
@@ -527,16 +533,17 @@ const primaryKpis = computed(() => [
         </div>
 
         <div class="dashboard-secondary-grid">
-            <GlassCard v-if="enabledWidgets.has('operations') && isVisible('routines') && (summary?.focus_routines?.length ?? 0) > 0" padding="lg" class="dashboard-panel">
+            <GlassCard v-if="enabledWidgets.has('operations') && isVisible('routines')" padding="lg" class="dashboard-panel">
                 <div class="dashboard-panel__head">
                     <div>
                         <h2 class="dashboard-panel__title">Prioridad operativa</h2>
                         <p class="dashboard-panel__desc">Validación y ejecución pendiente</p>
                     </div>
+                    <RouterLink to="/app/services" class="dashboard-panel__link">Ver todos</RouterLink>
                 </div>
-                <ul class="dashboard-focus-list">
+                <ul v-if="(summary?.focus_routines?.length ?? 0) > 0" class="dashboard-focus-list">
                     <li v-for="r in summary?.focus_routines" :key="r.id">
-                        <RouterLink :to="`/app/routines/${r.id}`" class="dashboard-focus-item">
+                        <RouterLink :to="`/app/services/${r.id}`" class="dashboard-focus-item">
                             <div class="dashboard-focus-item__main">
                                 <span class="dashboard-focus-item__title">
                                     {{ r.routine_type_name ?? 'Servicio' }}
@@ -550,6 +557,13 @@ const primaryKpis = computed(() => [
                         </RouterLink>
                     </li>
                 </ul>
+                <div v-else class="portal-table-empty py-2">
+                    <p class="text-portal-heading text-sm font-semibold">Sin servicios urgentes</p>
+                    <p class="text-portal-muted mt-1 text-sm">No hay pendientes de validación ni ejecución ahora.</p>
+                    <RouterLink to="/app/services" class="text-portal-link mt-3 inline-block text-sm font-medium">
+                        Ir a servicios
+                    </RouterLink>
+                </div>
             </GlassCard>
 
             <GlassCard

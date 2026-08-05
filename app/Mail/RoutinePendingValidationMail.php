@@ -26,7 +26,7 @@ class RoutinePendingValidationMail extends Mailable
     {
         $assetTag = $this->routine->asset?->tag ?? '—';
         $typeName = $this->routine->routineType?->name ?? 'Servicio';
-        $url = rtrim(config('app.url'), '/').'/app/routines/'.$this->routine->id;
+        $url = rtrim(config('app.url'), '/').'/app/services/'.$this->routine->id;
 
         return new Content(
             text: 'mail.routine-pending-validation',

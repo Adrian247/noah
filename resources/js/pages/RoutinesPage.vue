@@ -47,7 +47,7 @@ const router = useRouter();
 const company = useCompanyStore();
 const toast = useToast();
 const confirm = useConfirm();
-const { canWriteModule } = useModuleAccess();
+const { canWriteModule, isVisible } = useModuleAccess();
 const routines = ref<Routine[]>([]);
 const loading = ref(true);
 const statusFilter = ref((route.query.status as string) ?? '');
@@ -55,7 +55,7 @@ const createLoading = ref(false);
 const clientContextLoading = ref(false);
 
 function openRoutine(id: number) {
-    void router.push(`/app/routines/${id}`);
+    void router.push(`/app/services/${id}`);
 }
 
 const showCreate = ref(false);
@@ -73,7 +73,12 @@ const createForm = ref({
     scheduled_at: '',
 });
 
-const canCreate = computed(() => canWriteModule('routines'));
+const canCreate = computed(
+    () =>
+        canWriteModule('routines') &&
+        isVisible('clients') &&
+        isVisible('design_routine_types'),
+);
 const isAdmin = computed(() => company.current?.role === 'administrator');
 
 const selectedType = computed(
@@ -373,7 +378,7 @@ async function createDemoRoutine() {
         toast.success('Servicio demo creado con datos de prueba.');
         await load();
         if (res.data?.id) {
-            await router.push(`/app/routines/${res.data.id}`);
+            await router.push(`/app/services/${res.data.id}`);
         }
     } catch (e) {
         toast.error((e as Error).message);
@@ -392,8 +397,13 @@ watch(
 
 onMounted(async () => {
     await load();
+    // Precarga silenciosa solo si ya puede crear (evita toast 403 al entrar a la lista).
     if (canCreate.value) {
-        await loadCreateData();
+        try {
+            await loadCreateData();
+        } catch {
+            // loadCreateData ya notifica error; no bloquear la lista.
+        }
     }
 });
 </script>
@@ -401,9 +411,8 @@ onMounted(async () => {
 <template>
     <div class="portal-page" data-tour="page-routines">
         <SectionSubnav :items="routinesSectionNav" />
-        <div class="flex flex-wrap items-start justify-between gap-3">
-            <PageHeader class="flex-1" title="Servicios" subtitle="Filtra por estado y crea nuevas asignaciones." />
-            <div class="flex shrink-0 flex-wrap gap-2">
+        <PageHeader title="Servicios" subtitle="Filtra por estado y crea nuevas asignaciones.">
+            <template #actions>
                 <AppButton
                     v-if="isAdmin"
                     type="button"
@@ -414,8 +423,8 @@ onMounted(async () => {
                     Generar servicio demo
                 </AppButton>
                 <AppButton v-if="canCreate" type="button" @click="openCreate">Nuevo servicio</AppButton>
-            </div>
-        </div>
+            </template>
+        </PageHeader>
         <div class="flex flex-wrap gap-2">
             <button
                 v-for="chip in statusChips"
@@ -431,7 +440,14 @@ onMounted(async () => {
                 {{ chip.label }}
             </button>
         </div>
-        <p v-if="loading" class="text-portal-muted">Cargando…</p>
+        <div v-if="loading" class="portal-list-panel overflow-hidden" aria-busy="true" aria-label="Cargando servicios">
+            <div v-for="n in 5" :key="n" class="portal-skeleton-row">
+                <div class="portal-skeleton h-4 w-16" />
+                <div class="portal-skeleton h-4 flex-1" />
+                <div class="portal-skeleton h-4 w-24" />
+                <div class="portal-skeleton h-4 w-20" />
+            </div>
+        </div>
         <ConfigurableDataTable
             v-else
             table-id="routines"
@@ -439,15 +455,26 @@ onMounted(async () => {
             :rows="routines"
             row-key="id"
             clickable
-            empty-text="Sin servicios."
+            :empty-text="statusFilter ? 'Ningún servicio en este filtro' : 'Aún no hay servicios'"
+            :empty-description="
+                statusFilter
+                    ? 'Prueba otro estado o limpia el filtro para ver todos.'
+                    : 'Crea una asignación para empezar a operar en campo.'
+            "
             @row-click="(row) => openRoutine((row as Routine).id)"
         >
+            <template v-if="canCreate || statusFilter" #empty-action>
+                <AppButton v-if="statusFilter" type="button" variant="secondary" @click="statusFilter = ''; load()">
+                    Ver todos
+                </AppButton>
+                <AppButton v-if="canCreate" type="button" @click="openCreate">Nuevo servicio</AppButton>
+            </template>
             <template #routine="{ row }">
                 <p class="text-portal-heading font-medium">
                     {{ (row as Routine).routine_type?.name ?? 'Servicio' }}
                     <span
                         v-if="(row as Routine).is_demo"
-                        class="ml-1.5 inline-flex rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-200"
+                        class="ml-1.5 inline-flex rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 ring-1 ring-amber-500/25 dark:text-amber-200"
                     >
                         Demo
                     </span>

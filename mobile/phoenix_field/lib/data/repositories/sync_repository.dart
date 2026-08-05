@@ -133,6 +133,29 @@ class SyncRepository {
     String? signatureLocalId,
     List<Map<String, dynamic>> consumptions = const [],
   }) async {
+    final stockError = await _validateConsumptionsStock(consumptions);
+    if (stockError != null) {
+      throw StateError(stockError);
+    }
+
+    // Sustituir envíos fallidos/pendientes previos del mismo servicio.
+    final previous = await (_db.select(_db.outboxEvents)
+          ..where((t) => t.eventType.equals('execution.submitted')))
+        .get();
+    for (final row in previous) {
+      if (row.status == 'synced') {
+        continue;
+      }
+      try {
+        final payload = jsonDecode(row.payloadJson);
+        if (payload is Map && _routineIdFromPayload(Map<String, dynamic>.from(payload)) == routineId) {
+          await (_db.delete(_db.outboxEvents)..where((t) => t.eventId.equals(row.eventId))).go();
+        }
+      } catch (_) {
+        // ignore corrupt payload
+      }
+    }
+
     final eventId = 'evt-${_uuid.v4()}';
     final payload = {
       'routine_id': routineId,
@@ -189,11 +212,73 @@ class SyncRepository {
     return eventId;
   }
 
+  Future<String?> _validateConsumptionsStock(
+    List<Map<String, dynamic>> consumptions,
+  ) async {
+    if (consumptions.isEmpty) {
+      return null;
+    }
+    final supplies = await getSupplyItems();
+    final byId = <int, Map<String, dynamic>>{};
+    for (final item in supplies) {
+      final id = item['id'];
+      final parsed = id is int ? id : (id is num ? id.toInt() : int.tryParse('$id'));
+      if (parsed != null) {
+        byId[parsed] = item;
+      }
+    }
+
+    for (final line in consumptions) {
+      final supplyIdRaw = line['supply_item_id'];
+      final supplyId = supplyIdRaw is int
+          ? supplyIdRaw
+          : (supplyIdRaw is num ? supplyIdRaw.toInt() : int.tryParse('$supplyIdRaw'));
+      final qty = line['quantity'];
+      final quantity = qty is num ? qty.toDouble() : double.tryParse('$qty') ?? 0;
+      final usage = line['usage_type']?.toString() ?? 'out';
+      if (supplyId == null || quantity <= 0) {
+        continue;
+      }
+      if (!const {'out', 'consignment', 'write_off'}.contains(usage)) {
+        continue;
+      }
+      final supply = byId[supplyId];
+      if (supply == null) {
+        return 'Insumo #$supplyId no está en caché local. Sincroniza e intenta de nuevo.';
+      }
+      final stockRaw = supply['quantity_on_hand'];
+      final stock = stockRaw is num ? stockRaw.toDouble() : double.tryParse('$stockRaw') ?? 0;
+      if (quantity > stock) {
+        final label = '${supply['sku'] ?? ''} ${supply['name'] ?? 'insumo'}'.trim();
+        return 'Stock insuficiente de «$label». Disponible: $stock, solicitado: $quantity.';
+      }
+    }
+    return null;
+  }
+
   Future<SyncResult> syncNow() async {
     final deviceId = _session.deviceId;
     if (deviceId == null || deviceId.isEmpty) {
       throw StateError('device_id no configurado');
     }
+
+    // Reintentar eventos previamente rechazados junto con los pendientes.
+    await (_db.update(_db.outboxEvents)..where((t) => t.status.equals('error')))
+        .write(
+      const OutboxEventsCompanion(
+        status: Value('pending'),
+        errorMessage: Value(null),
+      ),
+    );
+
+    // Reintentar fotos marcadas en error.
+    await (_db.update(_db.pendingMedia)..where((t) => t.status.equals('error')))
+        .write(
+      const PendingMediaCompanion(
+        status: Value('pending'),
+        errorMessage: Value(null),
+      ),
+    );
 
     await _preparePendingEvents();
 
@@ -201,15 +286,26 @@ class SyncRepository {
           ..where((t) => t.status.equals('pending')))
         .get();
 
-    final events = pending
-        .map(
-          (row) => {
-            'event_id': row.eventId,
-            'event_type': row.eventType,
-            'payload': jsonDecode(row.payloadJson),
-          },
-        )
-        .toList();
+    final events = <Map<String, dynamic>>[];
+    for (final row in pending) {
+      final payload = jsonDecode(row.payloadJson);
+      if (payload is! Map) {
+        continue;
+      }
+      // No empujar ejecuciones con fotos locales sin resolver.
+      if (row.eventType == 'execution.submitted') {
+        final responses = payload['responses'];
+        if (responses is Map &&
+            await _media.hasUnresolvedLocalPaths(Map<String, dynamic>.from(responses))) {
+          continue;
+        }
+      }
+      events.add({
+        'event_id': row.eventId,
+        'event_type': row.eventType,
+        'payload': payload,
+      });
+    }
 
     final result = await _syncApi.sync(
       deviceId: deviceId,
@@ -243,6 +339,7 @@ class SyncRepository {
                 errorMessage: Value(reason),
               ),
             );
+            await _markRoutineSyncErrorForEvent(eventId);
           }
         }
       }
@@ -267,6 +364,39 @@ class SyncRepository {
       routinesPulled: (pull?['routines'] as List<dynamic>? ?? []).length,
       mediaPending: mediaPending,
     );
+  }
+
+  Future<void> retryFailedOutbox() async {
+    await (_db.update(_db.outboxEvents)..where((t) => t.status.equals('error')))
+        .write(
+      const OutboxEventsCompanion(
+        status: Value('pending'),
+        errorMessage: Value(null),
+      ),
+    );
+    await syncNow();
+  }
+
+  Future<void> discardOutboxEvent(String eventId) async {
+    final row = await (_db.select(_db.outboxEvents)
+          ..where((t) => t.eventId.equals(eventId)))
+        .getSingleOrNull();
+    if (row == null) {
+      return;
+    }
+    final payload = jsonDecode(row.payloadJson);
+    await (_db.delete(_db.outboxEvents)..where((t) => t.eventId.equals(eventId))).go();
+    if (payload is Map) {
+      final routineId = payload['routine_id'];
+      final id = routineId is int
+          ? routineId
+          : (routineId is num ? routineId.toInt() : int.tryParse('$routineId'));
+      if (id != null) {
+        await (_db.update(_db.localRoutines)..where((t) => t.id.equals(id))).write(
+          const LocalRoutinesCompanion(localSyncStatus: Value('synced')),
+        );
+      }
+    }
   }
 
   Future<int> countPendingOutbox() async {
@@ -300,8 +430,8 @@ class SyncRepository {
       }
 
       final payload = jsonDecode(row.payloadJson) as Map<String, dynamic>;
-      final routineId = payload['routine_id'];
-      if (routineId is! int) {
+      final routineId = _routineIdFromPayload(payload);
+      if (routineId == null) {
         continue;
       }
 
@@ -336,11 +466,37 @@ class SyncRepository {
       return;
     }
     final payload = jsonDecode(row.payloadJson) as Map<String, dynamic>;
-    final routineId = payload['routine_id'];
-    if (routineId is int) {
+    final routineId = _routineIdFromPayload(payload);
+    if (routineId != null) {
       await (_db.update(_db.localRoutines)..where((t) => t.id.equals(routineId)))
           .write(const LocalRoutinesCompanion(localSyncStatus: Value('synced')));
     }
+  }
+
+  Future<void> _markRoutineSyncErrorForEvent(String eventId) async {
+    final row = await (_db.select(_db.outboxEvents)
+          ..where((t) => t.eventId.equals(eventId)))
+        .getSingleOrNull();
+    if (row == null) {
+      return;
+    }
+    final payload = jsonDecode(row.payloadJson) as Map<String, dynamic>;
+    final routineId = _routineIdFromPayload(payload);
+    if (routineId != null) {
+      await (_db.update(_db.localRoutines)..where((t) => t.id.equals(routineId)))
+          .write(const LocalRoutinesCompanion(localSyncStatus: Value('sync_error')));
+    }
+  }
+
+  int? _routineIdFromPayload(Map<String, dynamic> payload) {
+    final routineId = payload['routine_id'];
+    if (routineId is int) {
+      return routineId;
+    }
+    if (routineId is num) {
+      return routineId.toInt();
+    }
+    return int.tryParse(routineId?.toString() ?? '');
   }
 
   Future<void> _persistPull(Map<String, dynamic> pull) async {

@@ -5,12 +5,17 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Services\Audit\AuditLogger;
+use App\Services\Identity\ClientPortalAccountService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class ClientController extends Controller
 {
+    public function __construct(
+        private readonly ClientPortalAccountService $portalAccounts,
+    ) {}
+
     public function index(): JsonResponse
     {
         $clients = Client::query()
@@ -31,11 +36,15 @@ class ClientController extends Controller
     {
         $data = $this->validated($request);
 
-        $client = Client::query()->create($data);
+        $client = Client::query()->create($data)->fresh();
+        $portal = $this->portalAccounts->syncForClient($client);
 
-        $audit->fromRequest($request, 'client.created', Client::class, $client->id);
+        $audit->fromRequest($request, 'client.created', Client::class, $client->id, [
+            'portal_user_id' => $portal['user']->id,
+            'portal_created' => $portal['created'],
+        ]);
 
-        return response()->json(['data' => self::formatClient($client)], 201);
+        return response()->json(['data' => self::formatClient($client->fresh())], 201);
     }
 
     public function update(Request $request, Client $client, AuditLogger $audit): JsonResponse
@@ -43,6 +52,13 @@ class ClientController extends Controller
         $data = $this->validated($request, true);
 
         $client->update($data);
+        $client = $client->fresh();
+
+        if ($client->is_active && filled($client->billing_email)) {
+            $this->portalAccounts->syncForClient($client);
+        } else {
+            $this->portalAccounts->deactivateForClient($client);
+        }
 
         $audit->fromRequest($request, 'client.updated', Client::class, $client->id);
 
@@ -70,6 +86,7 @@ class ClientController extends Controller
     public function destroy(Request $request, Client $client, AuditLogger $audit): JsonResponse
     {
         $client->update(['is_active' => false]);
+        $this->portalAccounts->deactivateForClient($client);
 
         $audit->fromRequest($request, 'client.deactivated', Client::class, $client->id);
 
@@ -81,19 +98,17 @@ class ClientController extends Controller
      */
     private function validated(Request $request, bool $partial = false): array
     {
-        $rules = [
+        return $request->validate([
             'code' => ['nullable', 'string', 'max:64'],
             'legal_name' => [$partial ? 'sometimes' : 'required', 'string', 'max:255'],
             'trade_name' => ['nullable', 'string', 'max:255'],
             'tax_id' => ['nullable', 'string', 'max:64'],
-            'billing_email' => ['nullable', 'email', 'max:255'],
+            'billing_email' => [$partial ? 'sometimes' : 'required', 'email', 'max:255'],
             'billing_address' => ['nullable', 'string', 'max:2000'],
             'currency' => ['nullable', 'string', 'size:3'],
             'is_active' => ['sometimes', 'boolean'],
             'notes' => ['nullable', 'string', 'max:5000'],
-        ];
-
-        return $request->validate($rules);
+        ]);
     }
 
     /**
@@ -113,6 +128,8 @@ class ClientController extends Controller
             'currency' => $client->currency,
             'is_active' => $client->is_active,
             'notes' => $client->notes,
+            'portal_login_email' => $client->billing_email,
+            'portal_password_hint' => ClientPortalAccountService::portalPassword(),
         ];
     }
 

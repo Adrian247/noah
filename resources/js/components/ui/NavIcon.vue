@@ -32,6 +32,8 @@ export type NavIconName =
     | 'trash'
     | 'arrows-exchange'
     | 'eye'
+    | 'check'
+    | 'x'
     | 'chevron-up'
     | 'chevron-down'
     | 'copy'
@@ -205,6 +207,12 @@ const sizeClass = computed(() => (props.size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'));
         <template v-else-if="name === 'eye'">
             <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
             <circle cx="12" cy="12" r="3" />
+        </template>
+        <template v-else-if="name === 'check'">
+            <path d="M5 12.5 10 17.5 19 7" />
+        </template>
+        <template v-else-if="name === 'x'">
+            <path d="M6 6l12 12M18 6 6 18" />
         </template>
         <template v-else-if="name === 'chevron-up'">
             <path d="M6 15l6-6 6 6" />

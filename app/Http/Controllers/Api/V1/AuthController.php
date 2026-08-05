@@ -43,9 +43,11 @@ class AuthController extends Controller
 
         $this->recordAccessAudit($audit, $user, 'auth.login', $access, $request->ip());
 
+        $user->forceFill(['last_login_at' => now()])->save();
+
         return response()->json([
             'token' => $token,
-            'user' => ProfileController::formatUser($user),
+            'user' => ProfileController::formatUser($user->fresh()),
             'companies' => $directory->companiesForUser($user)->values(),
         ]);
     }

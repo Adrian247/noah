@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phoenix_field/data/local/app_database.dart';
 import 'package:phoenix_field/data/repositories/sync_repository.dart';
+import 'package:phoenix_field/shared/routine/routine_context.dart';
 import 'package:phoenix_field/shared/routine/routine_schedule_filter.dart';
 import 'package:phoenix_field/shared/routine/routine_status_labels.dart';
 
@@ -192,6 +193,7 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
                   ),
                 ...routines.map((routine) {
                   final payload = _decodePayload(routine.payloadJson);
+                  final ctx = RoutineContext.fromPayload(payload, fallbackId: routine.id);
                   final serverStatus = routine.status;
                   final scheduled = payload['scheduled_at']?.toString();
                   final statusColor = routineStatusColor(serverStatus);
@@ -216,7 +218,7 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
                                       children: [
                                         Expanded(
                                           child: Text(
-                                            _routineTitle(payload, routine.id),
+                                            ctx.title,
                                             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                                   fontWeight: FontWeight.w700,
                                                 ),
@@ -235,6 +237,48 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
                                         _SyncBadge(status: routine.localSyncStatus),
                                       ],
                                     ),
+                                    if (ctx.listSubtitles.isNotEmpty) ...[
+                                      const SizedBox(height: 8),
+                                      ...ctx.listSubtitles.map(
+                                        (line) => Padding(
+                                          padding: const EdgeInsets.only(bottom: 3),
+                                          child: Row(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Icon(
+                                                line.startsWith('Sitio')
+                                                    ? Icons.place_outlined
+                                                    : line.startsWith('Ubicación')
+                                                        ? Icons.my_location_outlined
+                                                        : line.startsWith('Activo') ||
+                                                                line.startsWith('Artículo')
+                                                            ? Icons.inventory_2_outlined
+                                                            : line.startsWith('Cliente')
+                                                                ? Icons.business_outlined
+                                                                : Icons.circle,
+                                                size: 14,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withValues(alpha: 0.55),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Expanded(
+                                                child: Text(
+                                                  line,
+                                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .onSurface
+                                                            .withValues(alpha: 0.78),
+                                                      ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                     const SizedBox(height: 6),
                                     Text(
                                       rejection != null
@@ -290,23 +334,6 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
     } catch (_) {
       return {};
     }
-  }
-
-  String _routineTitle(Map<String, dynamic> map, int fallbackId) {
-    final type = map['routine_type']?['name']?.toString();
-    final asset = map['asset']?['tag']?.toString();
-    final client = map['client']?['trade_name']?.toString() ??
-        map['client']?['legal_name']?.toString();
-    final subject = (asset != null && asset.isNotEmpty)
-        ? asset
-        : (client != null && client.isNotEmpty ? client : null);
-    if (type != null && subject != null) {
-      return '$type — $subject';
-    }
-    if (type != null) {
-      return type;
-    }
-    return 'Servicio #${map['id'] ?? fallbackId}';
   }
 
   String _formatScheduled(String iso) {

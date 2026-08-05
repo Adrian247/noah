@@ -58,7 +58,7 @@ const router = createRouter({
                     meta: { title: 'Dashboard' },
                 },
                 {
-                    path: 'routines',
+                    path: 'services',
                     name: 'routines',
                     component: () => import('@/pages/RoutinesPage.vue'),
                     meta: { title: 'Servicios', moduleId: 'routines' },
@@ -74,16 +74,27 @@ const router = createRouter({
                     },
                 },
                 {
-                    path: 'routines/types',
+                    path: 'services/types',
                     name: 'routine-types',
                     component: () => import('@/pages/RoutineTypesPage.vue'),
                     meta: { title: 'Tipos de servicio', moduleId: 'design_routine_types' },
                 },
                 {
-                    path: 'routines/:id',
+                    path: 'services/:id',
                     name: 'routine-detail',
                     component: () => import('@/pages/RoutineDetailPage.vue'),
                     meta: { title: 'Detalle servicio', moduleId: 'routines' },
+                },
+                // Compat: rutas antiguas /app/routines → /app/services
+                { path: 'routines', redirect: (to) => ({ path: '/app/services', query: to.query, hash: to.hash }) },
+                { path: 'routines/types', redirect: '/app/services/types' },
+                {
+                    path: 'routines/:id',
+                    redirect: (to) => ({
+                        path: `/app/services/${String(to.params.id)}`,
+                        query: to.query,
+                        hash: to.hash,
+                    }),
                 },
                 {
                     path: 'billing',
@@ -294,7 +305,7 @@ const router = createRouter({
                     path: 'platform/predictive',
                     name: 'platform-predictive',
                     component: () => import('@/pages/PlatformPredictiveAlgorithmsPage.vue'),
-                    meta: { title: 'Algoritmo predictivo', requiresPlatformAdmin: true },
+                    meta: { title: 'Algoritmos predictivos', requiresPlatformAdmin: true },
                 },
                 {
                     path: 'platform/role-permissions',

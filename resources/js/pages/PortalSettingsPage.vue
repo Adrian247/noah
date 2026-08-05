@@ -10,8 +10,6 @@ import AlertBanner from '@/components/ui/AlertBanner.vue';
 import MaterialField from '@/components/ui/MaterialField.vue';
 
 type PortalPayload = {
-    hero_image_url: string | null;
-    hero_image_alt: string | null;
     service_title: string | null;
     service_description: string | null;
     service_highlights: string[];
@@ -24,8 +22,6 @@ type PortalPayload = {
 
 const toast = useToast();
 const form = ref<PortalPayload>({
-    hero_image_url: '',
-    hero_image_alt: '',
     service_title: '',
     service_description: '',
     service_highlights: ['', '', ''],
@@ -54,11 +50,17 @@ async function load() {
     try {
         const res = await api<{ data: PortalPayload }>('/portal/settings');
         form.value = {
-            ...res.data,
+            service_title: res.data.service_title ?? '',
+            service_description: res.data.service_description ?? '',
             service_highlights:
                 res.data.service_highlights?.length > 0
                     ? [...res.data.service_highlights]
                     : ['', '', ''],
+            help_title: res.data.help_title ?? '',
+            help_text: res.data.help_text ?? '',
+            contact_email: res.data.contact_email ?? '',
+            contact_phone: res.data.contact_phone ?? '',
+            contact_hours: res.data.contact_hours ?? '',
         };
     } catch (e) {
         toast.error((e as Error).message);
@@ -91,22 +93,17 @@ onMounted(load);
 
 <template>
     <div class="max-w-3xl">
-        <RouterLink to="/app/dashboard" class="text-portal-link text-sm underline">← Panel</RouterLink>
+        <RouterLink to="/app/settings#portal-login" class="text-portal-link text-sm underline">← Ajustes</RouterLink>
         <PageHeader
             title="Portal de login"
-            subtitle="Textos de ayuda, contacto, servicio e imagen del panel derecho en la pantalla de acceso (visible sin autenticación)."
+            subtitle="Textos de ayuda, contacto y servicio en la pantalla de acceso (visible sin autenticación)."
         />
         <AlertBanner variant="info" class="mb-4">
-            Los cambios se reflejan de inmediato en la pantalla de inicio de sesión. Usa una URL de imagen HTTPS (p. ej. almacenamiento propio o CDN).
+            Los cambios se reflejan de inmediato en la pantalla de inicio de sesión. El fondo visual del login es
+            propio de Phoenix (sin URL externa de imagen).
         </AlertBanner>
         <GlassCard v-if="loading" padding="md">Cargando…</GlassCard>
         <GlassCard v-else padding="lg" class="space-y-8">
-            <fieldset class="space-y-4">
-                <legend class="text-portal-heading text-sm font-semibold">Imagen industrial (panel derecho)</legend>
-                <MaterialField v-model="form.hero_image_url" label="URL de imagen" type="url" />
-                <MaterialField v-model="form.hero_image_alt" label="Texto alternativo" />
-            </fieldset>
-
             <fieldset class="space-y-4">
                 <legend class="text-portal-heading text-sm font-semibold">Servicio</legend>
                 <MaterialField v-model="form.service_title" label="Título" />

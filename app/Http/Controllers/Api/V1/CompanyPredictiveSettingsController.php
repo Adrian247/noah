@@ -24,6 +24,7 @@ class CompanyPredictiveSettingsController extends Controller
         abort_if($company === null, 400, 'Company context required.');
 
         $selected = $company->predictiveAlgorithmVersion;
+        $algorithms = $this->versions->companyAlgorithmsStatus($company);
 
         return response()->json([
             'data' => [
@@ -34,7 +35,10 @@ class CompanyPredictiveSettingsController extends Controller
                     'semver' => $selected->semver,
                     'kind' => $selected->kind,
                 ] : null,
+                // Compat: versiones seleccionables de mantenimiento.
                 'available_versions' => $this->versions->publishedForCompanies(),
+                // Estado por familia (mantenimiento / manufactura / inventario).
+                'algorithms' => $algorithms,
                 'legal_notice' => $this->legalNotice(),
             ],
         ]);
@@ -59,7 +63,7 @@ class CompanyPredictiveSettingsController extends Controller
             }
             $kind = \App\Enums\PredictiveAlgorithmKind::tryFromFlexible($version->kind);
             if ($kind !== \App\Enums\PredictiveAlgorithmKind::Maintenance) {
-                abort(422, 'La empresa solo puede fijar una versión de mantenimiento (hazard).');
+                abort(422, 'La empresa solo puede fijar una versión de mantenimiento. Manufactura e inventario usan la publicada más reciente.');
             }
         }
 
@@ -87,10 +91,10 @@ class CompanyPredictiveSettingsController extends Controller
         return 'Permitir a Phoenix recopilar información de servicios para entrenamiento. '
             .'Al activar esta opción, Phoenix podrá usar el historial de servicios aplicados '
             .'(fechas, tipos, resultados de validación, consumos y comentarios técnicos) '
-            .'únicamente para entrenar y mejorar el algoritmo predictivo dentro de la plataforma. '
+            .'únicamente para entrenar y mejorar los algoritmos predictivos dentro de la plataforma. '
             .'Esta información no se vende, no se comparte con terceros ni se expone fuera de '
             .'la aplicación Phoenix, salvo obligación legal. El tratamiento se limita a fines '
-            .'de confiabilidad operativa y mejora del modelo; puedes desactivar la recolección '
+            .'de confiabilidad operativa y mejora de los modelos; puedes desactivar la recolección '
             .'en cualquier momento. Los datos de clientes sin este permiso no entran al corpus '
             .'de entrenamiento multi-empresa.';
     }

@@ -395,7 +395,7 @@ onMounted(async () => {
                                 v-if="selectedRoutine?.id"
                                 icon="chevron-right"
                                 label="Abrir servicio"
-                                :to="`/app/routines/${selectedRoutine.id}`"
+                                :to="`/app/services/${selectedRoutine.id}`"
                             />
                         </div>
                     </div>
@@ -520,7 +520,7 @@ onMounted(async () => {
                     <div v-if="(row as Entry).routine" class="space-y-0.5">
                         <RouterLink
                             class="text-portal-link text-sm font-medium hover:underline"
-                            :to="`/app/routines/${(row as Entry).routine!.id}`"
+                            :to="`/app/services/${(row as Entry).routine!.id}`"
                         >
                             {{ routineTitle((row as Entry).routine!) }}
                         </RouterLink>

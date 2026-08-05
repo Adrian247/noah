@@ -300,6 +300,109 @@ class PredictiveAlgorithmVersionService
             ->all();
     }
 
+    public function publishedVersion(PredictiveAlgorithmKind $kind): ?PredictiveAlgorithmVersion
+    {
+        $kinds = $kind === PredictiveAlgorithmKind::Maintenance
+            ? [PredictiveAlgorithmKind::Maintenance->value, PredictiveAlgorithmKind::LEGACY_MAINTENANCE]
+            : [$kind->value];
+
+        return PredictiveAlgorithmVersion::query()
+            ->where('status', PredictiveAlgorithmVersion::STATUS_PUBLISHED)
+            ->whereIn('kind', $kinds)
+            ->orderByDesc('published_at')
+            ->first();
+    }
+
+    /**
+     * Metadata de versión publicada para respuestas de predicción (todas las familias).
+     *
+     * @return array<string, mixed>
+     */
+    public function publishedModelDescriptor(PredictiveAlgorithmKind $kind, string $selection = 'published_latest'): array
+    {
+        $version = $this->publishedVersion($kind);
+
+        return [
+            'kind' => $kind->value,
+            'kind_label' => $kind->label(),
+            'version' => $version?->semver ?? $kind->value,
+            'algorithm_version_id' => $version?->id,
+            'algorithm_semver' => $version?->semver,
+            'algorithm_kind' => $kind->value,
+            'selection' => $selection,
+            'feature_source' => match ($kind) {
+                PredictiveAlgorithmKind::Maintenance => 'routines',
+                PredictiveAlgorithmKind::Manufacturing => 'manufacturing_services',
+                PredictiveAlgorithmKind::Inventory => 'inventory_consumptions',
+            },
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    public function attachPublishedModel(array $payload, PredictiveAlgorithmKind $kind, string $selection = 'published_latest'): array
+    {
+        $payload['model'] = $this->publishedModelDescriptor($kind, $selection);
+
+        return $payload;
+    }
+
+    /**
+     * Estado de las 3 familias para la UI de configuración de empresa.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function companyAlgorithmsStatus(?Company $company): array
+    {
+        $pinnedId = $company?->predictive_algorithm_version_id;
+        $pinned = $pinnedId
+            ? PredictiveAlgorithmVersion::query()->find($pinnedId)
+            : null;
+
+        $status = [];
+        foreach (PredictiveAlgorithmKind::cases() as $kind) {
+            $latest = $this->publishedVersion($kind);
+            $selectable = $kind === PredictiveAlgorithmKind::Maintenance;
+            $active = $latest;
+            $selectionMode = $latest === null ? 'unavailable' : 'auto';
+
+            if ($selectable && $pinned !== null) {
+                $pinnedKind = PredictiveAlgorithmKind::tryFromFlexible($pinned->kind);
+                if ($pinnedKind === PredictiveAlgorithmKind::Maintenance && $pinned->isPublished()) {
+                    $active = $pinned;
+                    $selectionMode = 'pinned';
+                }
+            }
+
+            $status[] = [
+                'kind' => $kind->value,
+                'kind_label' => $kind->label(),
+                'description' => $kind->description(),
+                'selectable' => $selectable,
+                'selection_mode' => $selectionMode,
+                'selection_hint' => match (true) {
+                    ! $selectable => 'Usa automáticamente la versión publicada más reciente de plataforma.',
+                    $selectionMode === 'pinned' => 'Versión fijada por la empresa.',
+                    $selectionMode === 'auto' => 'Sin fijar: usa la publicada más reciente.',
+                    default => 'Aún no hay versión publicada de esta familia.',
+                },
+                'selected_version_id' => $selectable ? $pinnedId : null,
+                'active_version' => $active ? [
+                    'id' => $active->id,
+                    'semver' => $active->semver,
+                    'kind' => $active->kind,
+                    'kind_label' => PredictiveAlgorithmKind::tryFromFlexible($active->kind)?->label() ?? $active->kind,
+                    'published_at' => $active->published_at?->toIso8601String(),
+                ] : null,
+                'available_versions' => $selectable ? $this->publishedForCompanies() : [],
+            ];
+        }
+
+        return $status;
+    }
+
     /**
      * Calibración de la versión publicada más reciente de una familia de algoritmo.
      *
@@ -307,15 +410,7 @@ class PredictiveAlgorithmVersionService
      */
     public function publishedCalibration(PredictiveAlgorithmKind $kind): array
     {
-        $kinds = $kind === PredictiveAlgorithmKind::Maintenance
-            ? [PredictiveAlgorithmKind::Maintenance->value, PredictiveAlgorithmKind::LEGACY_MAINTENANCE]
-            : [$kind->value];
-
-        $version = PredictiveAlgorithmVersion::query()
-            ->where('status', PredictiveAlgorithmVersion::STATUS_PUBLISHED)
-            ->whereIn('kind', $kinds)
-            ->orderByDesc('published_at')
-            ->first();
+        $version = $this->publishedVersion($kind);
 
         return is_array($version?->calibration) ? $version->calibration : [];
     }

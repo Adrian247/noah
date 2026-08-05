@@ -19,6 +19,18 @@ class ReportPdfImageEncoderTest extends TestCase
         $this->assertStringStartsWith('data:image/jpeg;base64,', $uri);
     }
 
+    public function test_png_with_alpha_passes_through_as_png_data_uri(): void
+    {
+        $png = $this->transparentPng(32, 32);
+        $uri = ReportPdfImageEncoder::toEmbeddedSrc($png, 'image/png');
+        $this->assertNotNull($uri);
+        $this->assertStringStartsWith('data:image/png;base64,', $uri);
+
+        $decoded = base64_decode(substr($uri, strlen('data:image/png;base64,')), true);
+        $this->assertNotFalse($decoded);
+        $this->assertSame($png, $decoded);
+    }
+
     public function test_orientation_classifies_landscape_portrait_and_square(): void
     {
         $this->assertSame('landscape', ReportPdfImageEncoder::orientation($this->png(200, 100)));
@@ -40,6 +52,24 @@ class ReportPdfImageEncoderTest extends TestCase
         $this->assertNotFalse($image);
         $bg = imagecolorallocate($image, 200, 200, 200);
         imagefilledrectangle($image, 0, 0, $width, $height, $bg);
+        ob_start();
+        imagepng($image);
+        $binary = ob_get_clean();
+        imagedestroy($image);
+        $this->assertNotFalse($binary);
+
+        return $binary;
+    }
+
+    private function transparentPng(int $width, int $height): string
+    {
+        $image = imagecreatetruecolor($width, $height);
+        $this->assertNotFalse($image);
+        imagesavealpha($image, true);
+        $transparent = imagecolorallocatealpha($image, 0, 0, 0, 127);
+        imagefill($image, 0, 0, $transparent);
+        $red = imagecolorallocatealpha($image, 220, 38, 38, 0);
+        imagefilledellipse($image, (int) ($width / 2), (int) ($height / 2), (int) ($width / 2), (int) ($height / 2), $red);
         ob_start();
         imagepng($image);
         $binary = ob_get_clean();

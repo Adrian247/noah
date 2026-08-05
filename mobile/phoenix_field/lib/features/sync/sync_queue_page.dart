@@ -41,6 +41,15 @@ class _SyncQueuePageState extends ConsumerState<SyncQueuePage> {
     }
   }
 
+  Future<void> _discard(OutboxEvent event) async {
+    await ref.read(syncRepositoryProvider).discardOutboxEvent(event.eventId);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Evento descartado. Corrige consumos e intenta enviar de nuevo.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final repo = ref.watch(syncRepositoryProvider);
@@ -81,12 +90,49 @@ class _SyncQueuePageState extends ConsumerState<SyncQueuePage> {
                     ...events.map(
                       (event) => Card(
                         margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          title: Text(event.eventType),
-                          subtitle: Text(
-                            '${event.eventId}\n${dateFormat.format(event.createdAt)}',
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      event.eventType,
+                                      style: const TextStyle(fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                  _statusChip(event.status),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${event.eventId}\n${dateFormat.format(event.createdAt)}',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                              if (event.errorMessage != null && event.errorMessage!.trim().isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                  event.errorMessage!,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.error,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                              if (event.status == 'error') ...[
+                                const SizedBox(height: 8),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    onPressed: _syncing ? null : () => _discard(event),
+                                    child: const Text('Descartar'),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
-                          trailing: _statusChip(event.status),
                         ),
                       ),
                     ),
@@ -100,7 +146,13 @@ class _SyncQueuePageState extends ConsumerState<SyncQueuePage> {
                         margin: const EdgeInsets.only(bottom: 8),
                         child: ListTile(
                           title: Text('${row.fieldKey} · servicio #${row.routineId}'),
-                          subtitle: Text(row.localPath),
+                          subtitle: Text(
+                            [
+                              row.localPath,
+                              if (row.errorMessage != null && row.errorMessage!.trim().isNotEmpty)
+                                row.errorMessage!,
+                            ].join('\n'),
+                          ),
                           trailing: _statusChip(row.status),
                         ),
                       ),

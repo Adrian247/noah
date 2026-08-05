@@ -13,7 +13,7 @@ const classes = {
         'bg-gradient-to-br from-amber-400 to-amber-600 text-stone-950 shadow-md shadow-amber-500/25 hover:brightness-105',
     secondary: 'app-button-secondary',
     danger: 'bg-red-600/90 text-white hover:bg-red-600',
-    ghost: 'text-amber-400/95 hover:bg-white/5',
+    ghost: 'app-button-ghost',
 };
 </script>
 

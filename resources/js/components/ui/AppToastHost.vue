@@ -22,9 +22,9 @@ const variantClass: Record<ToastVariant, string> = {
     info: 'app-toast--info',
 };
 
-/** Logo (480) → shell (520@450) → texto (400@1000) → glow (560@1400) */
-const TOAST_ENTER_MS = 2000;
-const TOAST_LEAVE_MS = 320;
+/** Secuencia compacta: logo → shell → texto (~750ms total útil). */
+const TOAST_ENTER_MS = 750;
+const TOAST_LEAVE_MS = 280;
 
 function onToastEnter(el: Element, done: () => void) {
     el.classList.add('app-toast--playing');

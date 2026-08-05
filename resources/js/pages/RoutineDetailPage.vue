@@ -10,8 +10,10 @@ import { useCompanyStore } from '@/stores/company';
 import { usePermissions } from '@/composables/usePermissions';
 import AppButton from '@/components/ui/AppButton.vue';
 import IconActionButton from '@/components/ui/IconActionButton.vue';
+import StatusBadge from '@/components/ui/StatusBadge.vue';
 import { auditActionLabel } from '@/lib/auditLabels';
 import RoutineAiAssistCard from '@/components/insights/RoutineAiAssistCard.vue';
+import EvidencePhotoThumb from '@/components/domain/EvidencePhotoThumb.vue';
 import { useAiCapabilities } from '@/composables/useAiCapabilities';
 
 type FormVersion = {
@@ -23,6 +25,7 @@ type SupplyItem = {
     id: number;
     sku: string;
     name: string;
+    unit?: string | null;
     standard_cost?: string | number | null;
 };
 
@@ -69,6 +72,8 @@ type Routine = {
     status: string;
     asset_id?: number;
     asset?: { id?: number; tag: string };
+    site?: { id?: number; name?: string | null } | null;
+    client?: { id?: number; legal_name?: string | null; trade_name?: string | null } | null;
     routine_type?: { name: string; form_version?: FormVersion | null };
     latest_execution?: Execution;
     generated_reports?: { id: number; status: string; error_message?: string | null }[];
@@ -114,7 +119,8 @@ const formResponses = ref<Record<string, unknown>>({});
 const formDesignSettings = ref<{ max_image_size_kb: number; allowed_image_mimes: string[] } | null>(null);
 const formOptionCatalogs = ref<{ id: number; name: string; options: { value: string; label: string }[] }[]>([]);
 const technicianComments = ref('');
-const durationMinutes = ref(60);
+/** Duración real en minutos; 0 = sin registrar (no inventar 60 por defecto). */
+const durationMinutes = ref(0);
 const consumptionLines = ref<{ supply_item_id: string; quantity: string }[]>([
     { supply_item_id: '', quantity: '1' },
 ]);
@@ -151,6 +157,20 @@ const workflowCorrelationId = computed(
 const showAuditTimeline = computed(
     () => can('audit.view') && Boolean(workflowCorrelationId.value),
 );
+
+const hasCapturedResponses = computed(() => Object.keys(formResponses.value).length > 0);
+
+const executionConsumptions = computed(() => routine.value?.latest_execution?.consumptions ?? []);
+
+function formatConsumptionLabel(line: ConsumptionLine): string {
+    const item = line.supply_item;
+    if (!item) {
+        return `Insumo #${line.supply_item_id}`;
+    }
+    const sku = item.sku ? `${item.sku} — ` : '';
+    const unit = item.unit ? ` ${item.unit}` : '';
+    return `${sku}${item.name}${unit}`;
+}
 
 function workflowActionLabel(trigger: string, fallback: string): string {
     const actions = routine.value?.workflow_instance?.available_actions;
@@ -475,7 +495,7 @@ async function submitExecution() {
             body: JSON.stringify({
                 responses,
                 technician_comments: technicianComments.value || null,
-                duration_minutes: durationMinutes.value,
+                duration_minutes: durationMinutes.value > 0 ? durationMinutes.value : null,
                 consumptions,
             }),
         });
@@ -527,7 +547,7 @@ async function deleteRoutine() {
     try {
         await api(`/routines/${routine.value.id}`, { method: 'DELETE' });
         toast.success('Servicio eliminado.');
-        await router.push('/app/routines');
+        await router.push('/app/services');
     } catch (e) {
         toast.error((e as Error).message);
     } finally {
@@ -537,14 +557,32 @@ async function deleteRoutine() {
 </script>
 
 <template>
-    <div v-if="loading" class="text-portal-muted">Cargando…</div>
+    <div v-if="loading" class="portal-page w-full max-w-[1600px] space-y-4" aria-busy="true">
+        <div class="portal-skeleton h-4 w-40" />
+        <div class="portal-skeleton h-8 w-64" />
+        <div class="portal-form-panel space-y-3 p-4">
+            <div class="portal-skeleton h-4 w-1/2" />
+            <div class="portal-skeleton h-4 w-2/3" />
+            <div class="portal-skeleton h-24 w-full" />
+        </div>
+    </div>
     <div v-else-if="routine" class="portal-page w-full max-w-[1600px] space-y-4">
         <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="min-w-0">
-                <h2 class="text-portal-heading text-xl font-semibold">Servicio #{{ routine.id }}</h2>
-                <p class="text-portal-muted text-sm">
-                    {{ routine.routine_type?.name }} · {{ routine.asset?.tag }} ·
-                    <span class="text-portal-heading font-medium">{{ routine.status }}</span>
+                <RouterLink to="/app/services" class="text-portal-link mb-2 inline-flex text-sm font-medium">
+                    ← Volver a servicios
+                </RouterLink>
+                <div class="flex flex-wrap items-center gap-2">
+                    <h2 class="text-portal-heading text-xl font-semibold">Servicio #{{ routine.id }}</h2>
+                    <StatusBadge :status="routine.status" />
+                </div>
+                <p class="text-portal-muted mt-1 text-sm">
+                    {{ routine.routine_type?.name }}
+                    <span v-if="routine.asset?.tag"> · {{ routine.asset.tag }}</span>
+                    <span v-if="routine.site?.name"> · {{ routine.site.name }}</span>
+                    <span v-if="routine.client?.trade_name || routine.client?.legal_name">
+                        · {{ routine.client?.trade_name || routine.client?.legal_name }}
+                    </span>
                     <span v-if="routine.workflow_instance">
                         · paso {{ routine.workflow_instance.current_step_key }}
                     </span>
@@ -611,6 +649,7 @@ async function deleteRoutine() {
                         type="number"
                         min="0"
                         class="field-input mt-1 w-32"
+                        placeholder="Tiempo real en sitio"
                     />
                 </label>
                 <div v-if="supplies.length" class="space-y-3">
@@ -673,10 +712,158 @@ async function deleteRoutine() {
             </AppButton>
         </div>
 
+        <div
+            v-if="isPendingValidation && canValidateReject"
+            class="portal-callout portal-callout--warning space-y-3"
+        >
+            <p>Revisa el formulario capturado, las fotos y los insumos antes de validar o rechazar.</p>
+            <div
+                v-if="showRejectPanel"
+                class="space-y-3 rounded-xl border border-red-500/30 bg-black/10 p-3 text-sm"
+            >
+                <p class="portal-msg-danger">{{ rejectActionLabel }}</p>
+                <label class="text-portal-heading block">
+                    Motivo (visible para el técnico)
+                    <textarea
+                        v-model="rejectReason"
+                        rows="3"
+                        class="field-input mt-1 w-full"
+                        placeholder="Ej. Falta evidencia fotográfica del filtro nuevo"
+                    />
+                </label>
+                <div class="flex flex-wrap gap-2">
+                    <AppButton type="button" variant="danger" :disabled="rejecting" @click="rejectRoutine">
+                        Confirmar {{ rejectActionLabel.toLowerCase() }}
+                    </AppButton>
+                    <AppButton type="button" variant="ghost" @click="cancelReject">Cancelar</AppButton>
+                </div>
+            </div>
+            <div v-else class="flex flex-wrap gap-2">
+                <AppButton type="button" @click="validateRoutine">
+                    {{ approveActionLabel }}
+                </AppButton>
+                <AppButton type="button" variant="danger" @click="openRejectPanel">
+                    {{ rejectActionLabel }}
+                </AppButton>
+            </div>
+        </div>
+        <div
+            v-else-if="isPendingValidation"
+            class="portal-callout portal-callout--info"
+        >
+            Enviada a validación. Un supervisor o administrador debe aprobarla.
+        </div>
+
+        <div
+            v-if="!canExecute && formSchema && hasCapturedResponses"
+            class="space-y-3"
+        >
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 class="text-portal-heading text-base font-semibold">Formulario capturado</h3>
+                <p class="text-portal-muted text-xs">Solo lectura — fotos e respuestas del técnico</p>
+            </div>
+            <DynamicFormRenderer
+                v-model="formResponses"
+                :schema="formSchema"
+                :routine-id="routine.id"
+                :form-settings="formDesignSettings"
+                :option-catalogs="formOptionCatalogs"
+                disabled
+            />
+        </div>
+
+        <div
+            v-if="routine.latest_execution && !canExecute"
+            class="portal-form-panel space-y-4 p-4 text-sm"
+        >
+            <p class="text-portal-heading text-base font-semibold">Resumen de ejecución</p>
+            <div class="grid gap-3 sm:grid-cols-2">
+                <p v-if="routine.latest_execution.technician_comments">
+                    <span class="text-portal-muted block text-xs">Comentario técnico</span>
+                    <span class="text-portal-heading">{{ routine.latest_execution.technician_comments }}</span>
+                </p>
+                <p v-if="routine.latest_execution.corrected_comments">
+                    <span class="text-portal-muted block text-xs">Texto corregido</span>
+                    <span class="text-portal-heading">{{ routine.latest_execution.corrected_comments }}</span>
+                </p>
+                <p v-if="routine.latest_execution.duration_minutes != null">
+                    <span class="text-portal-muted block text-xs">Duración</span>
+                    <span class="text-portal-heading">{{ routine.latest_execution.duration_minutes }} min</span>
+                </p>
+            </div>
+
+            <div class="space-y-2 border-t border-white/10 pt-3">
+                <p class="text-portal-heading font-medium">Insumos / inventario utilizado</p>
+                <p v-if="!executionConsumptions.length" class="text-portal-muted text-xs">
+                    Sin consumos registrados en esta ejecución.
+                </p>
+                <ul v-else class="divide-y divide-white/10 overflow-hidden rounded-xl border border-white/10">
+                    <li
+                        v-for="c in executionConsumptions"
+                        :key="`${c.supply_item_id}-${c.quantity}`"
+                        class="flex flex-wrap items-center justify-between gap-2 bg-black/10 px-3 py-2.5"
+                    >
+                        <span class="text-portal-heading text-sm">{{ formatConsumptionLabel(c) }}</span>
+                        <span class="text-portal-heading font-semibold tabular-nums">× {{ c.quantity }}</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div
+                v-if="routineEvidences.length || canUploadEvidence"
+                class="space-y-3 border-t border-white/10 pt-3"
+            >
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <p class="text-portal-heading font-medium">Evidencias fotográficas</p>
+                    <AppButton
+                        v-if="canUploadEvidence"
+                        type="button"
+                        variant="secondary"
+                        :disabled="evidenceUploading"
+                        @click="triggerEvidenceUpload"
+                    >
+                        {{ evidenceUploading ? 'Subiendo…' : 'Adjuntar foto' }}
+                    </AppButton>
+                    <input
+                        ref="evidenceInput"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        class="hidden"
+                        @change="onEvidenceSelected"
+                    />
+                </div>
+                <p v-if="!routineEvidences.length" class="text-portal-muted text-xs">
+                    Sin evidencias adicionales en esta ejecución.
+                </p>
+                <div v-else class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <figure
+                        v-for="ev in routineEvidences"
+                        :key="ev.id"
+                        class="space-y-2"
+                    >
+                        <EvidencePhotoThumb :evidence-id="ev.id" :alt="ev.original_name" />
+                        <figcaption class="flex flex-wrap items-center justify-between gap-2 px-0.5">
+                            <span class="text-portal-muted truncate text-xs" :title="ev.original_name ?? undefined">
+                                {{ ev.original_name ?? `Evidencia #${ev.id}` }}
+                                <span v-if="ev.size_bytes"> · {{ formatBytes(ev.size_bytes) }}</span>
+                            </span>
+                            <button
+                                type="button"
+                                class="text-portal-link shrink-0 text-xs underline"
+                                @click="downloadEvidence(ev.id, ev.original_name)"
+                            >
+                                Descargar
+                            </button>
+                        </figcaption>
+                    </figure>
+                </div>
+            </div>
+        </div>
+
         <details
             v-if="showAuditTimeline"
             class="portal-form-panel group space-y-3 p-4 text-sm"
-            :open="!canExecute"
+            :open="false"
         >
             <summary
                 class="text-portal-heading flex cursor-pointer list-none items-center justify-between gap-2 font-medium marker:content-none"
@@ -740,138 +927,8 @@ async function deleteRoutine() {
             </ol>
         </details>
 
-        <div
-            v-else-if="formSchema && Object.keys(formResponses).length"
-            class="space-y-2"
-        >
-            <p class="text-portal-muted text-sm">Formulario capturado (solo lectura)</p>
-            <DynamicFormRenderer
-                v-model="formResponses"
-                :schema="formSchema"
-                :routine-id="routine.id"
-                :form-settings="formDesignSettings"
-                :option-catalogs="formOptionCatalogs"
-                disabled
-            />
-        </div>
-
-        <div v-if="routine.latest_execution" class="portal-form-panel space-y-3 p-4 text-sm">
-            <p class="text-portal-heading font-medium">Última ejecución</p>
-            <p v-if="routine.latest_execution.technician_comments">
-                <span class="text-portal-muted">Comentario técnico</span><br />
-                <span class="text-portal-heading">{{ routine.latest_execution.technician_comments }}</span>
-            </p>
-            <p v-if="routine.latest_execution.corrected_comments">
-                <span class="text-portal-muted">Texto corregido</span><br />
-                <span class="text-portal-heading">{{ routine.latest_execution.corrected_comments }}</span>
-            </p>
-            <ul
-                v-if="routine.latest_execution.consumptions?.length"
-                class="text-portal-heading list-inside list-disc"
-            >
-                <li v-for="c in routine.latest_execution.consumptions" :key="c.supply_item_id">
-                    {{ c.supply_item?.name ?? 'Insumo' }} × {{ c.quantity }}
-                </li>
-            </ul>
-            <div v-if="routineEvidences.length || canUploadEvidence" class="space-y-2 border-t border-white/10 pt-3">
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                    <p class="text-portal-heading font-medium">Evidencias fotográficas</p>
-                    <AppButton
-                        v-if="canUploadEvidence"
-                        type="button"
-                        variant="secondary"
-                        :disabled="evidenceUploading"
-                        @click="triggerEvidenceUpload"
-                    >
-                        {{ evidenceUploading ? 'Subiendo…' : 'Adjuntar foto' }}
-                    </AppButton>
-                    <input
-                        ref="evidenceInput"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        class="hidden"
-                        @change="onEvidenceSelected"
-                    />
-                </div>
-                <p v-if="!routineEvidences.length" class="text-portal-muted text-xs">
-                    Sin evidencias en esta ejecución.
-                </p>
-                <ul v-else class="space-y-2">
-                    <li
-                        v-for="ev in routineEvidences"
-                        :key="ev.id"
-                        class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-black/10 px-3 py-2"
-                    >
-                        <span class="text-portal-heading text-xs">
-                            {{ ev.original_name ?? `Evidencia #${ev.id}` }}
-                            <span class="text-portal-muted"> · {{ formatBytes(ev.size_bytes) }}</span>
-                        </span>
-                        <button
-                            type="button"
-                            class="text-portal-link text-xs underline"
-                            @click="downloadEvidence(ev.id, ev.original_name)"
-                        >
-                            Descargar
-                        </button>
-                    </li>
-                </ul>
-            </div>
-        </div>
-
-        <div
-            v-if="isPendingValidation && canValidateReject"
-            class="portal-callout portal-callout--warning"
-        >
-            Este servicio espera tu validación como supervisor o administrador.
-        </div>
-        <div
-            v-else-if="isPendingValidation"
-            class="portal-callout portal-callout--info"
-        >
-            Enviada a validación. Un supervisor o administrador debe aprobarla (revisa Mailpit en
-            <span class="font-mono text-xs opacity-80">http://localhost:8025</span> si eres supervisor).
-        </div>
-
-        <div
-            v-if="isPendingValidation && canValidateReject && showRejectPanel"
-            class="portal-form-panel space-y-3 border-red-500/30 text-sm"
-        >
-            <p class="portal-msg-danger">{{ rejectActionLabel }}</p>
-            <label class="text-portal-heading block">
-                Motivo (visible para el técnico)
-                <textarea
-                    v-model="rejectReason"
-                    rows="3"
-                    class="field-input mt-1 w-full"
-                    placeholder="Ej. Falta evidencia fotográfica del filtro nuevo"
-                />
-            </label>
-            <div class="flex flex-wrap gap-2">
-                <AppButton type="button" variant="danger" :disabled="rejecting" @click="rejectRoutine">
-                    Confirmar {{ rejectActionLabel.toLowerCase() }}
-                </AppButton>
-                <AppButton type="button" variant="ghost" @click="cancelReject">Cancelar</AppButton>
-            </div>
-        </div>
-
-        <div class="flex flex-wrap gap-2">
+        <div v-if="primaryReadyReport" class="flex flex-wrap gap-2">
             <AppButton
-                v-if="isPendingValidation && canValidateReject && !showRejectPanel"
-                type="button"
-                @click="validateRoutine"
-            >
-                {{ approveActionLabel }}
-            </AppButton>
-            <AppButton
-                v-if="isPendingValidation && canValidateReject && !showRejectPanel"
-                type="button"
-                variant="danger"
-                @click="openRejectPanel"
-            >
-                {{ rejectActionLabel }}
-            </AppButton>
-            <AppButton
-                v-if="primaryReadyReport"
                 type="button"
                 variant="secondary"
                 @click="downloadReport(primaryReadyReport.id)"

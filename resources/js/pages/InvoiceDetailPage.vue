@@ -98,7 +98,6 @@ const issuing = ref(false);
 const delivering = ref(false);
 const notifyClient = ref(false);
 const portalVisible = ref(false);
-const deliveryDeferred = ref(false);
 const issueActionLabel = ref('Emitir factura');
 const fiscalEnabled = ref(false);
 const fiscalProvider = ref<'sandbox' | 'mexico_pac'>('sandbox');
@@ -371,7 +370,6 @@ async function load() {
         customReference.value = invRes.data.custom_reference ?? '';
         notifyClient.value = Boolean(invRes.data.notify_client_on_issue);
         portalVisible.value = Boolean(invRes.data.client_portal_visible);
-        deliveryDeferred.value = Boolean(invRes.data.delivery_deferred);
         editLines.value = invRes.data.lines.map(lineImport);
     } catch (e) {
         toast.error((e as Error).message);
@@ -424,7 +422,7 @@ async function saveDraft(options: { quiet?: boolean } = {}) {
                 custom_reference: customReference.value.trim() || null,
                 notify_client_on_issue: notifyClient.value,
                 client_portal_visible: portalVisible.value,
-                delivery_deferred: deliveryDeferred.value,
+                delivery_deferred: false,
                 lines: editLines.value,
             }),
         });
@@ -454,7 +452,7 @@ async function issueInvoice() {
             body: JSON.stringify({
                 notify_client_on_issue: notifyClient.value,
                 client_portal_visible: portalVisible.value,
-                delivery_deferred: deliveryDeferred.value,
+                delivery_deferred: false,
             }),
         });
         invoice.value = res.data;
@@ -482,7 +480,6 @@ async function deliverToClient() {
         invoice.value = res.data;
         notifyClient.value = Boolean(res.data.notify_client_on_issue);
         portalVisible.value = Boolean(res.data.client_portal_visible);
-        deliveryDeferred.value = Boolean(res.data.delivery_deferred);
         toast.success('Documentación enviada al cliente.');
     } catch (e) {
         toast.error((e as Error).message);
@@ -843,10 +840,6 @@ onMounted(load);
                         <label class="flex items-start gap-2">
                             <input v-model="portalVisible" type="checkbox" class="mt-1" />
                             <span>Visible en portal del cliente (descarga ZIP con PDF y evidencias)</span>
-                        </label>
-                        <label class="flex items-start gap-2">
-                            <input v-model="deliveryDeferred" type="checkbox" class="mt-1" />
-                            <span>Diferir envío (guardar intención para después)</span>
                         </label>
                     </div>
                     <AlertBanner v-if="showFiscalReplaceWarning" variant="warning" class="mb-2">

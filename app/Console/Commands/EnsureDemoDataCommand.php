@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Company;
 use App\Models\User;
+use App\Services\Identity\ClientPortalAccountService;
 use App\Support\DemoAccounts;
 use App\Support\PlatformAdmin;
 use Database\Seeders\PhoenixDemoSeeder;
@@ -45,6 +46,7 @@ class EnsureDemoDataCommand extends Command
             $this->resetDemoCredentials();
             $this->call('phoenix:bootstrap-permissions');
             $this->info('Demo credentials reset (root: '.config('phoenix.demo_root_password').', tenants: '.config('phoenix.demo_password').').');
+            $this->syncWorkflowsAndPortalAccounts();
 
             return self::SUCCESS;
         }
@@ -56,7 +58,13 @@ class EnsureDemoDataCommand extends Command
         }
 
         $this->call('phoenix:bootstrap-permissions');
+        $this->syncWorkflowsAndPortalAccounts();
 
+        return self::SUCCESS;
+    }
+
+    private function syncWorkflowsAndPortalAccounts(): void
+    {
         $workflowRuntime = app(WorkflowRuntime::class);
         $synced = 0;
         foreach (self::DEMO_COMPANY_NAMES as $companyName) {
@@ -71,7 +79,10 @@ class EnsureDemoDataCommand extends Command
             $this->info("Workflow estándar «routine-validation-v1» sincronizado en {$synced} empresa(s) demo.");
         }
 
-        return self::SUCCESS;
+        $portalSynced = app(ClientPortalAccountService::class)->syncAllCompanies();
+        if ($portalSynced > 0) {
+            $this->info("Cuentas de portal de cliente sincronizadas: {$portalSynced} (password: ".ClientPortalAccountService::portalPassword().').');
+        }
     }
 
     private function demoEnvironmentIncomplete(): bool

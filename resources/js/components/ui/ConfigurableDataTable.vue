@@ -23,6 +23,7 @@ const props = withDefaults(
         clickable?: boolean;
         rowClass?: string | ((row: unknown) => string);
         emptyText?: string;
+        emptyDescription?: string;
         showColumnPicker?: boolean;
         stopClickColumnIds?: string[];
         /** Popover de búsqueda (icono en barra de herramientas). */
@@ -255,9 +256,22 @@ const showToolbar = computed(
                         <slot :name="col.id" :row="row" :index="index" />
                     </td>
                 </tr>
-                <tr v-if="displayRows.length === 0 && emptyText">
-                    <td :colspan="visibleColumns.length || 1" class="text-portal-muted py-8 text-center text-sm">
-                        {{ emptyText }}
+                <tr v-if="displayRows.length === 0 && (emptyText || $slots.empty)">
+                    <td :colspan="visibleColumns.length || 1" class="py-10 text-center">
+                        <slot name="empty">
+                            <div class="portal-table-empty mx-auto max-w-md px-4">
+                                <p class="text-portal-heading text-sm font-semibold">{{ emptyText }}</p>
+                                <p
+                                    v-if="emptyDescription"
+                                    class="text-portal-muted mt-1.5 text-sm leading-relaxed"
+                                >
+                                    {{ emptyDescription }}
+                                </p>
+                                <div v-if="$slots['empty-action']" class="mt-4 flex justify-center gap-2">
+                                    <slot name="empty-action" />
+                                </div>
+                            </div>
+                        </slot>
                     </td>
                 </tr>
             </tbody>

@@ -116,9 +116,18 @@ const demandLoading = ref(false);
 const inventoryLoading = ref(false);
 const sites = ref<Site[]>([]);
 const payload = ref<PredictionsPayload | null>(null);
-const demandPayload = ref<{
+type DemandModel = {
+    kind: string;
+    kind_label?: string;
+    version: string;
+    algorithm_semver?: string | null;
+    selection?: string;
+};
+
+type DemandPayload = {
     as_of: string;
     horizon_days: number;
+    model?: DemandModel;
     predictions: Array<{
         client_id: number;
         client_name: string;
@@ -131,10 +140,12 @@ const demandPayload = ref<{
         drivers: Array<{ code: string; label: string; evidence: string }>;
     }>;
     notes?: string[];
-} | null>(null);
-const inventoryPayload = ref<{
+};
+
+type InventoryPayload = {
     as_of: string;
     horizon_days: number;
+    model?: DemandModel;
     predictions: Array<{
         client_id: number;
         client_name: string;
@@ -146,7 +157,9 @@ const inventoryPayload = ref<{
         drivers: Array<{ code: string; label: string; evidence: string }>;
     }>;
     notes?: string[];
-} | null>(null);
+};
+const demandPayload = ref<DemandPayload | null>(null);
+const inventoryPayload = ref<InventoryPayload | null>(null);
 const demandLine = ref('manufacturing');
 const health = ref<HealthPayload | null>(null);
 const healthLoading = ref(false);
@@ -345,6 +358,25 @@ const inventoryColumns = computed((): TableColumnDef[] => [
     { id: 'why', label: 'Por qué' },
 ]);
 
+const activeAlgorithmLabel = computed(() => {
+    if (viewMode.value === 'clients') {
+        const m = demandPayload.value?.model;
+        if (!m) return null;
+        const semver = m.algorithm_semver ?? m.version;
+        return `${m.kind_label ?? 'Manufactura'} · v${semver}`;
+    }
+    if (viewMode.value === 'inventory') {
+        const m = inventoryPayload.value?.model;
+        if (!m) return null;
+        const semver = m.algorithm_semver ?? m.version;
+        return `${m.kind_label ?? 'Inventario'} · v${semver}`;
+    }
+    const m = payload.value?.model;
+    if (!m) return null;
+    const semver = m.algorithm_semver ?? m.version;
+    return `Mantenimiento · v${semver}`;
+});
+
 onMounted(async () => {
     await Promise.all([loadSites(), loadFailureModeOptions()]);
     await predictFleet();
@@ -394,6 +426,10 @@ onMounted(async () => {
                 Inventario
             </button>
         </div>
+        <p v-if="activeAlgorithmLabel" class="text-portal-muted mb-4 -mt-1 text-xs">
+            Algoritmo activo:
+            <span class="font-mono text-portal-heading">{{ activeAlgorithmLabel }}</span>
+        </p>
 
         <section
             v-if="viewMode === 'clients'"
@@ -443,6 +479,14 @@ onMounted(async () => {
                     </span>
                 </template>
             </ConfigurableDataTable>
+            <p v-if="demandPayload?.model" class="text-portal-muted mt-3 text-xs">
+                Modelo
+                <span class="font-mono text-portal-heading">
+                    {{ demandPayload.model.kind_label ?? demandPayload.model.kind }}
+                    · v{{ demandPayload.model.algorithm_semver ?? demandPayload.model.version }}
+                </span>
+                (publicada automática)
+            </p>
         </section>
 
         <section
@@ -491,6 +535,14 @@ onMounted(async () => {
                     </span>
                 </template>
             </ConfigurableDataTable>
+            <p v-if="inventoryPayload?.model" class="text-portal-muted mt-3 text-xs">
+                Modelo
+                <span class="font-mono text-portal-heading">
+                    {{ inventoryPayload.model.kind_label ?? inventoryPayload.model.kind }}
+                    · v{{ inventoryPayload.model.algorithm_semver ?? inventoryPayload.model.version }}
+                </span>
+                (publicada automática)
+            </p>
         </section>
 
         <template v-if="viewMode === 'assets'">

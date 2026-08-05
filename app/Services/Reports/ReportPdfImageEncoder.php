@@ -3,7 +3,8 @@
 namespace App\Services\Reports;
 
 /**
- * DomPDF (vía GD) no siempre acepta WebP en data-URI; normaliza a JPEG para el PDF.
+ * DomPDF (vía GD) no siempre acepta WebP en data-URI; normaliza formatos
+ * preservando transparencia (PNG/WebP con alfa → PNG).
  */
 final class ReportPdfImageEncoder
 {
@@ -84,17 +85,21 @@ final class ReportPdfImageEncoder
             $mime = self::guessMime($binary) ?? 'image/jpeg';
         }
 
+        // WebP: DomPDF puede fallar; PNG conserva alfa.
         if ($mime === 'image/webp' || self::looksLikeWebp($binary)) {
+            $png = self::encodeAsPng($binary, 'webp');
+            if ($png !== null) {
+                return 'data:image/png;base64,'.base64_encode($png);
+            }
+
             $jpeg = self::encodeAsJpeg($binary, 'webp');
 
             return $jpeg !== null ? 'data:image/jpeg;base64,'.base64_encode($jpeg) : null;
         }
 
-        if ($mime === 'image/png') {
-            $jpeg = self::encodeAsJpeg($binary, 'png');
-            if ($jpeg !== null) {
-                return 'data:image/jpeg;base64,'.base64_encode($jpeg);
-            }
+        // PNG: embeber tal cual para respetar transparencia en la portada.
+        if ($mime === 'image/png' || self::looksLikePng($binary)) {
+            return 'data:image/png;base64,'.base64_encode($binary);
         }
 
         return 'data:'.$mime.';base64,'.base64_encode($binary);
@@ -105,12 +110,17 @@ final class ReportPdfImageEncoder
         return str_starts_with($binary, 'RIFF') && str_contains(substr($binary, 0, 16), 'WEBP');
     }
 
+    private static function looksLikePng(string $binary): bool
+    {
+        return str_starts_with($binary, "\x89PNG\r\n\x1a\n");
+    }
+
     private static function guessMime(string $binary): ?string
     {
         if (str_starts_with($binary, "\xFF\xD8\xFF")) {
             return 'image/jpeg';
         }
-        if (str_starts_with($binary, "\x89PNG\r\n\x1a\n")) {
+        if (self::looksLikePng($binary)) {
             return 'image/png';
         }
         if (self::looksLikeWebp($binary)) {
@@ -120,7 +130,65 @@ final class ReportPdfImageEncoder
         return null;
     }
 
+    private static function encodeAsPng(string $binary, string $hint): ?string
+    {
+        $image = self::loadGdImage($binary, $hint);
+        if ($image === null) {
+            return null;
+        }
+
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
+
+        ob_start();
+        $ok = imagepng($image);
+        $png = ob_get_clean();
+        imagedestroy($image);
+
+        if ($ok === false || $png === false || $png === '') {
+            return null;
+        }
+
+        return $png;
+    }
+
     private static function encodeAsJpeg(string $binary, string $hint): ?string
+    {
+        $image = self::loadGdImage($binary, $hint);
+        if ($image === null) {
+            return null;
+        }
+
+        // JPEG no tiene alfa: aplanar sobre blanco en vez de negro.
+        $width = imagesx($image);
+        $height = imagesy($image);
+        $canvas = imagecreatetruecolor($width, $height);
+        if ($canvas === false) {
+            imagedestroy($image);
+
+            return null;
+        }
+        $white = imagecolorallocate($canvas, 255, 255, 255);
+        imagefilledrectangle($canvas, 0, 0, $width, $height, $white);
+        imagecopy($canvas, $image, 0, 0, 0, 0, $width, $height);
+        imagedestroy($image);
+
+        ob_start();
+        $ok = imagejpeg($canvas, null, 88);
+        $jpeg = ob_get_clean();
+        imagedestroy($canvas);
+
+        if ($ok === false || $jpeg === false || $jpeg === '') {
+            return null;
+        }
+
+        return $jpeg;
+    }
+
+    /**
+     * @return \GdImage|null
+     */
+    private static function loadGdImage(string $binary, string $hint): mixed
     {
         $image = null;
         $tempFile = null;
@@ -138,16 +206,11 @@ final class ReportPdfImageEncoder
                 $image = @imagecreatefromstring($binary);
             }
 
-            if ($image === false) {
+            if ($image === false || $image === null) {
                 return null;
             }
 
-            ob_start();
-            imagejpeg($image, null, 88);
-            $jpeg = ob_get_clean();
-            imagedestroy($image);
-
-            return $jpeg !== false && $jpeg !== '' ? $jpeg : null;
+            return $image;
         } finally {
             if ($tempFile !== null && is_file($tempFile)) {
                 @unlink($tempFile);
@@ -164,10 +227,5 @@ final class ReportPdfImageEncoder
         file_put_contents($path, $binary);
 
         return $path;
-    }
-
-    private static function tempPath(string $binary): string
-    {
-        return self::writeTemp($binary);
     }
 }

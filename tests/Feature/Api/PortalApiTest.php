@@ -43,7 +43,6 @@ class PortalApiTest extends TestCase
             ->assertOk()
             ->assertJsonStructure([
                 'data' => [
-                    'hero_image_url',
                     'service_title',
                     'help_title',
                     'contact_email',

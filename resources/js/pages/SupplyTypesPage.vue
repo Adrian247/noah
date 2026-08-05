@@ -141,8 +141,8 @@ async function save() {
 }
 
 async function remove(id: number) {
-    const accepted = await confirm('¿Eliminar este tipo de insumo? Esta acción no se puede deshacer.', {
-        title: 'Eliminar tipo de insumo',
+    const accepted = await confirm('¿Eliminar este tipo de artículo? Esta acción no se puede deshacer.', {
+        title: 'Eliminar tipo de artículo',
         confirmLabel: 'Eliminar',
         danger: true,
     });
@@ -189,10 +189,10 @@ onMounted(load);
             <template #form="{ row }">{{ (row as SupplyType).default_form_definition?.name ?? '—' }}</template>
             <template #actions="{ row }">
                 <div class="table-row-actions">
-                    <IconActionButton icon="pencil" label="Editar tipo de insumo" @click="openEdit(row as SupplyType)" />
+                    <IconActionButton icon="pencil" label="Editar tipo de artículo" @click="openEdit(row as SupplyType)" />
                     <IconActionButton
                         icon="trash"
-                        label="Eliminar tipo de insumo"
+                        label="Eliminar tipo de artículo"
                         variant="danger"
                         @click="remove((row as SupplyType).id)"
                     />
@@ -202,7 +202,7 @@ onMounted(load);
 
         <AppModal
             :open="showForm && canWrite"
-            :title="editingId ? 'Editar tipo de insumo' : 'Nuevo tipo de insumo'"
+            :title="editingId ? 'Editar tipo de artículo' : 'Nuevo tipo de artículo'"
             size="sm"
             @close="showForm = false"
         >
@@ -212,7 +212,7 @@ onMounted(load);
                 <MaterialField v-model="form.description" label="Descripción" />
                 <MaterialSelect
                     v-model="form.default_form_definition_id"
-                    label="Formulario de ficha (insumo)"
+                    label="Formulario de ficha (artículo)"
                     :options="formOptions"
                 />
                 <MaterialField v-model="form.sort_order" label="Orden" type="number" />
